@@ -3,8 +3,9 @@ import { Router } from 'express';
 import type { ServerConfig } from '../config.js';
 import type { DownloadQueue } from '../downloads/queue.js';
 import { DOWNLOAD_STATUS } from '../../shared/contracts.js';
-import type { EngineHealth, StationHealthSnapshot } from '../../shared/health.js';
+import type { EngineHealth, StationHealthSnapshot, SystemHealth } from '../../shared/health.js';
 import { EngineInspector } from './engines.js';
+import { SystemInspector } from './system.js';
 
 /**
  * Degrades cleanly when a restricted runtime cannot read resident process memory.
@@ -23,12 +24,14 @@ function readMemoryBytes(): number | null {
  * @param {ServerConfig} configuration - Validated station environment.
  * @param {DownloadQueue} queue - Live owner queue.
  * @param {EngineHealth[]} engines - Bounded version checks.
+ * @param {SystemHealth} [system] - Independently sampled OS-visible measurements.
  * @returns {StationHealthSnapshot} Owner-only station diagnostics.
  */
 export function readStationHealth(
   configuration: ServerConfig,
   queue: DownloadQueue,
   engines: EngineHealth[],
+  system?: SystemHealth,
 ): StationHealthSnapshot {
   let storage: StationHealthSnapshot['storage'] = {
     availableBytes: null,
@@ -71,6 +74,7 @@ export function readStationHealth(
       holdReason,
     },
     engines,
+    system,
   };
 }
 
@@ -79,17 +83,19 @@ export function readStationHealth(
  * @param {ServerConfig} configuration - Station environment.
  * @param {DownloadQueue} queue - Live queue.
  * @param {EngineInspector} [inspector] - Coalesced, cached command checks.
+ * @param {SystemInspector} [systemInspector] - Cached bounded system measurements.
  * @returns {Router} Owner-only read routes.
  */
 export function createHealthRoutes(
   configuration: ServerConfig,
   queue: DownloadQueue,
   inspector = new EngineInspector(),
+  systemInspector = new SystemInspector(),
 ): Router {
   const router = Router();
   router.get('/', async (_request, response) => {
-    const engines = await inspector.inspect();
-    response.json(readStationHealth(configuration, queue, engines));
+    const [engines, system] = await Promise.all([inspector.inspect(), systemInspector.inspect()]);
+    response.json(readStationHealth(configuration, queue, engines, system));
   });
   return router;
 }

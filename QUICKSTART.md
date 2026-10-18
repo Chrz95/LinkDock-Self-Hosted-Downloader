@@ -1,4 +1,4 @@
-# Run LinkDock 2.5 on your Raspberry Pi
+# Run LinkDock 2.9 on your Raspberry Pi
 
 1. Use 64-bit Raspberry Pi OS and install Docker Engine with the Compose plugin.
 2. Extract this project and open a terminal in its `linkdock` directory.
@@ -103,3 +103,92 @@ semantics.
 No new deployment variables are needed. Keep `.env` and the full data volume, rebuild with
 `docker compose up -d --build` and reload your browser. Real-device playback, seeking and large-archive acceptance
 remain deployment checks.
+
+## New in version 2.6
+
+- Select individual jobs or **Select visible · up to 50** after filtering the library.
+- **Organize selected** can change folders and add, remove or replace tags together. Unchanged fields retain each job's
+  own labels; an empty replacement explicitly clears tags. Label changes commit together or keep all old values.
+- **Review deletion** shows exact filenames before permanent removal of completed, failed or cancelled jobs.
+- Active/paused jobs and jobs with an active ZIP export block bulk deletion. Filters clear selection; polling never
+  selects new arrivals. Rows leaving the filtered view are deselected and invalidate deletion review.
+- Failed deletions stay selected for review and retry. Some bytes may already have been removed after an I/O failure;
+  deletion cannot be undone or rolled back. Refresh after a network failure before reviewing another attempt.
+
+No new dependencies, environment variables or data-format fields are required. Keep `.env` and the full data volume, run
+`docker compose up -d --build`, then reload your browser. Mobile layout and device acceptance remain deployment checks;
+automated DOM tests cover selection, review and errors.
+
+## New in version 2.7
+
+- Optional completion/failure alerts now persist in a bounded private outbox and resume after a container restart.
+- Temporary failures retry up to six total attempts with bounded backoff; pending records expire after one hour.
+- Bursts coalesce per device/category. New devices and rotated browser keys do not receive old queued alerts.
+- Open **On this device → Alert delivery · all registered devices** for private aggregate counts, refresh and an
+  explicit **Clear pending alerts** action. Clearing does not disable registrations or recall requests already sending.
+- Explicit test alerts remain immediate and do not retry automatically. Alerts are best effort: duplicates or missed
+  events remain possible around crashes or storage failures, and provider acceptance does not prove device display.
+
+Keep `.env` and the full data volume, including `/data/notifications`, then run `docker compose up -d --build` and
+reload this page. No new dependencies or configuration variables are required. Malformed/unwritable backlog state
+suspends background alerts while downloads continue; check station storage and follow the recovery steps in `README.md`.
+Real-provider delivery and physical Pi/mobile acceptance remain deployment checks.
+
+## New in version 2.8
+
+- Open **Station health → System view** for OS-visible CPU threads, 1/5/15-minute load, uptime and total/free memory.
+- Recognized CPU sensors expose temperature in Celsius. Missing or restricted values show **Unavailable**.
+- System counters are separate from LinkDock's process data and Docker resource limits; load is not a CPU percentage.
+- System readings cache for five seconds; a bounded single thermal probe prevents accumulating stalled reads.
+
+If Docker hides the Pi CPU sensor, first verify `/sys/class/thermal/thermal_zone0/type` and its readable `temp` file,
+then use the optional read-only override:
+
+```bash
+docker compose -f compose.yaml -f compose.metrics.yaml config
+docker compose -f compose.yaml -f compose.metrics.yaml up -d --build
+```
+
+The source directory must already exist. Keep using the same override flags on subsequent commands, including
+`-f compose.cookies.yaml` if applicable. See `README.md` for supported sensor types, other zone indices and scope.
+Otherwise retain the normal Compose command and accept unavailable temperature. Keep `.env` and the full data volume; no
+new configuration variables, dependencies or saved-history fields are required. Real Pi/mobile testing is pending.
+
+## New in version 2.9
+
+- New torrent/magnet jobs fetch metadata and pause. Open **Choose torrent files**, check the files you need and press
+  **Download selected files**. Your selection survives restarts; neighboring BitTorrent piece bytes may be received.
+- Use **Move on completion** to choose a relative physical folder such as `Movies` or `Media/Travel`. The default is
+  `/data/completed/<folder>/<job-uuid>/files/`; saved files remain available in the browser. You can also move existing
+  completed downloads. **Delete file & record** deletes that job's moved files as well.
+- If a move fails, internal originals remain available. Fix the destination and choose **Retry move**. Once payload
+  preparation begins, keep that destination for recovery. Back up completion storage along with the data volume.
+
+Run terminal commands from this project directory with the container running:
+
+```bash
+docker compose exec linkdock node dist-server/server/cli.js list
+docker compose exec linkdock node dist-server/server/cli.js pause all
+docker compose exec linkdock node dist-server/server/cli.js resume all
+docker compose exec linkdock node dist-server/server/cli.js pause JOB_UUID
+docker compose exec linkdock node dist-server/server/cli.js resume JOB_UUID --at '2026-10-20T07:00:00+03:00'
+docker compose exec linkdock node dist-server/server/cli.js schedules
+docker compose exec linkdock node dist-server/server/cli.js unschedule SCHEDULE_UUID
+```
+
+Replace example IDs and dates. Timed commands need seconds and `Z` or an explicit UTC offset. `pause all` holds new jobs
+across restarts; `resume all` clears that gate. Overdue schedules run when the station starts. Recurring station windows
+and disk holds still apply, and unreviewed torrents stay paused. Use `--help` for file selection and destination
+commands.
+
+For separate USB/SSD completion storage, create a host folder writable by container UID/GID 1000 and set
+`COMPLETED_HOST_DIRECTORY=/mnt/storage/linkdock-completed` in `.env`. Then use:
+
+```bash
+docker compose -f compose.yaml -f compose.destinations.yaml config
+docker compose -f compose.yaml -f compose.destinations.yaml up -d --build
+```
+
+Keep existing cookie/temperature overrides if used. Keep the same completion mount on upgrades; the override refuses a
+missing host source. See `README.md` for move recovery, storage layout, API details and scheduling semantics. Docker,
+physical Pi, live swarm and rendered mobile acceptance remain unverified in this environment.

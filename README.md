@@ -1,9 +1,47 @@
-# LinkDock 2.5
+# LinkDock 2.9
 
 A private download studio for your Raspberry Pi: videos, Instagram moments, torrents and files, collected in one place.
 The dark-first React + TypeScript workspace has a saved light/dark preference, source selection, real progress,
 searchable history, batch review, queue priorities and individual access to every completed file. Downloads run on the
 Pi when your browser is closed.
+
+## Bulk actions for your library
+
+Select individual download checkboxes or choose **Select visible · up to 50**. This captures the currently visible
+records, in their displayed order. New arrivals from polling are never selected automatically. Changing search, folder,
+tag or status filters clears selection and any deletion review. A selected record that disappears from the current view
+during polling is dropped and invalidates the review; it is not automatically reselected if it later returns. Choose
+**Clear selection** to leave every record unchanged.
+
+Open **Organize selected** to make a partial edit across the selection. Folder changes are opt-in: enable **Change
+folder for all selected** and enter a folder, or leave it empty to move the selection to **Unfiled**. Tags default to
+**Keep current tags**. You can instead add tags, remove matching tags without regard to case, or explicitly replace all
+tags. An empty replacement clears tags. Untouched fields preserve each job's own values; adding an existing tag keeps
+its current display spelling. Folder and tag changes can be applied together to active, paused or finished jobs.
+
+Every merged label set must satisfy the existing eight-tag limit. The server resolves the entire selection and validates
+all resulting labels before a single atomic history write. Invalid labels, a missing record or a failed write leave all
+previous labels intact. Concurrent edits in another browser use the last successful save, with merges based on current
+server values. Organization never moves physical files.
+
+For permanent removal, select only **completed, failed or cancelled** records, then choose **Review deletion**. Review
+shows the fixed filenames and recorded bytes; **Keep downloads** dismisses it. **Permanently delete** removes those
+records and their associated files from the Pi. This cannot be undone. Recorded bytes are not a guaranteed disk-space
+estimate. Waiting, running and paused records cannot be bulk-deleted; cancel or finish them first.
+
+The server checks every member's current status, worker cleanup and ZIP-export lease before deleting anything. A missing
+record or blocked member rejects the entire request. Filesystem deletion then runs sequentially, saving each successful
+removal. It is not a filesystem transaction: an I/O failure can remove some files before a record fails. The toolbar
+reports successful and failed counts, retains failed selections and requires a separate review before retrying. A
+history-write failure restores the record in memory so it remains retryable, but cannot restore bytes already deleted.
+Back up the complete station volume if you need recovery. Network failures can also leave an outcome uncertain; refresh
+and review the collection before retrying. There is no automatic destructive retry.
+
+Bulk commands use authenticated, JSON-only `POST /api/downloads/bulk` with at most 50 unique existing UUIDs. An
+organization request uses `action: "organize"`, `ids` and optional `folder`, `tagMode` (`add`, `remove`, `replace`) with
+`tags`. A deletion uses `action: "delete"`, `ids` and `confirmation: "delete-selected-files"`. Explicit IDs bound the
+operation even if another client adds records. The existing cookie, origin and no-store protections apply. Selection and
+draft changes remain browser-local; the new toolbar wraps on phones and uses the existing dark/light palette.
 
 ## Preview saved media and export a ZIP
 
@@ -75,7 +113,8 @@ reflect the combined filters; options are drawn from the whole retained collecti
 Draft label edits survive progress polling. **Reset labels** loads the latest observed saved values. Saving replaces the
 job's complete folder/tag set; if several browsers edit the same job, the last successful save wins. A collapsed editor
 retains its draft while that row remains in the current view; changing filters or reloading can discard unsaved edits.
-Folder-wide rename, nested disk folders and bulk organization are future work.
+Folder-wide rename remains future work. Completion destinations support nested physical folders. Bulk edits are
+available in the selection toolbar.
 
 The protected JSON endpoint is `POST /api/downloads/:id/organization`, with the complete object
 `{"folder":"Research","tags":["Useful"]}`. It uses the same session, origin and JSON-only mutation checks as queue
@@ -87,7 +126,7 @@ silently erased.
 Open **Station health** below **On this device** for a private operational snapshot. It reports the actual Node version,
 platform/architecture, LinkDock process uptime and resident memory, data-filesystem capacity/free space, directory write
 permissions, queue counts and any current schedule/storage hold. A restricted runtime can report **Unavailable** for a
-measurement. Memory and uptime describe the application process; filesystem capacity includes other files on that same
+measurement. Process memory and station uptime describe LinkDock; filesystem capacity includes other files on that same
 volume. Permission checks are a snapshot, not a disk integrity or quota test.
 
 The panel runs local version commands for yt-dlp, gallery-dl, aria2 and ffmpeg, showing versions, timestamps and static
@@ -105,6 +144,70 @@ ownership; the last displayed snapshot remains visible when refresh fails and is
 Detailed diagnostics use authenticated `GET /api/station` with `Cache-Control: no-store`, omitting paths, source URLs,
 credentials and browser push registrations. The public `/api/health` remains the existing minimal process probe used by
 Docker. It does not certify engine, storage or source readiness.
+
+### System view and optional Pi temperature access
+
+Version 2.8 adds a separate **System view** inside Station health. It shows OS-visible CPU thread count, the
+1/5/15-minute load averages, system uptime and total/free memory. These counters can describe the physical host, a
+Docker Desktop VM or another OS view supplied by the runtime. They are **not container CPU/memory limits**,
+LinkDock-only usage or CPU utilization percentages. The thread count is the OS-visible CPU list, not a promise of CPU
+quota or parallel capacity. Memory uses the OS total/free counters; no available-RAM budget or used-memory percentage is
+inferred. Windows load averages are marked unavailable rather than presenting its unsupported zero values as measured
+activity.
+
+Each counter can independently show **Unavailable** when restricted or unsupported; valid zero free memory/load/uptime
+is retained. System readings have their own timestamp, a shared **five-second cache** and single-flight sampling.
+**Refresh status** retains the existing one-minute engine cache, so system and engine timestamps can differ. System
+sampling starts only after an authenticated health request. It does not run a periodic background monitor, save metric
+history or contact any remote service. Hostnames, CPU model strings, serial numbers and network addresses are omitted.
+
+CPU temperature uses a recognized Linux thermal-zone type: `cpu-thermal`, `cpu_thermal` or `x86_pkg_temp`. It first
+tries `/run/linkdock-thermal`, then `/sys/class/thermal/thermal_zone0`. Unknown types are skipped rather than being
+labelled CPU temperature. Each `type`/`temp` field is read with a **256-byte** bound, nonblocking open and no final-file
+symlink following. Values must be integer millidegrees in a broad -40 to 150 Celsius plausibility envelope. This
+envelope is input validation, **not a model-specific safe operating range**. Temperature displays Celsius with one
+decimal place.
+
+A temperature probe has a **500 ms response deadline**. If a physical kernel read outlives it, subsequent inspections
+retain useful OS counters and avoid launching more thermal probes until that read settles. Missing, unsupported,
+permission-denied or timed-out sensor data produces explicit guidance. The panel cannot certify cooling, fan behavior,
+undervoltage, throttling state, power quality or drive health; it does not change cooling or download policy.
+
+On a Linux Raspberry Pi where Docker hides the sensor, verify its type and readability on the Pi:
+
+```bash
+cat /sys/class/thermal/thermal_zone0/type
+cat /sys/class/thermal/thermal_zone0/temp
+```
+
+If this is the CPU zone, enable the supplied **optional** override:
+
+```bash
+docker compose -f compose.yaml -f compose.metrics.yaml config
+docker compose -f compose.yaml -f compose.metrics.yaml up -d --build
+```
+
+`compose.metrics.yaml` mounts only that existing zone at `/run/linkdock-thermal`, read-only. It retains the normal
+unprivileged UID, dropped capabilities, read-only root filesystem and data volume. The source is not created if missing;
+leave the override disabled on systems without that zone. The bind does not bypass host read permissions. If your CPU
+zone uses another index, change only the override's source to that exact verified zone; keep its target unchanged.
+
+When also using cookies, include both overrides on every subsequent Compose invocation:
+
+```bash
+docker compose -f compose.yaml -f compose.cookies.yaml -f compose.metrics.yaml up -d --build
+```
+
+No new environment variables, JavaScript dependencies or persistent-data fields are needed. Reload the browser after
+rebuilding. Real Pi sensor exposure, Docker mount behavior and responsive device rendering remain acceptance checks. The
+standard deployment continues to work with unavailable temperature values when the override is omitted.
+
+Implementation references: [Node OS counters][os-counters], [Linux thermal sysfs][thermal-sysfs] and [Compose long bind
+syntax][compose-bind].
+
+[os-counters]: https://nodejs.org/download/release/v24.19.0/docs/api/os.html
+[thermal-sysfs]: https://docs.kernel.org/driver-api/thermal/sysfs-api.html
+[compose-bind]: https://docs.docker.com/reference/compose-file/services/#volumes
 
 ## Pause, resume and unattended operation
 
@@ -228,27 +331,204 @@ is part of VAPID authentication. The Pi needs outbound HTTPS/DNS access to each 
 needs its normal push connectivity. The station accepts at most 32 registered browsers, with two concurrent deliveries,
 a five-second lookup/request bound per attempt and no provider redirects. Public DNS is checked and pinned for sends.
 
-Only future saved completion/failure transitions trigger alerts; cancellation, pauses and restored history do not.
-Bursts coalesce by category and the browser groups notifications into one replaceable LinkDock alert. Delivery is best
-effort: there is no durable alert outbox or automatic retry, and unsent alerts are dropped at shutdown. Open the queue
-for the authoritative status. Tapping an alert focuses the station or opens its downloads section; authentication still
-applies. Private webhook delivery is not implemented.
+Newly saved completion/failure transitions enqueue generic alerts for exactly the devices registered at that moment.
+Cancellation, pauses and restored download history do not create new alerts. Version 2.7 restores alerts already saved
+in its private outbox, so pending deliveries can survive a container restart. New registrations and rotated browser keys
+do not receive older pending events. Refreshing an unchanged registration retains its pending work. The browser groups
+notifications into a replaceable LinkDock alert. Open the download queue for authoritative file status. Tapping an alert
+opens the station; authentication still applies.
+
+### Durable alert delivery
+
+The outbox lives at `/data/notifications/outbox.json`, alongside the existing private signing identity and browser
+registrations. It stores only a generic completed/failed category, an opaque fingerprint of the exact registration,
+record ID, timestamps and attempt count. It does not duplicate subscription endpoints, encryption keys, download IDs,
+filenames, source links or provider response bodies. Back up the complete private notification directory with the rest
+of the volume. The backlog is restricted to owner permissions, at most **64 records** (two categories per 32 devices)
+and a **64 KiB** input file. Each device/category pair has at most one record, including during delivery. Further events
+coalesce without extending its expiry or resetting its attempts; one generic alert can represent a burst of downloads.
+
+Temporary network/DNS failures, HTTP 408/429 and provider 5xx responses retry automatically. There are at most **six
+attempts total** per record. Backoff starts at **30 seconds**, doubles and is capped at **10 minutes**. A longer valid
+provider `Retry-After` delay is honored within that same cap. A 30-second scheduler sweep can add latency; timestamps
+are scheduling targets. Records expire from the Pi backlog **one hour after enqueue**, including across restarts. Keep
+the Pi clock synchronized. Expired/exhausted entries are removed. HTTP 404/410 revoke the registration and all its
+queued categories. Other permanent provider responses are discarded without automatic retry; explicit tests show their
+errors immediately and are never added to the durable backlog. Provider-side TTL and device behavior can delay actual
+display after acceptance.
+
+An attempt count and its next retry time are atomically saved **before** the network request. Provider acceptance
+removes the record. A crash after acceptance but before that removal can cause a duplicate generic alert; a crash just
+after claiming can consume an attempt without sending. History and alert files are separate transactions, so a crash
+between the terminal history save and outbox enqueue, or a storage failure during enqueue, can still miss an alert. This
+is bounded best-effort delivery, without exactly-once guarantees or device display receipts. Graceful shutdown keeps
+pending records and waits only for already bounded network requests. Downloads do not wait for provider retries.
+
+Malformed or unwritable outbox state suspends automatic alerts and shows an unavailable status; it does not overwrite
+that state or stop downloads. Resolve disk space/permissions and restart to retry preserved work. For a corrupt backlog,
+stop the container, back up the full data volume, move only `notifications/outbox.json` aside and restart. This discards
+pending generic alerts while keeping `vapid.json` and `subscriptions.json`. Never modify managed state while running.
+Disabling HTTPS/alert configuration leaves saved state dormant; re-enabling prunes expired or revoked work before sends.
+
+Open **On this device → Alert delivery · all registered devices** for private aggregate pending, previously attempted
+and in-flight counts, plus the earliest scheduled attempt in your device's time. Counts overlap and are a snapshot;
+**Refresh delivery status** updates them. This panel loads only when opened. It displays no other device identifiers or
+notification contents. **Clear pending alerts** explicitly clears the station-wide backlog, without disabling browser
+registrations or sending any tests. Already-sending requests cannot be recalled, and later download events can enqueue
+new alerts. Closing/reopening cancels stale status requests without overwriting a newer snapshot.
+
+Owner-only `GET /api/notifications/outbox` returns aggregate status; JSON-only `DELETE` on the same path clears it. Both
+use the existing session/origin checks and `Cache-Control: no-store`. Explicit test alerts share the two outbound
+request slots with background delivery; a busy test returns an error rather than creating an unbounded request queue.
+Private webhooks and a permanent alert history remain future work.
 
 **Disable alerts on this device** revokes its browser subscription first, including when the station is unreachable. The
-browser's site settings can also revoke notification permission. Locking the dashboard, expiring a session or rotating
-the station password does not revoke previously authorized push registrations. To revoke every registered browser, stop
-the container, remove `/data/notifications/subscriptions.json` from the volume and restart; keep `vapid.json`. To stop
-all station delivery temporarily, unset `WEB_PUSH_SUBJECT` and recreate the container. Do not delete the signing
-identity during ordinary upgrades. Back up the complete private `notifications` directory with the rest of `/data`; a
-restored browser can be re-enabled if its registration has expired.
+browser's site settings can also revoke notification permission. Successful server revocation removes its queued alerts;
+an already-sending request may still finish. Locking the dashboard, expiring a session or rotating the station password
+does not revoke previously authorized push registrations. To revoke every registered browser, stop the container, remove
+`/data/notifications/subscriptions.json` from the volume and restart; keep `vapid.json`. To stop all station delivery
+temporarily, unset `WEB_PUSH_SUBJECT` and recreate the container. Do not delete the signing identity during ordinary
+upgrades. Back up the complete private `notifications` directory with the rest of `/data`; a restored browser can be
+re-enabled if its registration has expired.
 
 ### Remaining roadmap
 
-The next candidates are bulk organization, richer hardware metrics, optional private webhooks and a durable notification
-outbox. Media previews and per-job ZIP exports are implemented in version 2.5. Any retention policy should show what it
-will remove and require explicit owner configuration. Engine updates should be reviewed and pinned.
+The next candidates are container-quota diagnostics, optional private webhooks and richer alert history. Torrent file
+review, terminal scheduling and completion destinations are implemented in version 2.9. OS-visible system readings and
+optional CPU temperature are implemented in version 2.8, durable alert retries in 2.7, bulk library actions in 2.6 and
+media/ZIP delivery in 2.5. Any retention policy should show what it will remove and require explicit owner
+configuration. Engine updates should be reviewed and pinned.
 
 [share-target]: https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps/Manifest/Reference/share_target
+
+## New in version 2.9
+
+### Choose torrent and magnet files
+
+New torrent and magnet jobs fetch metadata first, then pause with **Choose torrent files to continue**. Open **Choose
+torrent files**, select the files you want and press **Download selected files**. Select all and clear selection are
+available; an empty selection cannot start. The checklist shows relative names and logical byte sizes. Magnet metadata
+requires reachable peers even before file names can be shown. A `.torrent` upload or URL provides metadata directly.
+File review supports up to 2,000 entries.
+
+Your explicit one-based selection is saved across restarts, reapplied before payload transfer and checked against the
+pinned metadata. The per-job size limit applies to selected logical bytes. Only selected files are published. BitTorrent
+pieces can span file boundaries, so the engine may temporarily receive neighboring bytes; this is not a strict
+network-byte or disk quota. Unselected output and metadata are excluded from saved files. Selection is locked once
+approved; pause and **Restart** to review a different selection before payload completion. Restart discards partial
+progress. Legacy jobs already in history retain their existing all-files behavior; new jobs require review.
+
+### Terminal commands and one-shot schedules
+
+Run these from the project directory while the container is running. Commands authenticate through the existing
+container password and talk to the running server on loopback. They do not launch another queue or accept shell code.
+Use `list` to find a job UUID; substitute it for `JOB_UUID` below.
+
+```bash
+docker compose exec linkdock node dist-server/server/cli.js list
+docker compose exec linkdock node dist-server/server/cli.js pause JOB_UUID
+docker compose exec linkdock node dist-server/server/cli.js resume JOB_UUID
+docker compose exec linkdock node dist-server/server/cli.js pause all
+docker compose exec linkdock node dist-server/server/cli.js resume all
+```
+
+`pause all` persists a station-wide gate: current work pauses and newly submitted jobs wait. `resume all` clears that
+gate and resumes paused jobs whose torrent file selection is approved. A single-job resume does not clear the global
+gate. Daily windows, speed limits, concurrency and free-space holds still apply. Completed, canceled or failed jobs
+cannot be resumed; metadata-review torrents need a selection first. Repeating an already satisfied pause/resume is
+harmless.
+
+```bash
+docker compose exec linkdock node dist-server/server/cli.js pause all --at '2026-10-20T23:00:00+03:00'
+docker compose exec linkdock node dist-server/server/cli.js resume all --at '2026-10-21T07:00:00+03:00'
+docker compose exec linkdock node dist-server/server/cli.js schedules
+docker compose exec linkdock node dist-server/server/cli.js unschedule SCHEDULE_UUID
+```
+
+Choose future timestamps within the next year, including seconds and an explicit `Z` or UTC offset. These are one-shot
+instants, not local recurring times. UTC-normalized actions and results persist in private `controls.json`, with a
+maximum of 64 retained/pending entries. The running server checks about once a second. Overdue actions run in
+timestamp/FIFO order before recovered workers start; an action recorded as running is replayed idempotently after a
+restart. An offline Pi cannot execute at the requested instant. Pending actions can be canceled; executing actions
+cannot. A deleted/unsuitable target records a failure. `all` evaluates eligible jobs at execution time. Check
+`schedules` for results. Use Station controls for recurring daily windows.
+
+Additional commands support the same per-job options as the browser:
+
+```bash
+docker compose exec linkdock node dist-server/server/cli.js files JOB_UUID
+docker compose exec linkdock node dist-server/server/cli.js select JOB_UUID '1,3-5'
+docker compose exec linkdock node dist-server/server/cli.js destination JOB_UUID 'Media/Travel'
+docker compose exec linkdock node dist-server/server/cli.js destination JOB_UUID -
+docker compose exec linkdock node dist-server/server/cli.js retry-move JOB_UUID
+docker compose exec linkdock node dist-server/server/cli.js --help
+```
+
+`files` lists stable torrent indexes after metadata arrives. `select` requires a paused job awaiting its first
+selection; `-` clears an unstarted completion destination. Non-Docker installations can use `pnpm station --help` after
+building, with the same `.env` and port as their running server. The access token is read from the environment, never a
+command argument. Command results omit source URLs and session credentials. The terminal needs permission to access the
+running container or its environment. Keep that password private as with the dashboard.
+
+### Move files on completion
+
+Open **Move on completion** on a job and save a folder such as `Movies` or `Media/Travel`. This is a physical
+destination, separate from the logical **Organize download** folder. Leave it empty to retain normal station storage.
+The default completion root is `/data/completed` in Docker, or `DATA_DIRECTORY/completed` outside Docker. Paths must be
+relative, without dot-prefixed segments, backslashes or traversal. The application refuses symlinked destination
+directories.
+
+Each job writes to `<completion-root>/<folder>/<job-uuid>/files/`, preserving selected torrent/media subfolders. A
+direct download uses its safe display filename. UUID directories avoid collisions between equally named downloads. These
+job directories belong to LinkDock; do not add unrelated files or edit its ownership journal. Browser downloads,
+eligible previews and collection ZIP exports continue to use the moved files. **Delete file & record** also deletes that
+job's managed destination directory. Other jobs and sibling directories are retained.
+
+Set a destination while downloading, or apply one to an already completed job. Moving a completed job briefly requeues
+it and obeys station holds. Payload completion is checkpointed before copying. Files stream into private destination
+staging, are flushed, and are published by rename after a SHA-256 recovery journal is prepared. History switches to the
+new location before internal originals are removed. Cross-filesystem moves are supported and temporarily need space for
+both copies. A pause/shutdown interrupts copying; resume uses saved payload rather than downloading the source again. A
+prepared destination from an interrupted history commit is verified before adoption. Existing unowned folders are never
+overwritten. This is application recovery, not a substitute for backups or reliable storage hardware.
+
+If a move fails, the job remains available from its internal copy and **Move needs attention** appears. Fix space, mount
+availability or UID 1000 write permissions, then choose **Retry move** or use `retry-move`. Retry uses saved bytes.
+After payload preparation, the assigned destination is locked for recovery; retry that destination rather than changing
+it. Successfully moved files remain at their published location. Keep the configured completion root consistent across
+upgrades and back up both `/data` and external completion storage. Private staging or original copies can remain after
+an interruption; a retry reuses or replaces only that job's owned staging.
+
+To use a separate USB/SSD directory, first create an existing host directory, for example
+`/mnt/storage/linkdock-completed`, and grant container UID/GID 1000 write access. Set this in `.env`:
+
+```dotenv
+COMPLETED_HOST_DIRECTORY=/mnt/storage/linkdock-completed
+```
+
+Enable the bind mount:
+
+```bash
+docker compose -f compose.yaml -f compose.destinations.yaml config
+docker compose -f compose.yaml -f compose.destinations.yaml up -d --build
+```
+
+The override refuses to create a missing host source and mounts it at `/completed`, setting `COMPLETED_DIRECTORY` inside
+the container. Continue using the override when recreating the service. Combine cookie/temperature overrides if already
+enabled. Do not put completion output inside the internal `/data/downloads` or metadata directories. Choose the external
+completion root before moving jobs; changing it later does not relocate existing saved files. Backups and physical
+Pi/cross-device acceptance remain owner deployment checks.
+
+Owner-authenticated JSON API additions:
+
+| Method | Endpoint                               | Payload or result                               |
+| ------ | -------------------------------------- | ----------------------------------------------- |
+| GET    | `/api/control`                         | Global paused flag and scheduled action history |
+| POST   | `/api/control`                         | `action`, `target`, optional `at`               |
+| DELETE | `/api/control/:scheduleId`             | Cancel pending schedule                         |
+| POST   | `/api/downloads/:id/torrent-selection` | Nonempty one-based `indexes` array              |
+| POST   | `/api/downloads/:id/destination`       | Relative `directory` or null                    |
+| POST   | `/api/downloads/:id/retry-move`        | Empty JSON; use saved output                    |
 
 ## Start here: Raspberry Pi + Docker
 
@@ -365,12 +645,14 @@ MiB**, then aria2 validates its bencoded contents. Remote metadata is fetched th
 public-address checks before being handed to the engine.
 
 Peer upload can occur while downloading. **Post-completion seeding is disabled** so completed jobs release their queue
-slot. There is no ratio configuration or per-file selection before transfer. Pause retains private data and aria2
-control files; Resume submits the source again and reuses verified pieces. Magnet metadata may need to be fetched again.
-Remote torrent metadata is pinned on first fetch so a changing URL cannot mix another torrent into resumed staging.
-Restart clears that remote metadata snapshot as well as partial data; uploaded metadata stays attached to its job.
-Cancellation removes the job's active GIDs and partial output; Restart begins again. All files in the torrent are
-requested. The dashboard provides a separate save link for each resulting file; there is no all-files ZIP operation.
+slot. There is no ratio configuration. New jobs retrieve metadata and pause for explicit file selection before payload
+transfer. Pause retains private data and aria2 control files; Resume reapplies the approved selection and reuses
+verified pieces. Retrieved magnet metadata is pinned locally for subsequent resumes. Remote torrent metadata is pinned
+on first fetch so a changing URL cannot mix another torrent into resumed staging. Restart clears that remote metadata
+snapshot as well as partial data; uploaded metadata stays attached to its job. Cancellation removes the job's active
+GIDs and partial output; Restart begins again. Only selected files are published for new jobs. Legacy jobs keep their
+existing all-files behavior. Completed jobs provide individual save links and a streamed **Save all as ZIP** action for
+multi-file output.
 
 ### Network and resource limits
 
@@ -626,9 +908,12 @@ authentication.
 - `server/downloads`: queue, persistence, filesystem naming, HTTP streams and routes.
 - `server/engines`: checked media proxy, bounded subprocesses, credentials, manifests and torrent RPC.
 - `server/policy`: validated persistent preferences, daily windows and free-space checks.
-- `server/notifications`: private registrations, signing identity and bounded encrypted delivery.
+- `server/notifications`: durable bounded outbox, retry classification and private registrations, signing identity and
+  bounded encrypted delivery.
+- `server/downloads/bulkLibrary.ts`: bounded whole-selection preflight, atomic labels and per-record deletion outcomes.
 - `server/downloads/delivery`: checked media streams, byte ranges, portable ZIP exports and resource leases.
-- `server/health`: lazy, bounded and cached command checks plus private process/storage diagnostics.
+- `server/health`: independent bounded system sampling, fixed thermal readers and lazy, bounded and cached command
+  checks plus private process/storage diagnostics.
 - `server/config.ts`: the sole environment reader.
 - `tests`: behavior and integration tests with isolated temporary state.
 - `scripts`: complementary code-convention validation.
@@ -748,8 +1033,16 @@ upgrading. Version 2.2 introduces a default 1 GiB free-space buffer; change it i
 must include `settings.json` as well as the existing history and files. Older versions cannot read paused states;
 restore a complete pre-upgrade backup if you need to downgrade. Version 2.3 adds optional priority fields and a private
 notification directory; preserve that identity and its registrations when upgrading. Version 2.4 adds optional library
-metadata in history and read-only diagnostics. Version 2.5 adds media/ZIP routes without changing persisted history.
-Older releases do not display organization. HTTPS alert setup is opt-in.
+metadata in history and read-only diagnostics. Version 2.5 adds media/ZIP routes; version 2.6 adds bulk operations
+without new deployment variables, dependencies or persisted-history fields. Version 2.7 adds an optional private
+notification outbox; keep the complete notification directory. Version 2.8 adds private system readings and an optional
+read-only temperature override; retain that override in Compose commands if enabled. Downgrading to 2.6 will not drain
+the new backlog. Version 2.9 adds optional torrent selection, payload-publication and destination fields plus
+`controls.json`. Preserve that file and the complete completion storage alongside `/data`. Keep any
+`compose.destinations.yaml` override when recreating the service; moved files stay on that mount. Avoid downgrading
+after moving files: older versions do not resolve completion destinations or honor the new file-selection state. Restore
+both data and completion storage from a matching pre-upgrade backup if a downgrade is necessary. Older releases do not
+display organization. HTTPS alert setup is opt-in.
 
 Media sites change frequently. To update an extractor, change its explicit version in `requirements-media.txt`, rebuild
 with `docker compose build --pull --no-cache` and recreate the service. Review engine release notes and test a small
@@ -767,9 +1060,10 @@ torrent metadata handoff and quota cleanup, theme persistence, artifact containm
 DNS answers, filenames, real HTTP transport with pinned test DNS, redirects, streaming completion, unknown-length
 limits, cancellation, concurrency, retry, restart recovery, cookie authentication, CSRF, invalid links, form errors,
 deletion confirmation and formatting. Version 2.3 also tests atomic batches, duplicate review, priority persistence,
-shared-link review, encrypted push transport, registration expiry and public-only worker caching. HTTP upstreams are
-local test servers or deterministic streams; tests do not depend on a public download service. Test state is isolated
-and removed after each case.
+shared-link review, encrypted push transport, registration expiry and public-only worker caching. Version 2.6 checks
+whole-selection label rollback, explicit deletion review, partial I/O failures and polling-safe bounded selection. HTTP
+upstreams are local test servers or deterministic streams; tests do not depend on a public download service. Test state
+is isolated and removed after each case.
 
 Before a pull request:
 

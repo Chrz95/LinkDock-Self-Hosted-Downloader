@@ -26,6 +26,11 @@ import { isWindowOpen } from '../policy/schedule.js';
 import { ensureStorage, StorageHoldError } from '../policy/storage.js';
 import { validateLibraryMetadata } from '../../shared/library.js';
 import { ArchiveAccess } from './delivery/access.js';
+import { validateTorrentSelection, validateDestination } from '../../shared/jobOptions.js';
+import { QueueControls } from '../control/service.js';
+import { moveCompleted } from './completion/move.js';
+import { destinationDirectory, removeManagedDirectory, safeDirectory } from './completion/paths.js';
+import { readJournal } from './completion/journal.js';
 
 /** Persistent bounded queue; only lifecycle events write history, progress stays in memory. */
 export class DownloadQueue {
@@ -35,6 +40,7 @@ export class DownloadQueue {
   private isStopping = false;
   private readonly torrentEngine: TorrentRpc;
   readonly policy: PolicyStore;
+  readonly controls: QueueControls;
   private readonly workers = new Map<string, Promise<void>>();
   private readonly policyTimer: ReturnType<typeof setInterval>;
   private minimumFreeBytes = 0;
@@ -46,8 +52,9 @@ export class DownloadQueue {
    */
   constructor(private readonly configuration: ServerConfig) {
     this.torrentEngine = new TorrentRpc(configuration.dataDirectory);
-    this.store = new DownloadStore(configuration.dataDirectory);
+    this.store = new DownloadStore(configuration.dataDirectory, configuration.completedDirectory);
     this.policy = new PolicyStore(configuration.dataDirectory);
+    this.controls = new QueueControls(configuration.dataDirectory, this);
     const resumableIds = new Set(
       this.store.jobs
         .filter((job) => job.status === DOWNLOAD_STATUS.queued || job.status === DOWNLOAD_STATUS.paused)
@@ -120,6 +127,11 @@ export class DownloadQueue {
   addBatch(urls: unknown, sourceType?: unknown, quality?: unknown): BatchResult {
     const review = reviewBatch(urls, sourceType, quality, this.store.jobs);
     const added = review.unique.map(createQueuedJob);
+    for (const job of added) {
+      if (job.sourceType === SOURCE_TYPE.torrent || job.sourceType === SOURCE_TYPE.magnet) {
+        job.torrentSelection = {};
+      }
+    }
     if (added.length) {
       this.store.jobs.unshift(...added.toReversed());
       try {
@@ -157,6 +169,7 @@ export class DownloadQueue {
       createdAt: new Date().toISOString(),
       finishedAt: null,
       errorMessage: null,
+      torrentSelection: {},
     };
     this.store.jobs.unshift(job);
     this.store.save();
@@ -181,7 +194,7 @@ export class DownloadQueue {
 
   /** Schedules by priority, then FIFO, without exceeding the configured connection count. */
   schedule(): void {
-    if (this.isStopping) {
+    if (this.isStopping || !this.controls.ready) {
       return;
     }
     const holdReason = this.getHoldReason();
@@ -239,11 +252,17 @@ export class DownloadQueue {
     if (job.status !== DOWNLOAD_STATUS.queued && job.status !== DOWNLOAD_STATUS.downloading) {
       throw new Error('Only queued or active downloads can be paused.');
     }
+    const previous = { status: job.status, stage: job.stage, bytesPerSecond: job.bytesPerSecond };
     job.status = DOWNLOAD_STATUS.paused;
     job.stage = 'Paused by you';
     job.bytesPerSecond = 0;
+    try {
+      this.store.save();
+    } catch (error) {
+      Object.assign(job, previous);
+      throw error;
+    }
     this.controllers.get(job.id)?.abort();
-    this.store.save();
     await this.workers.get(job.id);
   }
 
@@ -252,18 +271,87 @@ export class DownloadQueue {
    * @param {DownloadJob} job - Paused record whose worker has stopped.
    */
   resume(job: DownloadJob): void {
+    if (job.torrentSelection?.files && !job.torrentSelection.selected) {
+      throw new Error('Choose torrent files before resuming this download.');
+    }
     if (job.status !== DOWNLOAD_STATUS.paused || this.controllers.has(job.id)) {
       throw new Error('Wait for the transfer to pause before resuming it.');
     }
+    const previous = { status: job.status, errorMessage: job.errorMessage, stage: job.stage };
     job.status = DOWNLOAD_STATUS.queued;
     job.errorMessage = null;
     job.stage = 'Waiting to resume';
-    this.store.save();
+    try {
+      this.store.save();
+    } catch (error) {
+      Object.assign(job, previous);
+      throw error;
+    }
     this.schedule();
   }
 
+  /** Pauses a snapshot of all active/waiting jobs before releasing workers.
+   * @returns {Promise<number>} Changed job count after workers release their files.
+   */
+  async pauseAll(): Promise<number> {
+    const jobs = this.store.jobs.filter(
+      (job) => job.status === DOWNLOAD_STATUS.queued || job.status === DOWNLOAD_STATUS.downloading,
+    );
+    const previous = jobs.map((job) => ({ job, status: job.status, stage: job.stage, speed: job.bytesPerSecond }));
+    for (const job of jobs) {
+      job.status = DOWNLOAD_STATUS.paused;
+      job.stage = 'Paused from terminal controls';
+      job.bytesPerSecond = 0;
+    }
+    try {
+      this.store.save();
+    } catch (error) {
+      for (const item of previous) {
+        item.job.status = item.status;
+        item.job.stage = item.stage;
+        item.job.bytesPerSecond = item.speed;
+      }
+      throw error;
+    }
+    for (const job of jobs) {
+      this.controllers.get(job.id)?.abort();
+    }
+    await Promise.allSettled(jobs.map((job) => this.workers.get(job.id)));
+    return jobs.length;
+  }
+
+  /** Requeues paused jobs with approved torrent selections; the global gate is owned by controls.
+   * @returns {number} Changed job count.
+   */
+  resumeAll(): number {
+    const jobs = this.store.jobs.filter(
+      (job) =>
+        job.status === DOWNLOAD_STATUS.paused &&
+        !this.controllers.has(job.id) &&
+        (!job.torrentSelection?.files || job.torrentSelection.selected),
+    );
+    const previous = jobs.map((job) => ({ job, stage: job.stage, error: job.errorMessage }));
+    for (const job of jobs) {
+      job.status = DOWNLOAD_STATUS.queued;
+      job.stage = 'Waiting to resume';
+      job.errorMessage = null;
+    }
+    try {
+      this.store.save();
+    } catch (error) {
+      for (const item of previous) {
+        item.job.status = DOWNLOAD_STATUS.paused;
+        item.job.stage = item.stage;
+        item.job.errorMessage = item.error;
+      }
+      throw error;
+    }
+    this.schedule();
+    return jobs.length;
+  }
+
   /**
-   * Restarts a failed or cancelled download from byte zero.
+   * Restarts unfinished transfers or recovers payload bytes that were already published.
    * @param {DownloadJob} job - Terminal record without a live worker.
    */
   retry(job: DownloadJob): void {
@@ -274,6 +362,15 @@ export class DownloadQueue {
         job.status !== DOWNLOAD_STATUS.paused)
     ) {
       throw new Error('This download cannot be retried yet.');
+    }
+    if (job.payloadReady) {
+      job.status = DOWNLOAD_STATUS.queued;
+      job.finishedAt = null;
+      job.errorMessage = null;
+      job.stage = 'Recovering saved files';
+      this.store.save();
+      this.schedule();
+      return;
     }
     Object.assign(job, {
       status: DOWNLOAD_STATUS.queued,
@@ -287,6 +384,8 @@ export class DownloadQueue {
       peers: undefined,
       resumeValidator: undefined,
       resumeSourceUrl: undefined,
+      torrentSelection: job.torrentSelection ? {} : undefined,
+      payloadReady: undefined,
     });
     this.clearPartial(job);
     if (job.sourceType === SOURCE_TYPE.torrent && !job.url.startsWith(SOURCE_URL.uploadedTorrent)) {
@@ -299,24 +398,57 @@ export class DownloadQueue {
   }
 
   /**
-   * Removes terminal history and its associated file; active jobs must be cancelled first.
-   * @param {DownloadJob} job - Record to permanently delete.
+   * Preflights deletion without modifying history or files.
+   * @param {DownloadJob} job - Existing owner-selected record.
    */
-  remove(job: DownloadJob): void {
+  assertRemovable(job: DownloadJob): void {
+    if (!this.store.jobs.includes(job)) {
+      throw new Error('Download no longer exists. Refresh the selection.');
+    }
     if (this.archiveAccess.has(job.id)) {
       throw new Error('Wait for the ZIP download to finish, or cancel it in your browser, before deleting this job.');
     }
-    if (this.controllers.has(job.id) || job.status === DOWNLOAD_STATUS.queued) {
+    if (
+      this.controllers.has(job.id) ||
+      job.status === DOWNLOAD_STATUS.queued ||
+      job.status === DOWNLOAD_STATUS.downloading
+    ) {
       throw new Error('Cancel this download and wait for cleanup before deleting it.');
     }
-    if (job.status === DOWNLOAD_STATUS.completed) {
-      rmSync(this.store.getFilePath(job.id), { force: true });
+  }
+
+  /**
+   * Removes files and terminal history, retaining a retryable record if the history write fails.
+   * @param {DownloadJob} job - Record to permanently delete.
+   */
+  remove(job: DownloadJob): void {
+    this.assertRemovable(job);
+    if (job.destination) {
+      try {
+        const directory = destinationDirectory(this.store.completedDirectory, job);
+        if (existsSync(directory)) {
+          safeDirectory(directory);
+          readJournal(directory, job.id);
+          removeManagedDirectory(directory);
+        }
+      } catch (error) {
+        if (job.destination.moved || (error as NodeJS.ErrnoException).code !== 'ENOENT') {
+          throw error;
+        }
+      }
     }
+    rmSync(this.store.getFilePath(job.id), { force: true });
     rmSync(`${this.store.getFilePath(job.id)}${OUTPUT.outputSuffix}`, { recursive: true, force: true });
     this.clearPartial(job);
     rmSync(path.join(this.configuration.dataDirectory, OUTPUT.metadataDirectory, `${job.id}.torrent`), { force: true });
-    this.store.jobs.splice(this.store.jobs.indexOf(job), 1);
-    this.store.save();
+    const index = this.store.jobs.indexOf(job);
+    this.store.jobs.splice(index, 1);
+    try {
+      this.store.save();
+    } catch (error) {
+      this.store.jobs.splice(index, 0, job);
+      throw error;
+    }
   }
 
   /**
@@ -361,6 +493,94 @@ export class DownloadQueue {
   }
 
   /**
+   * Saves a nonempty reviewed selection before requeuing, without changing existing partial payload choices.
+   * @param {DownloadJob} job - Paused metadata-ready torrent.
+   * @param {unknown} input - One-based file indexes.
+   */
+  selectTorrentFiles(job: DownloadJob, input: unknown): void {
+    if (
+      job.status !== DOWNLOAD_STATUS.paused ||
+      this.controllers.has(job.id) ||
+      !job.torrentSelection?.files ||
+      job.torrentSelection.selected
+    ) {
+      throw new Error('Wait for torrent metadata, or restart the job to review a different selection.');
+    }
+    const selected = validateTorrentSelection(input, job.torrentSelection.files);
+    const total = job.torrentSelection.files
+      .filter((file) => selected.includes(file.index))
+      .reduce((sum, file) => sum + file.sizeBytes, 0);
+    if (!Number.isSafeInteger(total) || total > this.configuration.maximumFileBytes) {
+      throw new Error('Selected files exceed the configured size limit.');
+    }
+    const previous = { selection: job.torrentSelection, status: job.status, stage: job.stage };
+    job.torrentSelection = { files: previous.selection.files, selected };
+    job.status = DOWNLOAD_STATUS.queued;
+    job.stage = 'Waiting to download selected files';
+    try {
+      this.store.save();
+    } catch (error) {
+      job.torrentSelection = previous.selection;
+      job.status = previous.status;
+      job.stage = previous.stage;
+      throw error;
+    }
+    this.schedule();
+  }
+
+  /**
+   * Saves a completion folder before payload publication, or queues a move of an existing saved download.
+   * @param {DownloadJob} job - Owner-selected existing record.
+   * @param {unknown} input - Relative directory, or null to retain internal storage.
+   */
+  setDestination(job: DownloadJob, input: unknown): void {
+    if (
+      job.destination?.moved ||
+      (job.payloadReady && job.status !== DOWNLOAD_STATUS.completed) ||
+      this.archiveAccess.has(job.id) ||
+      (job.status === DOWNLOAD_STATUS.completed && this.controllers.has(job.id))
+    ) {
+      throw new Error('Wait for the move or browser ZIP to finish. Published destinations cannot be changed.');
+    }
+    if (job.payloadReady && job.destination && input !== job.destination.directory) {
+      throw new Error('Retry the existing completion destination after checking its mount and permissions.');
+    }
+    const previous = {
+      destination: job.destination,
+      payloadReady: job.payloadReady,
+      status: job.status,
+      stage: job.stage,
+      finishedAt: job.finishedAt,
+    };
+    const directory = input === null ? null : validateDestination(input);
+    job.destination = directory ? { directory, moved: false, error: null } : undefined;
+    if (directory && job.status === DOWNLOAD_STATUS.completed) {
+      job.payloadReady = true;
+      job.status = DOWNLOAD_STATUS.queued;
+      job.stage = 'Waiting to move saved files';
+      job.finishedAt = null;
+    }
+    try {
+      this.store.save();
+    } catch (error) {
+      Object.assign(job, previous);
+      throw error;
+    }
+    this.schedule();
+  }
+
+  /**
+   * Retries a failed move using saved payload bytes rather than contacting the source again.
+   * @param {DownloadJob} job - Completed download whose destination move failed.
+   */
+  retryMove(job: DownloadJob): void {
+    if (!job.destination || job.destination.moved || job.status !== DOWNLOAD_STATUS.completed) {
+      throw new Error('Only completed downloads with an unfinished destination can retry a move.');
+    }
+    this.setDestination(job, job.destination.directory);
+  }
+
+  /**
    * Observes future terminal transitions without delaying download workers for delivery work.
    * @param {(job: DownloadJob) => void} listener - Nonblocking terminal-event consumer.
    * @returns {() => void} Removes the observer during shutdown.
@@ -394,15 +614,33 @@ export class DownloadQueue {
         ),
         reservedFreeBytes: settings.reserveGib * LIMIT.bytesPerGibibyte,
       };
-      if (!job.sourceType || job.sourceType === SOURCE_TYPE.direct) {
+      if (!job.payloadReady && (!job.sourceType || job.sourceType === SOURCE_TYPE.direct)) {
         await transferToDisk(job, this.store, controller.signal, this.configuration.maximumFileBytes, {
           bytesPerSecond: workerConfiguration.downloadBytesPerSecond,
           reservedFreeBytes: workerConfiguration.reservedFreeBytes,
           onCheckpoint: () => this.store.save(),
         });
-      } else {
+      } else if (!job.payloadReady) {
         await transferExternal(job, this.store, controller.signal, workerConfiguration, this.torrentEngine);
       }
+      job.payloadReady = true;
+      this.store.save();
+      controller.signal.throwIfAborted();
+      if (job.destination && !job.destination.moved) {
+        job.stage = 'Moving saved files to destination';
+        try {
+          await moveCompleted(job, this.store, controller.signal);
+        } catch (error) {
+          if (controller.signal.aborted) {
+            throw error;
+          }
+          logger.error('Completion move failed; internal payload retained.', error);
+          job.destination.error =
+            'Move failed. Files remain on the station. Check destination storage, permissions and service logs.';
+          job.stage = job.destination.error;
+        }
+      }
+      controller.signal.throwIfAborted();
       job.status = DOWNLOAD_STATUS.completed;
       job.totalBytes = job.receivedBytes;
     } catch (error) {
@@ -445,12 +683,14 @@ export class DownloadQueue {
    */
   async stop(): Promise<void> {
     this.isStopping = true;
+    const controlsStopped = this.controls.stop();
     clearInterval(this.policyTimer);
     this.suspendActive('Waiting for the station to restart');
     for (const controller of this.controllers.values()) {
       controller.abort();
     }
     await Promise.allSettled(this.workers.values());
+    await controlsStopped;
     this.torrentEngine.stop();
   }
 
@@ -471,6 +711,9 @@ export class DownloadQueue {
 
   /** Returns the current automatic hold. @returns {string | null} Human-readable scheduler reason. */
   private getHoldReason(): string | null {
+    if (this.controls.isPaused) {
+      return 'All downloads paused from terminal controls';
+    }
     const { settings } = this.policy;
     if (!isWindowOpen(settings)) {
       return `Waiting for ${settings.windowStart}–${settings.windowEnd} (${settings.timeZone})`;

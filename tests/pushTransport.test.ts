@@ -31,13 +31,14 @@ const subscription: BrowserSubscription = {
 /**
  * Captures the transport without issuing network requests or retaining provider response bodies.
  * @param {number} statusCode - Fake provider HTTP status.
+ * @param {Record<string, string>} [headers] - Synthetic provider headers.
  * @returns {object} Encrypted request and response controls.
  */
-function fakeProvider(statusCode: number) {
+function fakeProvider(statusCode: number, headers: Record<string, string> = {}) {
   const destroy = vi.fn();
   const end = vi.fn((_body: Buffer) => {
     const [, , callback] = vi.mocked(https.request).mock.calls[0]!;
-    queueMicrotask(() => callback!({ statusCode, destroy } as unknown as import('node:http').IncomingMessage));
+    queueMicrotask(() => callback!({ statusCode, headers, destroy } as unknown as import('node:http').IncomingMessage));
   });
   const request = Object.assign(new EventEmitter(), { end });
   vi.mocked(https.request).mockReturnValue(request as unknown as import('node:http').ClientRequest);
@@ -79,4 +80,15 @@ it.each([EXPIRED_STATUS, REDIRECT_STATUS])('retains only status for rejected pro
   fakeProvider(status);
   await expect(sendPush(subscription, 'Generic alert', keys, CONTACT)).rejects.toMatchObject({ statusCode: status });
   expect(https.request).toHaveBeenCalledTimes(1);
+});
+
+it('retains a bounded Retry-After delay without keeping provider bodies or endpoint metadata', async () => {
+  const rateLimited = 429;
+  const seconds = 120;
+  const millisecondsPerSecond = 1_000;
+  fakeProvider(rateLimited, { 'retry-after': String(seconds), 'x-private': 'discard-this-header' });
+  await expect(sendPush(subscription, 'Generic alert', keys, CONTACT)).rejects.toMatchObject({
+    statusCode: rateLimited,
+    retryAfterMilliseconds: seconds * millisecondsPerSecond,
+  });
 });

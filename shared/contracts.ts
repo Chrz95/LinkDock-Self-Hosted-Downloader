@@ -31,6 +31,9 @@ export interface DownloadJob {
   resumeSourceUrl?: string;
   priority?: import('./batch.js').JobPriority;
   library?: import('./library.js').LibraryMetadata;
+  torrentSelection?: import('./jobOptions.js').TorrentSelection;
+  destination?: import('./jobOptions.js').CompletionDestination;
+  payloadReady?: boolean;
 }
 
 /** Live queue and filesystem snapshot. */

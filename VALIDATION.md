@@ -1,4 +1,4 @@
-# LinkDock 2.5 delivery and validation
+# LinkDock 2.9 delivery and validation
 
 Validated on 18 October 2026 using Node 24.19.0 and the committed dependency lockfile. The project pins pnpm 12.14.0;
 this session's provided command wrapper reports 11.25.0. A fresh Docker/Pi toolchain build remains unverified. Version
@@ -90,6 +90,104 @@ manifest-only output, Unicode/empty entries, changed identities, bounded leases,
 disconnect. UI tests check explicit media setup, ordinary-save fallbacks, quiet controls, native errors, indexed
 carousel previews, cancellation and ZIP request handoff without a whole-file Blob.
 
+## Version 2.6 changes
+
+- Touch-sized per-row selection and select-visible capped at 50 explicitly captured unique IDs.
+- Selection survives progress polling without automatically including new arrivals; filter changes clear it.
+- Polling removes selection and destructive review when a selected row leaves the current filtered view.
+- Opt-in folder edits and keep/add/remove/replace tag modes; combined partial edits preserve untouched labels.
+- Validation of every resulting tag set before one atomic history write, with complete in-memory rollback on failure.
+- Owner-only bulk JSON route with bounded UUID membership, existing origin/session checks and no-store responses.
+- Separate filename/recorded-byte deletion review, explicit confirmation, cancellation and in-flight controls.
+- Whole-selection preflight for terminal states, worker cleanup, missing IDs and active ZIP exports.
+- Sequential physical removal with explicit per-record outcomes, retained failed selections and no automatic retries.
+- Restored in-memory history entry after a deletion history-write failure; already-deleted bytes remain irreversible.
+- Wrapping controls in both themes, 44-pixel primary targets and 16-pixel mobile text/select fields.
+- Native compiled-server smoke for real bulk HTTP routing, restart persistence and confirmed physical file deletion.
+- No new runtime/development dependencies, history fields, deployment variables or volumes.
+
+New tests cover malformed/duplicate/oversized IDs, unconfirmed deletion, session/origin/JSON protection, preservation of
+individual labels, Unicode normalization and case-insensitive tag operations, merged tag overflow and all-record
+rollback. Physical-file fixtures verify deletion rejection before any removal, active-export protection, partial I/O
+outcomes and explicit retry. DOM tests cover visible-only membership, a 50-job cap, polling and filter invalidation,
+review focus/filenames, cancellation, double-click protection, opt-in fields and retained failures. No browser render,
+physical Pi, live media provider or public torrent network is used by these tests.
+
+## Version 2.7 changes
+
+- Atomic private outbox with fixed registration fingerprints, finite generic categories and no duplicated source data.
+- At most 64 records and 64 KiB input; duplicate/invalid records fail validation without overwriting damaged state.
+- Durable claims before network attempts, saved retry deadlines and restoration without replaying download history.
+- Network/408/429/5xx retries, bounded exponential backoff, capped seconds/HTTP-date Retry-After and six attempts total.
+- One-hour backlog expiry; revoked/rotated registrations and exhausted entries are pruned before future sends.
+- Coalescing includes in-flight entries without extending expiry or resetting retry budgets.
+- Shared two-request limit for explicit tests and background alerts; tests do not enter the durable outbox.
+- Shutdown preserves pending work; failure to claim/acknowledge state suspends retries without a tight loop.
+- Corrupt/unwritable backlog status remains visible while downloads and explicit browser tests remain separate.
+- Lazy private aggregate status, explicit station-wide clear, retained snapshot/error feedback and cancellation.
+- Clearing/revocation cannot recall an in-flight request and never resurrects its failed record after it settles.
+- No new dependencies, environment variables, download-history fields or data mounts.
+
+Deterministic tests use real private files and browser keys, mocked DNS/HTTPS sends and controlled clocks. They verify
+restart deadlines/counts, expiry, coalescing bounds, Retry-After parsing, error classification, exact registration
+rotation, revocation, shared concurrency, clear races, corrupt/oversized input and real atomic-write failures. They also
+exercise failure to acknowledge an accepted attempt and recovery after storage repair, acknowledging possible duplicate
+delivery. DOM tests cover lazy opening, refresh, explicit clear, stale/failed snapshots and rapid reopening. Native
+compiled-server smoke restores a seeded future retry and checks private aggregate status and clearing without contacting
+any provider. Live device display and exactly-once delivery are not claimed.
+
+## Version 2.8 changes
+
+- Private OS-visible CPU threads, 1/5/15-minute load averages, uptime and total/free memory, each with null fallbacks.
+- Independent process/system labelling; no CPU utilization or container-quota interpretation is inferred.
+- Optional system response field for older-client compatibility and a graceful UI fallback for older backends.
+- CPU-specific thermal types, mounted/native fixed locations, strict millidegree parsing and a plausibility envelope.
+- Bounded 256-byte fields with one overflow byte, nonblocking opens, no final-file symlinks and descriptor cleanup.
+- Five-second cache, cloned results and coalesced sampling with a 500 ms thermal response deadline.
+- Only one physical thermal probe until it settles, even after timeout, so callers cannot accumulate stuck file reads.
+- No automatic monitoring loop, metrics persistence, remote probes, raw paths or unique host identification.
+- Mobile-compatible system grid, independent sample time, clear unavailable guidance and valid-zero handling.
+- Optional `compose.metrics.yaml` existing-source read-only CPU-zone mount; normal runtime privileges stay unchanged.
+- No new dependencies, environment variables or saved-history fields; default deployment needs no override.
+
+Tests use controlled OS counters, injected thermal reads and real bounded filesystem fixtures. They cover independent
+native failures, malformed/oversized thermal values, zero readings, missing fields, unknown zones, symlink rejection,
+cache/copy isolation, coalescing, timeout and recovery without overlapping probes. HTTP checks preserve authenticated
+private snapshots and the minimal public health probe. DOM checks verify units, null/zero semantics and old-backend
+fallback. The native production smoke validates the compiled health route with actual runtime counters or explicit
+unavailability. YAML syntax and override structure are checked locally; actual Docker/Pi binding remains unverified.
+
+## Version 2.9 changes
+
+- New torrent/magnet jobs retrieve metadata with payload paused, then require an explicit nonempty file selection.
+- One-based index lists and pinned metadata persist across restarts; selected logical bytes determine the payload limit.
+- Selected indexes are reapplied before unpausing; unselected output and torrent bookkeeping are excluded from
+  publication.
+- Mobile/keyboard file checklists show file counts and sizes, select-all/clear actions, saved selections and errors.
+- An authenticated loopback CLI supports pause/resume for one/all jobs, file review/selection and destination commands.
+- Persistent global pause holds future submissions. Resume-all skips torrents awaiting file review, while interrupted
+  metadata retrieval can resume. Existing daily windows, concurrency and disk holds remain effective.
+- Bounded one-shot explicit-offset schedules persist with outcomes, cancellation and overdue startup execution.
+- Running commands replay idempotently after restart; persisted malformed controls fail closed before workers start.
+- Per-job physical completion destinations work for active and already completed downloads under a configured root.
+- Cross-filesystem streaming copies use private staging, a flushed hash journal and atomic destination publication.
+- History switches delivery before internal source cleanup; interrupted publication is verified before adoption.
+- Move errors keep internal originals and expose a retry using saved payload rather than a new source request.
+- Destination paths reject traversal, symlink ancestors and overlong UTF-8 segments. Existing unowned output is
+  retained.
+- Moved files retain authenticated downloads, supported previews and multi-file ZIP export; deletion removes managed
+  output.
+- Default completion storage uses the data volume; an optional existing-host bind mount targets USB/SSD storage.
+
+New tests exercise magnet metadata handoff/pinning without unpausing content, selected-size limits, changed manifests,
+index validation, selection rollback and selected-only publication. Control tests execute actual loopback authentication
+under secure-cookie/proxy settings, keep passwords/source queries out of command output, replay overdue controls before
+workers, cancel schedules, retain pause-all through restart and reject malformed timestamps/commands. Completion tests
+use real file copies, restored history, private file/preview/ZIP routes, symlink/collision rejection, a failed history
+commit, digest-mismatch recovery, aborted work and move-only retry after storage repair. DOM tests submit exact selected
+indexes and destinations and retain rejected drafts. The native compiled smoke executes CLI, schedule creation/cancel,
+selection and a saved-payload move without starting a torrent engine or contacting a content source.
+
 ## Executed checks
 
 | Check                                 | Result                                                             |
@@ -98,9 +196,9 @@ carousel previews, cancellation and ZIP request handoff without a whole-file Blo
 | `pnpm lint`                           | Passed; zero errors and zero warnings                              |
 | `pnpm format:check`                   | Passed                                                             |
 | `pnpm typecheck`                      | Passed for browser, tests and server                               |
-| `pnpm test:run`                       | Passed; 226 tests across 32 files                                  |
+| `pnpm test:run`                       | Passed; 347 tests across 44 files                                  |
 | `pnpm build`                          | Passed; frontend and compiled server produced                      |
-| `pnpm test:production`                | Passed; compiled server, private media ranges and ZIP contents     |
+| `pnpm test:production`                | Passed; compiled CLI, controls, moves, outbox and media delivery   |
 | Component-size and source-line checks | Passed; at most 100 lines and 120 columns                          |
 | Named function documentation checks   | Passed; typed parameters and JSDoc present                         |
 | Manual constants/prop review          | Completed for new source, engine and appearance boundaries         |
@@ -204,9 +302,9 @@ suppression comments or ignored TypeScript errors are used.
   not use the HTTP media proxy. This limitation and host-level egress options are explicit in the README.
 - **Application quotas are not kernel quotas.** Torrent and media checks are sampled. Media staging allows temporary
   merge duplication; final publication still requires the entire job to fit the configured ceiling.
-- **Torrent scope:** v1 magnets, uploaded/remote torrent metadata and all files in a torrent are supported. Pause/resume
-  retains verified pieces through the engine; post-completion seeding, pre-download selection and pure v2 magnets remain
-  outside this release.
+- **Torrent scope:** v1 magnets and uploaded/remote torrent metadata support explicit file selection for new jobs.
+  Legacy jobs retain their all-files behavior. Pause/resume retains verified pieces through the engine. Shared pieces
+  may include neighboring file bytes. Post-completion seeding and pure v2 magnets remain outside this release.
 - **Media scope:** one site video or one Instagram post/reel is collected per job. Video height options apply to yt-dlp;
   Instagram uses its available pre-merged formats. Profiles, stories, DRM bypass and bulk account archives are not
   included.
@@ -225,21 +323,27 @@ suppression comments or ignored TypeScript errors are used.
 | HTTPS installation and share menu      | Install, share through the gate, then explicitly submit.                    |
 | Notifications with tab closed          | Grant, test, disable/re-enable; check text and click destination.           |
 | Offline navigation and updates         | Public reconnect page; no API/file cache; worker updates.                   |
+| Bulk selection and deletion review     | Select/filter/poll; inspect filenames, keyboard focus and error feedback.   |
 | Both themes, 200% zoom, reduced motion | Read content and reach all controls using touch and keyboard.               |
 
 The matrix records required manual acceptance work, not completed device tests. Source/CSS review and DOM interaction
 tests passed; this environment does not provide rendered viewport measurements. Proposed roadmap features in the README
 remain future work. Pause/recovery, station controls, mobile installation/sharing, batch priorities and optional alerts
-are implemented; version 2.4 adds organization/private diagnostics and version 2.5 adds media/ZIP delivery. Platform
-acceptance remains pending.
+are implemented; version 2.4 adds organization/private diagnostics, version 2.5 adds media/ZIP delivery and version 2.6
+adds bulk organization and reviewed deletion; version 2.7 adds durable alert retries, and version 2.8 adds system
+readings and optional CPU temperature. Version 2.9 adds torrent selection, terminal scheduling and completion moves.
+Platform acceptance remains pending.
 
 - **Live Web Push and installation:** provider delivery, VAPID contact acceptance, device permission behavior, native
   installation, share-target availability and worker update behavior have not been verified in a real browser. Secure
   contexts, supported browsers and provider connectivity are deployment requirements. Alerts are generic, best effort
-  and transient; no durable retries, provider receipts, private webhook or alert history is claimed.
+  with bounded durable retry attempts. Crashes/storage failures can cause duplicates or missed events; provider
+  receipts, private webhooks and permanent alert history are not claimed.
 - **Health diagnostics:** resident-memory access is unavailable in this restricted runtime and correctly returns null.
-  The panel's native checks do not certify physical Pi thermals, power delivery, drive health or media-source access.
-  Local command availability can differ from the Docker image; physical-device measurements remain deployment checks.
+  System counters can describe the host or a VM rather than container resource limits. Temperature is checked with
+  fixtures; physical Pi sensor availability, thermal calibration and the optional bind mount are unverified. Readings do
+  not certify cooling, power delivery, throttling, drive health or media-source access. Physical-device measurements
+  remain deployment checks.
 - **Native media and ZIP clients:** real browser image/video decoding, codec compatibility, mobile seek controls,
   programmatic attachment handoff and multi-gigabyte/ZIP64 extraction are not certified here. Fixtures validate header
   recognition and HTTP bytes rather than playable video. Previews serve original files; archive data is stored without
@@ -247,8 +351,9 @@ acceptance remains pending.
 - **Docker and physical Pi/ARM64:** no Docker daemon or Raspberry Pi was available. System packages and
   architecture-specific image build behavior were not executed here. Build and smoke-test on the Pi before relying on
   large transfers.
-- **Live torrent network:** no aria2 executable or public peer swarm was used here; RPC lifecycle behavior is tested
-  with fixtures. Port forwarding, tracker reachability, DHT and real swarm throughput depend on the deployment network.
+- **Live torrent network:** real paused metadata/file-selection behavior needs Pi acceptance; no aria2 executable or
+  public peer swarm was used here; RPC lifecycle behavior is tested with fixtures. Port forwarding, tracker
+  reachability, DHT and real swarm throughput depend on the deployment network.
 - **Live site downloads:** no YouTube/Instagram account or cookie jar was accessed. The installed engine parsers and
   progress formatter were verified, but a successful authenticated third-party media download is not claimed.
 - **Browser visual QA:** a bundled Chromium was obtained, but it exited before opening a browser page in this
@@ -257,7 +362,7 @@ acceptance remains pending.
 - **USB storage and HTTPS proxy:** these require the owner's device and network. Configuration examples are provided; no
   remote device, account, certificate or mount was changed.
 
-The handover includes `QUICKSTART.md`, detailed `README.md`, `compose.yaml`, optional `compose.cookies.yaml`, a
-Dockerfile, explicit media engine requirements and all source/tests. Keep the old data volume when upgrading, rebuild
-the image, then verify a small direct file, one site video, an Instagram post and a well-seeded public torrent on your
-Pi.
+The handover includes `QUICKSTART.md`, detailed `README.md`, `compose.yaml`, optional `compose.cookies.yaml`,
+`compose.destinations.yaml`, a Dockerfile, explicit media engine requirements and all source/tests. Keep the old data
+volume when upgrading, rebuild the image, then verify a small direct file, one site video, an Instagram post and a
+well-seeded public torrent on your Pi.

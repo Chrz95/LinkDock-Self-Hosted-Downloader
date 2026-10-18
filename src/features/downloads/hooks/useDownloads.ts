@@ -4,6 +4,8 @@ import { API_PATH, HTTP_METHOD, type DashboardSnapshot, type JobAction } from '.
 import { POLL_INTERVAL_MILLISECONDS } from '../constants';
 import type { BatchResult } from '../../../../shared/batch';
 import type { LibraryMetadata } from '../../../../shared/library';
+import type { BulkLibraryRequest, BulkLibraryResult } from '../../../../shared/bulkLibrary';
+import { mutateLibrary } from '../services/bulkLibrary';
 import {
   addDownload,
   addBatch,
@@ -182,7 +184,25 @@ export function useDownloads() {
       throw error;
     }
   }
+  /**
+   * Applies an explicit bulk selection and refreshes without concealing per-record failures.
+   * @param {BulkLibraryRequest} request - Reviewed labels or deletion command.
+   * @returns {Promise<BulkLibraryResult>} Persisted outcomes for the selection toolbar.
+   */
+  async function handleLibraryAction(request: BulkLibraryRequest): Promise<BulkLibraryResult> {
+    try {
+      const result = await mutateLibrary(request);
+      await refreshDownloads();
+      return result;
+    } catch (error) {
+      if (error instanceof AuthenticationError) {
+        setIsLocked(true);
+      }
+      throw error;
+    }
+  }
   return {
+    handleLibraryAction,
     organizeJob,
     queueBatch,
     queueTorrent,

@@ -1,0 +1,10 @@
+# Optional Pi CPU sensor: verify thermal_zone0/type is cpu-thermal before enabling this override.
+services:
+  linkdock:
+    volumes:
+      - type: bind
+        source: /sys/class/thermal/thermal_zone0
+        target: /run/linkdock-thermal
+        read_only: true
+        bind:
+          create_host_path: false

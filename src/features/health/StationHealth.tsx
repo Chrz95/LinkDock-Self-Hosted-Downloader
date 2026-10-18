@@ -1,6 +1,7 @@
 import { useStationHealth } from './useStationHealth';
 import { StationMetrics } from './StationMetrics';
 import { EngineChecks } from './EngineChecks';
+import { SystemMetrics } from './SystemMetrics';
 
 /**
  * Adds lazy, authenticated operational visibility with ordinary mobile controls.
@@ -15,7 +16,7 @@ export function StationHealth() {
     >
       <summary>
         <span>Station health</span>
-        <span className="policy-summary">Runtime, storage & engines</span>
+        <span className="policy-summary">System, storage &amp; engines</span>
       </summary>
       {health.isOpen && (
         <div
@@ -47,11 +48,12 @@ export function StationHealth() {
                 <time dateTime={health.snapshot.checkedAt}>{new Date(health.snapshot.checkedAt).toLocaleString()}</time>
               </p>
               <StationMetrics snapshot={health.snapshot} />
+              <SystemMetrics system={health.snapshot.system} />
               <EngineChecks engines={health.snapshot.engines} />
               <p className="policy-footnote">
                 Available means the local version command passed. Authentication, codecs, peer availability and actual
-                downloads still need a source test. Memory and uptime describe LinkDock's process; storage describes its
-                data filesystem. No engine updates are installed from this panel.
+                downloads still need a source test. Process memory and station uptime describe LinkDock; storage
+                describes its data filesystem. No engine updates are installed from this panel.
               </p>
             </div>
           )}

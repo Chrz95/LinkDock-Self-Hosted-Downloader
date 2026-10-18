@@ -16,6 +16,7 @@ export function DeleteDownload({ job, isBusy, onAction }: DownloadRowProps) {
     <div className="delete-control">
       {isConfirming ? (
         <div className="delete-confirmation">
+          {job.destination?.moved && <p>Also deletes this job’s files in {job.destination.directory}.</p>}
           <button
             className="danger-button"
             type="button"

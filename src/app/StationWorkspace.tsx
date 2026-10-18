@@ -19,6 +19,7 @@ import { StationHealth } from '../features/health/StationHealth';
  * @param {StationWorkspaceProps['onAction']} props.onAction - Mutates an existing transfer.
  * @param {StationWorkspaceProps['onBatch']} [props.onBatch] - Queues a reviewed batch atomically.
  * @param {StationWorkspaceProps['onOrganize']} [props.onOrganize] - Saves tags and folder labels.
+ * @param {StationWorkspaceProps['onBulk']} [props.onBulk] - Applies reviewed bulk library actions.
  * @returns {JSX.Element} Complete station content.
  */
 export function StationWorkspace({
@@ -29,6 +30,7 @@ export function StationWorkspace({
   onAction,
   onBatch,
   onOrganize,
+  onBulk,
 }: StationWorkspaceProps) {
   return (
     <div className="station-content">
@@ -49,6 +51,7 @@ export function StationWorkspace({
             busyJobId={busyJobId}
             onAction={onAction}
             onOrganize={onOrganize}
+            onBulk={onBulk}
           />
         </div>
         <aside className="insights-column">

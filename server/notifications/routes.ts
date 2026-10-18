@@ -10,6 +10,17 @@ import type { NotificationService } from './service.js';
  */
 export function createNotificationRoutes(notifications: NotificationService): Router {
   const router = Router();
+  router.get(NOTIFICATION_PATH.outbox, (_request, response) => response.json(notifications.deliveryStatus()));
+  router.delete(NOTIFICATION_PATH.outbox, (_request, response) => {
+    try {
+      notifications.clearOutbox();
+      response.status(HTTP_STATUS.noContent).end();
+    } catch {
+      response
+        .status(HTTP_STATUS.conflict)
+        .json({ error: 'Pending alerts could not be cleared. Check station storage.' });
+    }
+  });
   router.get('/', (_request, response) => response.json(notifications.configurationForBrowser()));
   router.post(NOTIFICATION_PATH.status, (request, response) => {
     response.json({ subscribed: notifications.has(request.body?.endpoint) });

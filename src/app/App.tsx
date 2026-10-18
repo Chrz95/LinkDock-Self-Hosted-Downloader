@@ -48,6 +48,7 @@ export function App() {
               onAction={station.handleJobAction}
               onBatch={station.queueBatch}
               onOrganize={station.organizeJob}
+              onBulk={station.handleLibraryAction}
             />
           ) : (
             <output className="loading-state">Connecting to your station…</output>

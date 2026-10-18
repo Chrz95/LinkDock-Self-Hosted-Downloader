@@ -5,6 +5,8 @@ import { createFileRoutes } from './fileRoutes.js';
 import { JOB_PRIORITY } from '../../shared/batch.js';
 import { createPreviewRoutes } from './delivery/previewRoutes.js';
 import { createArchiveRoutes } from './delivery/archiveRoutes.js';
+import { createBulkLibraryRoutes } from './bulkLibrary.js';
+import { createJobOptionsRoutes } from './jobOptionsRoutes.js';
 
 /**
  * Wires authenticated queue operations; invalid IDs never become filesystem paths.
@@ -13,6 +15,8 @@ import { createArchiveRoutes } from './delivery/archiveRoutes.js';
  */
 export function createDownloadRoutes(queue: DownloadQueue): Router {
   const router = Router();
+  router.use(createBulkLibraryRoutes(queue));
+  router.use(createJobOptionsRoutes(queue));
   router.get('/', (_request, response) => response.json(queue.snapshot()));
   router.post(DOWNLOAD_PATH.batchPreview, (request, response) => {
     try {

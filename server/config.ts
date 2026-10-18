@@ -17,6 +17,7 @@ export interface ServerConfig {
   uploadBytesPerSecond?: number;
   reservedFreeBytes?: number;
   webPushSubject?: string;
+  completedDirectory?: string;
 }
 
 /**
@@ -62,6 +63,7 @@ export function loadServerConfig(): ServerConfig {
   return {
     port: parsePositiveInteger(process.env.PORT, LIMIT.defaultPort, LIMIT.maximumPort),
     dataDirectory: path.resolve(process.env.DATA_DIRECTORY ?? './data'),
+    completedDirectory: process.env.COMPLETED_DIRECTORY ? path.resolve(process.env.COMPLETED_DIRECTORY) : undefined,
     accessToken,
     concurrency: parsePositiveInteger(
       process.env.MAX_CONCURRENT_DOWNLOADS,

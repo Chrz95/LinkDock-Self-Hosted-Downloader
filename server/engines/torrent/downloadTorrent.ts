@@ -7,6 +7,10 @@ import { ENGINE_LIMIT } from '../constants.js';
 import { TorrentRpc, type TorrentStatus } from './rpc.js';
 import { readTorrentMetadata } from './source.js';
 import { ensureStorage } from '../../policy/storage.js';
+import { existsSync } from 'node:fs';
+import path from 'node:path';
+import { OUTPUT } from '../constants.js';
+import { pinMagnetMetadata, prepareTorrentSelection } from './selection.js';
 
 /**
  * Transfers a torrent or magnet through the shared private engine, tracking magnet metadata handoff.
@@ -28,6 +32,11 @@ export async function downloadTorrent(
   signal.throwIfAborted();
   const requestedGid = randomBytes(ENGINE_LIMIT.gidBytes).toString('hex');
   const ownedGids = new Set([requestedGid]);
+  const requiresSelection = Boolean(job.torrentSelection);
+  const metadataPath = path.join(configuration.dataDirectory, OUTPUT.metadataDirectory, `${job.id}.torrent`);
+  const usesMagnet = job.sourceType === SOURCE_TYPE.magnet && (!requiresSelection || !existsSync(metadataPath));
+  let awaitingMagnet = usesMagnet;
+  let selectionPrepared = !requiresSelection;
   const options = {
     gid: requestedGid,
     dir: outputDirectory,
@@ -35,21 +44,23 @@ export async function downloadTorrent(
     'seed-time': '0',
     'allow-overwrite': 'false',
     'auto-file-renaming': 'false',
-    'bt-save-metadata': 'false',
+    'bt-save-metadata': requiresSelection && usesMagnet ? 'true' : 'false',
+    'rpc-save-upload-metadata': 'false',
+    pause: requiresSelection && !usesMagnet ? 'true' : 'false',
+    'pause-metadata': requiresSelection ? 'true' : 'false',
     'check-integrity': 'true',
     'max-download-limit': String(configuration.downloadBytesPerSecond ?? 0),
     'max-upload-limit': String(configuration.uploadBytesPerSecond ?? 0),
     'bt-stop-timeout': String(ENGINE_LIMIT.secondsWithoutPeers),
   };
   try {
-    let currentGid =
-      job.sourceType === SOURCE_TYPE.magnet
-        ? await engine.call<string>('addUri', [[job.url], options])
-        : await engine.call<string>('addTorrent', [
-            await readTorrentMetadata(job, configuration.dataDirectory, signal),
-            [],
-            options,
-          ]);
+    let currentGid = usesMagnet
+      ? await engine.call<string>('addUri', [[job.url], options])
+      : await engine.call<string>('addTorrent', [
+          await readTorrentMetadata(job, configuration.dataDirectory, signal),
+          [],
+          options,
+        ]);
     ownedGids.add(currentGid);
     while (true) {
       signal.throwIfAborted();
@@ -67,23 +78,41 @@ export async function downloadTorrent(
           throw new Error('Torrent metadata did not provide content.');
         }
         currentGid = contentGid;
+        awaitingMagnet = false;
+        if (requiresSelection && usesMagnet) {
+          await pinMagnetMetadata(job, outputDirectory, configuration.dataDirectory);
+        }
         continue;
       }
-      const totalBytes = Number(state.totalLength);
-      const receivedBytes = Number(state.completedLength);
-      if (totalBytes > configuration.maximumFileBytes || receivedBytes > configuration.maximumFileBytes) {
-        throw new Error('Torrent contents exceed the configured per-download size limit.');
-      }
-      job.totalBytes = totalBytes || null;
-      job.receivedBytes = receivedBytes;
-      job.bytesPerSecond = Number(state.downloadSpeed);
-      job.peers = Number(state.connections);
-      job.stage = totalBytes ? 'Downloading from peers' : 'Finding peers · fetching metadata';
       const name = state.bittorrent?.info?.name;
       if (name) {
         job.filename = name;
       }
+      if (!selectionPrepared && !awaitingMagnet) {
+        await prepareTorrentSelection(job, currentGid, outputDirectory, engine, configuration.maximumFileBytes);
+        selectionPrepared = true;
+        continue;
+      }
+      const totalBytes = Number(state.totalLength);
+      const receivedBytes = Number(state.completedLength);
+      const fetchingMetadata = requiresSelection && awaitingMagnet;
+      const maximumBytes = fetchingMetadata ? ENGINE_LIMIT.maximumTorrentBytes : configuration.maximumFileBytes;
+      if (totalBytes > maximumBytes || receivedBytes > maximumBytes) {
+        throw new Error(
+          fetchingMetadata
+            ? 'Magnet metadata exceeds the metadata size limit.'
+            : 'Torrent contents exceed the configured per-download size limit.',
+        );
+      }
+      job.totalBytes = fetchingMetadata ? null : totalBytes || null;
+      job.receivedBytes = fetchingMetadata ? 0 : receivedBytes;
+      job.bytesPerSecond = Number(state.downloadSpeed);
+      job.peers = Number(state.connections);
+      job.stage = fetchingMetadata || !totalBytes ? 'Finding peers · fetching metadata' : 'Downloading from peers';
       if (state.status === 'complete') {
+        if (awaitingMagnet && requiresSelection) {
+          throw new Error('Magnet metadata did not provide content.');
+        }
         return;
       }
       if (state.status === 'error' || state.status === 'removed') {

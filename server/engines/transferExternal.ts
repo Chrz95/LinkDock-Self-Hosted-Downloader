@@ -4,7 +4,7 @@ import { SOURCE_TYPE } from '../../shared/sources.js';
 import type { ServerConfig } from '../config.js';
 import type { DownloadStore } from '../downloads/store.js';
 import { OUTPUT } from './constants.js';
-import { listArtifacts } from './artifacts.js';
+import { listArtifacts, resolveArtifactPath } from './artifacts.js';
 import { downloadMedia } from './media.js';
 import { downloadTorrent } from './torrent/downloadTorrent.js';
 import type { TorrentRpc } from './torrent/rpc.js';
@@ -38,7 +38,25 @@ export async function transferExternal(
       await downloadMedia(job, workingDirectory, signal, configuration);
     }
     signal.throwIfAborted();
-    const artifacts = await listArtifacts(workingDirectory, '', !isTorrent);
+    let artifacts = await listArtifacts(workingDirectory, '', !isTorrent);
+    if (isTorrent && job.torrentSelection?.selected && job.torrentSelection.files) {
+      const selected = job.torrentSelection.files.filter((file) =>
+        job.torrentSelection?.selected?.includes(file.index),
+      );
+      const allowed = new Map(selected.map((file) => [file.name, file.sizeBytes]));
+      for (const artifact of artifacts) {
+        if (!allowed.has(artifact.relativePath)) {
+          await rm(await resolveArtifactPath(workingDirectory, artifact.relativePath), { force: true });
+        }
+      }
+      artifacts = artifacts.filter((artifact) => allowed.has(artifact.relativePath));
+      if (
+        artifacts.length !== selected.length ||
+        artifacts.some((file) => allowed.get(file.relativePath) !== file.sizeBytes)
+      ) {
+        throw new Error('Selected torrent output is incomplete or has changed.');
+      }
+    }
     const totalBytes = artifacts.reduce((total, file) => total + file.sizeBytes, 0);
     if (!artifacts.length) {
       throw new Error('The source produced no downloadable files.');

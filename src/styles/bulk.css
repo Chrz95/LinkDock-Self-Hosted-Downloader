@@ -1,0 +1,162 @@
+.library-view-controls,
+.library-item-actions,
+.bulk-library fieldset {
+  min-width: 0;
+  border: 0;
+  padding: 0;
+  margin: 0;
+}
+.bulk-library {
+  margin: 16px 0 8px;
+  padding: 14px;
+  border: 1px solid var(--accent-line);
+  border-radius: 12px;
+  background: var(--accent-soft);
+}
+.bulk-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.bulk-count {
+  margin-right: auto;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+}
+.bulk-library button,
+.bulk-organization summary {
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--field);
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.bulk-library button:disabled,
+.bulk-library fieldset:disabled button,
+.library-item-actions:disabled button {
+  opacity: 0.5;
+  cursor: default;
+}
+.bulk-actions {
+  margin-top: 12px;
+}
+.bulk-organization {
+  margin-bottom: 10px;
+}
+.bulk-organization summary {
+  align-content: center;
+}
+.bulk-organization form {
+  margin: 14px 0;
+}
+.bulk-library p {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+.bulk-library .bulk-scope {
+  color: var(--faint);
+  margin-bottom: 0;
+}
+.bulk-label-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.bulk-label-fields label {
+  display: grid;
+  min-width: 0;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.bulk-label-fields .bulk-folder-toggle {
+  display: flex;
+  align-items: center;
+  grid-column: 1 / -1;
+  min-height: 44px;
+}
+.bulk-label-fields input[type='text'],
+.bulk-label-fields select {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  border: 1px solid var(--line);
+  background: var(--field);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font: inherit;
+  font-size: 13px;
+}
+.bulk-label-fields p {
+  grid-column: 1 / -1;
+}
+.bulk-row-selection {
+  display: flex;
+  gap: 9px;
+  align-items: center;
+  min-height: 44px;
+  width: fit-content;
+  max-width: 100%;
+  padding: 0 10px;
+  font-size: 11px;
+  color: var(--faint);
+  cursor: pointer;
+}
+.bulk-row-selection input,
+.bulk-folder-toggle input {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  accent-color: var(--accent);
+}
+.library-item.is-selected {
+  box-shadow: inset 3px 0 0 var(--accent);
+  background: var(--accent-soft);
+}
+.bulk-library .bulk-danger,
+.bulk-library [role='alert'] {
+  color: var(--danger);
+}
+.bulk-deletion-review {
+  padding-top: 16px;
+  margin-top: 12px;
+  border-top: 1px solid var(--line);
+}
+.bulk-deletion-review h3 {
+  font-size: 14px;
+  margin: 0;
+}
+.bulk-deletion-review ul {
+  max-height: 220px;
+  overflow: auto;
+  padding-left: 22px;
+  font-size: 12px;
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 760px), (any-pointer: coarse) {
+  .bulk-label-fields input[type='text'],
+  .bulk-label-fields select {
+    font-size: 16px;
+  }
+}
+@media (max-width: 540px) {
+  .bulk-label-fields {
+    grid-template-columns: 1fr;
+  }
+  .bulk-count {
+    flex-basis: 100%;
+  }
+  .bulk-buttons button {
+    flex: 1 1 auto;
+  }
+}

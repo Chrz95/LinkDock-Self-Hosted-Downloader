@@ -1,4 +1,5 @@
 import { useNotifications } from './useNotifications';
+import { AlertDelivery } from './AlertDelivery';
 
 /**
  * Makes browser permission optional and explains setup limits without blocking normal downloads.
@@ -51,6 +52,7 @@ export function NotificationControls() {
           {alerts.errorMessage}
         </p>
       )}
+      {alerts.configuration?.enabled && <AlertDelivery />}
     </section>
   );
 }

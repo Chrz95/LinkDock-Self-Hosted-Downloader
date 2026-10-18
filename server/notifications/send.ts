@@ -1,6 +1,6 @@
 import https from 'node:https';
 import webPush, { type VapidKeys } from 'web-push';
-import { PUSH_LIMIT, type BrowserSubscription } from '../../shared/notifications.js';
+import { PUSH_LIMIT, OUTBOX_LIMIT, type BrowserSubscription } from '../../shared/notifications.js';
 import { parseTargetUrl, resolvePublicTarget } from '../security/target.js';
 
 /** Only HTTP status is retained from a provider failure; endpoints and response bodies never enter logs. */
@@ -8,10 +8,34 @@ export class PushDeliveryError extends Error {
   /**
    * Classifies expired registrations without leaking browser destination identifiers.
    * @param {number} statusCode - Provider HTTP response status.
+   * @param {number} [retryAfterMilliseconds] - Bounded provider-requested delay.
    */
-  constructor(readonly statusCode: number) {
+  constructor(
+    readonly statusCode: number,
+    readonly retryAfterMilliseconds?: number,
+  ) {
     super('The browser push service rejected this alert.');
   }
+}
+
+/**
+ * Parses provider scheduling without retaining response headers in state.
+ * @param {string | string[] | undefined} input - Delta seconds or HTTP date.
+ * @param {number} now - Current epoch milliseconds.
+ * @returns {number | undefined} Nonnegative bounded delay.
+ */
+export function parseRetryAfter(input: string | string[] | undefined, now: number): number | undefined {
+  const maximumCharacters = 128;
+  if (typeof input !== 'string' || input.length > maximumCharacters) {
+    return undefined;
+  }
+  const value = input.trim();
+  const httpDate = /^[A-Za-z]{3}, \d{2} [A-Za-z]{3} \d{4} \d{2}:\d{2}:\d{2} GMT$/u;
+  if (!/^\d+$/u.test(value) && !httpDate.test(value)) {
+    return undefined;
+  }
+  const delay = /^\d+$/u.test(value) ? Number(value) * OUTBOX_LIMIT.millisecondsPerSecond : Date.parse(value) - now;
+  return Number.isFinite(delay) ? Math.min(OUTBOX_LIMIT.maximumRetryMilliseconds, Math.max(0, delay)) : undefined;
 }
 
 /**
@@ -74,7 +98,7 @@ export async function sendPush(subscription: BrowserSubscription, payload: strin
         if (status >= minimumSuccess && status <= maximumSuccess) {
           resolve();
         } else {
-          reject(new PushDeliveryError(status));
+          reject(new PushDeliveryError(status, parseRetryAfter(response.headers['retry-after'], Date.now())));
         }
       },
     );

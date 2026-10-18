@@ -4,6 +4,7 @@ export const NOTIFICATION_PATH = {
   unsubscribe: '/unsubscribe',
   test: '/test',
   status: '/status',
+  outbox: '/outbox',
 } as const;
 /** Push setup information never exposes private keys or stored browser endpoints. */
 export interface PushConfiguration {
@@ -36,3 +37,29 @@ export const PUSH_LIMIT = {
   maximumAuthCharacters: 32,
   maximumPrivateKeyCharacters: 64,
 } as const;
+
+/** Finite generic categories are coalesced separately for each registered browser. */
+export type TerminalAlertKind = Exclude<keyof typeof PUSH_MESSAGE, 'test'>;
+/** Retry state is bounded in count, bytes, age, attempts and scheduling frequency. */
+const TERMINAL_ALERT_CATEGORIES = 2;
+/** Limits remain independent of the number of completed downloads. */
+export const OUTBOX_LIMIT = {
+  maximumEntries: PUSH_LIMIT.maximumDevices * TERMINAL_ALERT_CATEGORIES,
+  maximumBytes: 65_536,
+  maximumAttempts: 6,
+  maximumAgeMilliseconds: 3_600_000,
+  baseRetryMilliseconds: 30_000,
+  maximumRetryMilliseconds: 600_000,
+  sweepMilliseconds: 30_000,
+  backoffMultiplier: 2,
+  millisecondsPerSecond: 1_000,
+} as const;
+/** Private status exposes counts and times, never registrations, fingerprints, keys or alert payloads. */
+export interface AlertDeliveryStatus {
+  available: boolean;
+  pending: number;
+  retrying: number;
+  sending: number;
+  nextAttemptAt: string | null;
+  reason: string | null;
+}

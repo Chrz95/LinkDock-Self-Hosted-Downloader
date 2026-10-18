@@ -1,6 +1,5 @@
 import { Router, type Request, type Response, type NextFunction } from 'express';
 import { DOWNLOAD_PATH, DOWNLOAD_STATUS, HTTP_STATUS } from '../../shared/contracts.js';
-import { OUTPUT } from '../engines/constants.js';
 import { resolveArtifactPath } from '../engines/artifacts.js';
 import type { DownloadQueue } from './queue.js';
 
@@ -38,7 +37,7 @@ export function createFileRoutes(queue: DownloadQueue): Router {
           response.status(HTTP_STATUS.notFound).end();
           return;
         }
-        filename = await resolveArtifactPath(`${filename}${OUTPUT.outputSuffix}`, file.relativePath);
+        filename = await resolveArtifactPath(queue.store.getOutputDirectory(job), file.relativePath);
         displayName = file.name.split(/[\\/]/).at(-1) ?? file.name;
       } else if (request.params.fileIndex !== undefined) {
         response.status(HTTP_STATUS.notFound).end();

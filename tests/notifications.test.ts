@@ -201,7 +201,7 @@ it('bounds simultaneous delivery and coalesces terminal bursts by category', asy
   job.status = DOWNLOAD_STATUS.failed;
   service.enqueue(job);
   gateControl.release!();
-  const expectedCategories = 3;
+  const expectedCategories = 2;
   await vi.waitFor(() => expect(sendPush).toHaveBeenCalledTimes(deviceCount * expectedCategories));
   expect(peak).toBeLessThanOrEqual(PUSH_LIMIT.sendConcurrency);
 });

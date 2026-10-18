@@ -45,6 +45,7 @@ export function useLibraryView(jobs: DownloadJob[]) {
     tag,
     setTag,
     visibleJobs,
+    totalCount: jobs.length,
     options,
     hasFilters,
     clearFilters,

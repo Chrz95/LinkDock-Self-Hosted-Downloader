@@ -1,0 +1,10 @@
+services:
+  linkdock:
+    environment:
+      COMPLETED_DIRECTORY: /completed
+    volumes:
+      - type: bind
+        source: ${COMPLETED_HOST_DIRECTORY:?Set an existing writable completion directory}
+        target: /completed
+        bind:
+          create_host_path: false

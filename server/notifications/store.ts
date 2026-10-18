@@ -50,7 +50,7 @@ export function validateSubscription(input: unknown): BrowserSubscription {
  * @param {string} filename - Internally constructed state path.
  * @param {unknown} value - JSON-serializable state.
  */
-function savePrivateJson(filename: string, value: unknown): void {
+export function savePrivateJson(filename: string, value: unknown): void {
   writeFileSync(`${filename}.tmp`, JSON.stringify(value), { mode: 0o600 });
   renameSync(`${filename}.tmp`, filename);
 }

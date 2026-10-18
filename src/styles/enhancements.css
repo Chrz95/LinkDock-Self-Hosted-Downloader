@@ -118,3 +118,20 @@
     width: 100%;
   }
 }
+.alert-delivery {
+  margin-top: 20px;
+  border-top: 1px solid var(--line);
+}
+.alert-delivery summary {
+  min-height: 44px;
+  align-content: center;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 12px;
+}
+.alert-delivery-content {
+  padding-bottom: 12px;
+}
+.alert-delivery .health-metrics {
+  margin: 16px 0;
+}

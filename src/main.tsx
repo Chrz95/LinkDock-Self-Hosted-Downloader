@@ -15,6 +15,7 @@ import './styles/responsive.css';
 import './styles/enhancements.css';
 import './styles/library.css';
 import './styles/media.css';
+import './styles/bulk.css';
 
 applyTheme(readTheme());
 captureSharedLinks(window);

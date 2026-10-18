@@ -4,11 +4,13 @@ import path from 'node:path';
 import request from 'supertest';
 import { createApplication } from '../dist-server/server/app.js';
 import { DownloadQueue } from '../dist-server/server/downloads/queue.js';
-import { NotificationService } from '../dist-server/server/notifications/service.js';
 import { API_PATH, DOWNLOAD_PATH, HTTP_STATUS } from '../dist-server/shared/contracts.js';
-import { ENGINE_STATE } from '../dist-server/shared/health.js';
+import { ENGINE_STATE, SYSTEM_LIMIT } from '../dist-server/shared/health.js';
 import { ENGINE_CHECKS } from '../dist-server/server/health/engines.js';
 import { smokeDelivery } from './smokeDelivery.mjs';
+import { smokeBulkLibrary } from './smokeBulkLibrary.mjs';
+import { smokeOutbox } from './smokeOutbox.mjs';
+import { smokeWorkflows } from './smokeWorkflows.mjs';
 
 /** Native Node execution catches production module interop that the test transformer can mask. */
 const SMOKE = { port: 8_080, fileLimit: 1_024, origin: 'https://station.example' };
@@ -30,7 +32,6 @@ async function smokeProduction() {
     isProduction: true,
   };
   const queue = new DownloadQueue(configuration);
-  let notifications;
   try {
     await queue.stop();
     const client = request.agent(createApplication(configuration, queue));
@@ -68,20 +69,29 @@ async function smokeProduction() {
     assert.equal(health.body.engines.length, ENGINE_CHECKS.length);
     assert.ok(health.body.engines.every((engine) => Object.values(ENGINE_STATE).includes(engine.state)));
     assert.equal(health.body.runtime.node, process.version);
+    assert.ok(health.body.system);
+    const { cpuThreads, uptimeSeconds, memory, loadAverage, temperature } = health.body.system;
+    for (const value of [cpuThreads, uptimeSeconds, memory.totalBytes, memory.freeBytes]) {
+      assert.ok(value === null || (Number.isFinite(value) && value >= 0));
+    }
+    assert.ok(
+      loadAverage === null ||
+        (loadAverage.length === SYSTEM_LIMIT.loadWindows &&
+          loadAverage.every((value) => Number.isFinite(value) && value >= 0)),
+    );
+    assert.ok(
+      temperature.celsius === null ||
+        (temperature.celsius >= SYSTEM_LIMIT.minimumCelsius && temperature.celsius <= SYSTEM_LIMIT.maximumCelsius),
+    );
+    assert.ok(!JSON.stringify(health.body.system).includes('/sys/'));
     await smokeDelivery(queue, client);
+    await smokeBulkLibrary(queue, client, directory);
     await client.get('/notifications/vapid.json').expect(HTTP_STATUS.notFound);
-    notifications = new NotificationService({
-      ...configuration,
-      secureCookie: true,
-      publicOrigin: SMOKE.origin,
-      webPushSubject: 'mailto:owner@example.com',
-    });
-    assert.equal(notifications.configurationForBrowser().enabled, true);
-    assert.ok(notifications.configurationForBrowser().publicKey);
+    await smokeOutbox(configuration, queue);
+    await smokeWorkflows(configuration);
     process.stdout.write('Compiled production imports, mobile assets, organization and private diagnostics: passed.\n');
   } finally {
     await queue.stop();
-    await notifications?.stop();
     rmSync(directory, { recursive: true, force: true });
   }
 }
