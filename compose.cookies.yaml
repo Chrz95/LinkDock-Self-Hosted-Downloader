@@ -1,0 +1,12 @@
+# Optional private cookie mount. This file deliberately requires an existing host file.
+services:
+  linkdock:
+    environment:
+      MEDIA_COOKIES_FILE: /run/linkdock/cookies.txt
+    volumes:
+      - type: bind
+        source: ./secrets/cookies.txt
+        target: /run/linkdock/cookies.txt
+        read_only: true
+        bind:
+          create_host_path: false

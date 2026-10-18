@@ -1,0 +1,84 @@
+.connection-guide {
+  margin-top: 20px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 16px;
+  background: var(--surface);
+}
+.connection-guide summary {
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.connection-guide summary svg {
+  width: 12px;
+  height: 12px;
+}
+.connection-guide p {
+  font-size: 12px;
+  line-height: 1.8;
+  color: var(--faint);
+  margin-top: 14px;
+}
+.job-files {
+  margin-top: 13px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--field);
+}
+.job-files summary {
+  font-size: 11px;
+  color: var(--accent);
+  padding: 10px 12px;
+  cursor: pointer;
+}
+.job-files summary > svg {
+  width: 11px;
+  height: 11px;
+  vertical-align: middle;
+  margin-right: 7px;
+}
+.job-files ul {
+  padding: 0 12px;
+  list-style: none;
+  margin: 0;
+}
+.job-files li {
+  display: flex;
+  gap: 9px;
+  align-items: center;
+  padding: 11px 0;
+  border-top: 1px solid var(--line);
+}
+.job-files li > svg {
+  width: 14px;
+  height: 14px;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+.job-files li > span {
+  font-size: 12px;
+  color: var(--muted);
+  min-width: 0;
+  overflow-wrap: anywhere;
+  flex: 1;
+}
+.job-files small {
+  display: block;
+  font-size: 10px;
+  color: var(--faint);
+  margin-top: 5px;
+}
+.job-files .icon-button {
+  flex-shrink: 0;
+  width: 28px;
+  min-height: 28px;
+}
+.job-files .icon-button svg {
+  width: 12px;
+  height: 12px;
+}

@@ -1,0 +1,99 @@
+.job-files .artifact-row {
+  display: block;
+  min-width: 0;
+}
+.artifact-heading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.artifact-heading > svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  color: var(--muted);
+}
+.artifact-heading > span {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--muted);
+  font-size: 12px;
+}
+.media-preview {
+  margin-top: 8px;
+  min-width: 0;
+}
+.preview-button,
+.archive-download button {
+  min-height: 44px;
+  padding: 9px 13px;
+  border: 1px solid var(--accent-line);
+  border-radius: 8px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 11px;
+  cursor: pointer;
+}
+.media-preview figure {
+  margin: 12px 0 0;
+  min-width: 0;
+}
+.media-preview img,
+.media-preview video {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  max-height: min(65vh, 480px);
+  object-fit: contain;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--field);
+}
+.media-preview figcaption {
+  margin-top: 9px;
+  font-size: 11px;
+  color: var(--faint);
+  line-height: 1.8;
+}
+.media-preview a {
+  color: var(--accent);
+  text-underline-offset: 3px;
+}
+.media-preview .form-error {
+  color: var(--danger);
+  font-size: 12px;
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+}
+.archive-download {
+  padding: 8px 12px 12px;
+  border-bottom: 1px solid var(--line);
+}
+.archive-download output {
+  display: block;
+  font-size: 11px;
+  line-height: 1.8;
+  margin-top: 9px;
+  color: var(--muted);
+}
+.archive-download .form-error {
+  font-size: 12px;
+  line-height: 1.8;
+  margin-top: 9px;
+}
+@media (max-width: 760px), (any-pointer: coarse) {
+  .artifact-heading .icon-button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+@media (max-width: 540px) {
+  .archive-download button {
+    width: 100%;
+  }
+  .media-preview video {
+    max-height: 60vh;
+  }
+}

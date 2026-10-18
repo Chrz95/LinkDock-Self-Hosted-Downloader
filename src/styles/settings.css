@@ -1,0 +1,136 @@
+.station-settings {
+  margin: -8px 0 32px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  padding: 18px 22px;
+  background: var(--surface);
+}
+.station-settings summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  min-height: 44px;
+  font-size: 14px;
+}
+.station-settings summary > svg {
+  width: 18px;
+  height: 18px;
+  color: var(--accent);
+  flex-shrink: 0;
+}
+.station-settings summary > svg:last-child {
+  margin-left: auto;
+}
+.station-settings summary small {
+  display: block;
+  font-size: 12px;
+  color: var(--faint);
+  margin-top: 5px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+.station-settings summary > span {
+  min-width: 0;
+}
+.station-settings fieldset {
+  border: 0;
+  margin: 20px 0 0;
+  padding: 0;
+  min-width: 0;
+}
+.policy-fields {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+.policy-fields label {
+  display: grid;
+  align-content: start;
+  gap: 9px;
+  font-size: 12px;
+  min-width: 0;
+  color: var(--muted);
+}
+.policy-fields input {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  padding: 10px;
+  min-height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--field);
+  font-size: 16px;
+}
+.policy-fields small,
+.policy-footnote {
+  font-size: 12px;
+  line-height: 1.8;
+  color: var(--faint);
+}
+.policy-footnote {
+  margin-top: 12px;
+}
+.policy-schedule {
+  border-top: 1px solid var(--line);
+  padding-top: 16px;
+  margin-top: 20px;
+}
+.policy-checkbox {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+  margin-bottom: 12px;
+  line-height: 1.8;
+  cursor: pointer;
+}
+.policy-checkbox input {
+  min-height: 0;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  accent-color: var(--accent);
+}
+.policy-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+  margin-top: 22px;
+}
+.policy-actions .text-button {
+  min-height: 44px;
+}
+.policy-hold,
+.policy-saved {
+  display: block;
+  margin-top: 16px;
+  font-size: 13px;
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+  color: var(--accent);
+}
+.policy-hold {
+  color: var(--warning);
+}
+.row-actions {
+  flex-wrap: wrap;
+}
+.status-badge.paused {
+  color: var(--warning);
+  background: var(--warning-soft);
+}
+@media (max-width: 760px) {
+  .station-settings {
+    padding: 16px 18px;
+  }
+  .policy-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .policy-actions .primary-button {
+    width: 100%;
+  }
+}

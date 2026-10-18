@@ -1,0 +1,27 @@
+/** Hand-drawn SVG paths; never used as interactive elements. */
+export const ICON_PATH = {
+  pause: 'M7 4h3v16H7zM14 4h3v16h-3z',
+  play: 'M6 3l15 9-15 9z',
+  sun: 'M12 1v2m0 18v2M1 12h2m18 0h2M4 4l2 2m12 12 2 2M4 20l2-2M18 6l2-2M16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0',
+  moon: 'M21 13a9 9 0 0 1-10-10 9 9 0 1 0 10 10',
+  video: 'M4 4h16v16H4zM10 8l6 4-6 4z',
+  camera: 'M3 6h5l2-3h4l2 3h5v15H3zM16 13a4 4 0 1 1-8 0 4 4 0 0 1 8 0',
+  torrent: 'M12 7v10M7 12h10M5 5l3 3m8 8 3 3M19 5l-3 3M8 16l-3 3M3 3h4v4H3zM17 3h4v4h-4zM3 17h4v4H3zM17 17h4v4h-4z',
+  upload: 'M12 16V3m-5 5 5-5 5 5M4 16v5h16v-5',
+  sparkle: 'm12 2 3 7 7 3-7 3-3 7-3-7-7-3 7-3z',
+
+  download: 'M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5',
+  grid: 'M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z',
+  arrow: 'M7 17 17 7M7 7h10v10',
+  check: 'm5 12 4 4L19 6',
+  clock: 'M12 8v5l3 2M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0',
+  close: 'm6 6 12 12M6 18 18 6',
+  retry: 'M3 10a9 9 0 1 1 1 8M3 4v6h6',
+  file: 'M14 2H5v20h14V7zm0 0v6h5M8 13h8M8 17h5',
+  lock: 'M5 10h14v11H5zM8 10V6a4 4 0 0 1 8 0v4',
+  link: 'm10 13 4-4M8 15l-2 2a4 4 0 0 1-6-6l5-5a4 4 0 0 1 6 0m2 3 2-2a4 4 0 0 1 6 6l-5 5a4 4 0 0 1-6 0',
+  drive: 'M5 4h14l3 12v5H2v-5zm-3 12h20M6 18h1M17 18h1',
+  plus: 'M12 5v14M5 12h14',
+  search: 'M21 21l-5-5M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0',
+  trash: 'M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7',
+} as const;

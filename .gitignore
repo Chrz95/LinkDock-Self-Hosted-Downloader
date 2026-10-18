@@ -1,0 +1,9 @@
+node_modules/
+dist/
+dist-server/
+.env
+data/
+coverage/
+*.log
+
+secrets/

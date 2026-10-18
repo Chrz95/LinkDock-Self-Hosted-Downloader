@@ -1,0 +1,120 @@
+.composer-fields {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+.url-field textarea {
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: 0;
+  min-width: 0;
+  width: 100%;
+  flex: 1;
+  font-size: 14px;
+  line-height: 1.7;
+  padding: 9px 0;
+  min-height: 68px;
+  max-height: 260px;
+  resize: vertical;
+  overflow-wrap: anywhere;
+}
+.url-field textarea:focus {
+  outline: none;
+}
+.url-field textarea::placeholder {
+  color: var(--faint);
+}
+.batch-review {
+  margin-top: 14px;
+  padding: 14px;
+  border: 1px solid var(--accent-line);
+  border-radius: 9px;
+  background: var(--accent-soft);
+  font-size: 13px;
+  line-height: 1.8;
+}
+.batch-review small {
+  display: block;
+  margin-top: 5px;
+  color: var(--muted);
+}
+.batch-review summary {
+  min-height: 44px;
+  align-content: center;
+  cursor: pointer;
+  color: var(--accent);
+}
+.batch-review ul {
+  padding-left: 18px;
+  max-height: 180px;
+  overflow: auto;
+  overflow-wrap: anywhere;
+  color: var(--muted);
+}
+.priority-control {
+  display: grid;
+  gap: 5px;
+  font-size: 10px;
+  color: var(--faint);
+}
+.queue-hint {
+  color: var(--faint);
+  font-size: 12px;
+  line-height: 1.8;
+  margin-top: 12px;
+}
+.priority-control select {
+  min-height: 44px;
+  min-width: 90px;
+  font-size: 13px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--field);
+  color: var(--muted);
+  padding: 8px;
+}
+.row-actions {
+  align-items: flex-end;
+  max-width: 100%;
+  min-width: 0;
+}
+.device-tools-content {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  gap: 24px;
+}
+.device-tools-content > section {
+  min-width: 0;
+  border-top: 1px solid var(--line);
+  margin-top: 18px;
+  padding-top: 20px;
+}
+.device-tools h3 {
+  font-size: 16px;
+  font-weight: 550;
+}
+.device-tools button {
+  min-height: 44px;
+  margin-top: 14px;
+}
+.device-tools .primary-button {
+  white-space: normal;
+  text-align: center;
+}
+.device-tools .form-error {
+  margin-top: 14px;
+}
+@media (max-width: 760px), (any-pointer: coarse) {
+  .url-field textarea,
+  .priority-control select {
+    font-size: 16px;
+  }
+  .priority-control select {
+    min-width: 110px;
+  }
+  .device-tools .primary-button {
+    width: 100%;
+  }
+}

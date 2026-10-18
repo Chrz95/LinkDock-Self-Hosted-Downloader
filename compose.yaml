@@ -1,0 +1,35 @@
+services:
+  linkdock:
+    build: .
+    ports:
+      - '${PORT:-8080}:8080'
+      - '${TORRENT_PORT:-6881}:6881/tcp'
+      - '${TORRENT_PORT:-6881}:6881/udp'
+    environment:
+      LINKDOCK_ACCESS_TOKEN: ${LINKDOCK_ACCESS_TOKEN:?Set a random 32+ character password in .env}
+      MAX_CONCURRENT_DOWNLOADS: ${MAX_CONCURRENT_DOWNLOADS:-2}
+      MAX_FILE_SIZE_GIB: ${MAX_FILE_SIZE_GIB:-20}
+      SECURE_COOKIE: ${SECURE_COOKIE:-false}
+      PUBLIC_ORIGIN: ${PUBLIC_ORIGIN:-}
+      WEB_PUSH_SUBJECT: ${WEB_PUSH_SUBJECT:-}
+      DATA_DIRECTORY: /data
+      MEDIA_COOKIES_FILE: ${MEDIA_COOKIES_FILE:-}
+    volumes:
+      - linkdock-data:/data
+    restart: unless-stopped
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,noexec,nosuid
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    stop_grace_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
+volumes:
+  linkdock-data:

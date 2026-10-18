@@ -1,0 +1,12 @@
+node_modules
+.pnpm-store
+.git
+dist
+dist-server
+.env
+data
+coverage
+tests
+upload
+
+secrets/

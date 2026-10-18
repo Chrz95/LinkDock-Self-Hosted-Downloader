@@ -1,0 +1,51 @@
+{
+  "rules": {
+    "curly": ["error", "all"],
+    "no-implicit-coercion": "error",
+    "no-console": "error",
+    "prefer-destructuring": "warn",
+    "prefer-object-spread": "warn",
+    "prefer-regex-literals": "warn",
+    "no-import-assign": "error",
+    "import/no-self-import": "error",
+    "import/namespace": "error",
+    "react/no-unstable-nested-components": "warn",
+    "react/jsx-no-constructed-context-values": "warn",
+    "react/jsx-key": "warn",
+    "react/jsx-filename-extension": [
+      "error",
+      {
+        "extensions": [".tsx"]
+      }
+    ],
+    "react/no-array-index-key": "warn",
+    "react/jsx-props-no-spreading": "warn",
+    "react/jsx-fragments": ["error", "element"],
+    "react/jsx-no-useless-fragment": "error",
+    "react/jsx-no-duplicate-props": "error",
+    "jsx-a11y/anchor-is-valid": "warn",
+    "jsx-a11y/label-has-associated-control": "warn",
+    "jsx-a11y/click-events-have-key-events": "warn",
+    "react/rules-of-hooks": "error",
+    "react/exhaustive-deps": "error",
+    "no-magic-numbers": [
+      "error",
+      {
+        "ignore": [0, 1, -1],
+        "ignoreArrayIndexes": true,
+        "enforceConst": true
+      }
+    ],
+    "typescript/no-explicit-any": "error"
+  },
+  "plugins": ["typescript", "react", "import", "jsx-a11y"],
+  "ignorePatterns": ["dist/**", "dist-server/**", "node_modules/**", "coverage/**", "data/**"],
+  "overrides": [
+    {
+      "files": ["src/lib/logger/**"],
+      "rules": {
+        "no-console": "off"
+      }
+    }
+  ]
+}

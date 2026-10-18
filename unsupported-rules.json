@@ -1,0 +1,13 @@
+{
+  "camelcase": [
+    "error",
+    {
+      "properties": "never",
+      "allow": ["^UNSAFE_"]
+    }
+  ],
+  "react/destructuring-assignment": "warn",
+  "react/forbid-foreign-prop-types": "error",
+  "react/no-deprecated": "warn",
+  "react/no-unused-class-component-methods": "warn"
+}

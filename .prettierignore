@@ -1,0 +1,6 @@
+pnpm-lock.yaml
+dist
+dist-server
+node_modules
+data
+coverage
