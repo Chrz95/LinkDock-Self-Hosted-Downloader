@@ -1,4 +1,4 @@
-# Run LinkDock 2.9 on your Raspberry Pi
+# Run LinkDock 2.10 on your Raspberry Pi
 
 1. Use 64-bit Raspberry Pi OS and install Docker Engine with the Compose plugin.
 2. Extract this project and open a terminal in its `linkdock` directory.
@@ -34,7 +34,8 @@ requirement adjustments, see `VALIDATION.md`.
 
 ## New in version 2
 
-- Choose Video for YouTube and other supported sites; choose 720p, 1080p or best available quality.
+- Choose Video for YouTube and other supported sites; choose a source-quality ceiling from 360p to 2160p/4K, or best
+  available.
 - Paste an Instagram post/reel link for photos, videos and carousel items.
 - Paste a torrent URL or magnet, or use **Upload .torrent** for a local metadata file.
 - Expand **View files** on completed multi-file jobs to save individual items to your current device.
@@ -192,3 +193,63 @@ docker compose -f compose.yaml -f compose.destinations.yaml up -d --build
 Keep existing cookie/temperature overrides if used. Keep the same completion mount on upgrades; the override refuses a
 missing host source. See `README.md` for move recovery, storage layout, API details and scheduling semantics. Docker,
 physical Pi, live swarm and rendered mobile acceptance remain unverified in this environment.
+
+## New in version 2.10
+
+- Choose **Video** or **Auto detect**, then select **Output format → Video** and your desired video quality.
+- Select **MP3 audio** to extract audio at a target 128, 192 or 320 kbps. The result is an MP3 file, not a renamed
+  video. Conversion uses ffmpeg, already included in the image. Higher bitrates cannot restore missing source detail.
+- Open **Station health → Download utility updates** for automatic daily checks, update now, cancellation,
+  previous-version rollback and restore. Updates wait for idle workers and hold new transfers until
+  verification/activation finishes. Failed candidates leave the current tools selected. The Docker default enables
+  automatic updates after a startup grace period; saved browser preferences persist. Keep at least 1 GiB free in
+  writable/executable app storage.
+- yt-dlp/gallery-dl use PyPI; aria2 uses compatible packages from the image's signed Debian repositories. aria2 can lag
+  upstream releases. ffmpeg/base-library/app updates require an image rebuild. No root user or Docker socket is needed.
+
+For your existing `link_dock` service/image workflow, rebuild the new source on the Pi, then recreate your service:
+
+```bash
+docker build -t localhost:5000/link_dock:latest .
+docker compose up -d --force-recreate --pull never link_dock
+```
+
+Retain `.env`, app state and both download directories. Reload the browser afterward. New MP3/quality values require
+this server version; use a matching pre-upgrade backup for a downgrade. Utility state lives under `/data/utilities`.
+
+A complete bind-mount example is included as `compose.rpi.yaml`. To use it, set the existing password plus:
+
+```dotenv
+PORT=7489
+LINKDOCK_DOWNLOAD_PATH=/home/pi/downloads/linkDock
+AUTO_UPDATE_TOOLS=true
+```
+
+Create host directories with the correct ownership before launching:
+
+```bash
+sudo install -d -o 1000 -g 1000 -m 0750 \
+  /home/pi/configs/linkDock \
+  /home/pi/downloads/linkDock/transfers \
+  /home/pi/downloads/linkDock/completed
+docker compose -f compose.rpi.yaml config --quiet
+docker compose -f compose.rpi.yaml up -d --build
+```
+
+The example keeps all data on the Pi: app state in `/home/pi/configs/linkDock`, transfers under the chosen download root
+and optional completion destinations under its `completed` folder. Existing root-owned app files may still need
+`sudo chown -R 1000:1000 /home/pi/configs/linkDock` and `sudo chmod -R u+rwX /home/pi/configs/linkDock`, as with the
+history-file error. Run setup on the Docker host and preserve existing data when changing mounts.
+
+Terminal controls for the supplied Pi example:
+
+```bash
+docker compose -f compose.rpi.yaml exec link_dock node dist-server/server/cli.js updates
+docker compose -f compose.rpi.yaml exec link_dock node dist-server/server/cli.js update-tools
+docker compose -f compose.rpi.yaml exec link_dock node dist-server/server/cli.js auto-updates off
+docker compose -f compose.rpi.yaml exec link_dock node dist-server/server/cli.js rollback-tools
+docker compose -f compose.rpi.yaml exec link_dock node dist-server/server/cli.js restore-tools
+```
+
+Read `README.md` for update sources, persistence, resource limits and compatibility. Physical Pi/ARM64, real provider
+access, signed-repository update downloads and mobile rendering remain deployment checks.

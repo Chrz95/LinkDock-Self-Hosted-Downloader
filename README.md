@@ -1,4 +1,4 @@
-# LinkDock 2.9
+# LinkDock 2.10
 
 A private download studio for your Raspberry Pi: videos, Instagram moments, torrents and files, collected in one place.
 The dark-first React + TypeScript workspace has a saved light/dark preference, source selection, real progress,
@@ -137,9 +137,10 @@ per command. Four slow commands can take about twelve seconds. Closing the panel
 server inspection can finish for other callers. No media provider, account or peer swarm is contacted by these checks.
 
 **Available** means the version command succeeded. Verify an actual small source download to check provider access,
-cookies, formats, codecs and torrent peers. Review pinned engine updates and rebuild the Docker image using the upgrade
-guide. The panel does not install updates. If storage is unavailable, check its mount, available space and UID 1000
-ownership; the last displayed snapshot remains visible when refresh fails and is explicitly marked as potentially old.
+cookies, formats, codecs and torrent peers. Use **Download utility updates** below the engine checks for automatic or
+manual updates. The image still supplies pinned fallback tools; ffmpeg and base-library changes require an image
+rebuild. If storage is unavailable, check its mount, available space and UID 1000 ownership; the last displayed snapshot
+remains visible when refresh fails and is explicitly marked as potentially old.
 
 Detailed diagnostics use authenticated `GET /api/station` with `Cache-Control: no-store`, omitting paths, source URLs,
 credentials and browser push registrations. The public `/api/health` remains the existing minimal process probe used by
@@ -397,9 +398,134 @@ The next candidates are container-quota diagnostics, optional private webhooks a
 review, terminal scheduling and completion destinations are implemented in version 2.9. OS-visible system readings and
 optional CPU temperature are implemented in version 2.8, durable alert retries in 2.7, bulk library actions in 2.6 and
 media/ZIP delivery in 2.5. Any retention policy should show what it will remove and require explicit owner
-configuration. Engine updates should be reviewed and pinned.
+configuration. Bundled engine versions stay pinned; runtime utility updates can be disabled for a frozen installation.
 
 [share-target]: https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps/Manifest/Reference/share_target
+
+## New in version 2.10
+
+### Video resolution and MP3 audio
+
+The composer now separates **Output format** from **Video quality** or **Audio quality**. Video choices are best
+available or up to 2160p/4K, 1440p, 1080p, 720p, 480p and 360p. These are source-stream height ceilings, not upscaling
+or forced video re-encoding. The default remains up to 1080p; available source formats determine the actual result.
+
+Choose **MP3 audio** to extract/convert audio at a target 128, 192 or 320 kbps. The default is 192 kbps. The downloader
+prefers an audio stream and falls back to extracting a combined video/audio stream. ffmpeg performs conversion and the
+intermediate source is excluded from published files. A higher target bitrate cannot restore missing source detail;
+already compatible MP3 sources may be retained without re-encoding. Converted files have `.mp3` names and ordinary
+browser save links. They also support existing completion destinations. Inline MP3 playback is not added in this
+release.
+
+Use **Video** or **Auto detect** for these options. Auto routes direct media links through the extractor when MP3 is
+selected. File/torrent/magnet modes reject audio extraction. Instagram's dedicated collector keeps original gallery
+images/videos; choose **Video** explicitly for an Instagram video that should use the video extractor or MP3 conversion.
+Image-only posts do not contain extractable audio. Changing to a non-media source resets/disables media choices.
+
+Quality remains in each job's persisted `quality` field, including new `mp3-128`, `mp3-192` and `mp3-320` values. Batch
+review treats separate video/audio representations and audio bitrates as distinct downloads. Retries keep their chosen
+representation; legacy jobs preserve their existing quality. The API continues to accept `url`, `sourceType` and
+`quality`, with no arbitrary format expressions or ffmpeg arguments. Old servers cannot read the new quality values;
+keep a matching pre-upgrade backup if a downgrade is necessary.
+
+### Automatic utility updates
+
+Open **Station health → Download utility updates**. You can enable daily automatic checks, choose **Check & update
+now**, cancel a pending/running candidate, roll back to the previous verified set or restore the packaged tools.
+Automatic updates are initially enabled in the Docker image, with about two minutes of startup grace and a daily
+interval after each attempt. Your saved browser preference takes precedence over the initial `AUTO_UPDATE_TOOLS`
+environment default. Manual checks are available even when automatic checks are disabled. Updates wait until active
+download workers release their slots, then hold new transfers during preparation. They do not interrupt existing
+downloads. A permanently busy queue can defer maintenance; pause jobs if you want to create an idle period sooner.
+
+The updater prepares a complete private utility set under `/data/utilities/releases/<uuid>`:
+
+- yt-dlp with its default EJS dependencies and gallery-dl are installed into an isolated Python environment from the
+  fixed HTTPS PyPI index. Only binary package distributions are accepted; dependency checks must pass.
+- aria2 and libaria2 are downloaded using APT's normal signed repository/package authentication. The updater uses the
+  repositories already configured in the supplied Debian image. It checks dependency compatibility against the base
+  image and extracts only those two packages into private storage. It does not install or replace host/system packages.
+- Each utility's fixed version command must succeed before the active-release pointer is atomically replaced. The
+  previous release remains available, and an unsuccessful attempt keeps the previously selected tools. Incompatible,
+  corrupt or missing managed state falls back to packaged tools. Cached health diagnostics can lag by up to one minute.
+
+aria2 follows the latest compatible **Debian repository package**, which can lag upstream aria2 releases. This feature
+is not an upstream source compiler. If a newer package needs newer system libraries, rebuild the image rather than
+replacing its base libraries at runtime. **ffmpeg, Node, Python, CA certificates and the operating system still update
+through image rebuilds.** Runtime updates do not update LinkDock's application source or push/pull your registry image.
+
+Updates run as the application's UID 1000 and work with a read-only container root. They need writable executable
+storage under `/data`, outbound access to PyPI/the configured APT repositories and at least 1 GiB free before starting.
+Installer temporary files stay in the candidate directory. Sampled free-space, 1 GiB staging and file-count limits plus
+per-command timeouts bound ordinary failures; they are not filesystem/kernel quotas. Package payloads can be
+redownloaded during a daily refresh. Update traffic has separate fixed network timeouts and does not use download speed
+budgets or daily source-download windows. Signed-index caches persist between checks. Run one station per data
+directory.
+
+Successful activation uses the new tools for subsequent transfers. The idle torrent daemon is stopped and reaped before
+switching, so it restarts with the selected binary. No Docker socket, sudo access or root container user is required.
+Abruptly interrupted requests recover as waiting on restart; normal shutdown cancels candidate work. Private incomplete
+or inactive release directories are cleaned during later update attempts, retaining the active and previous releases.
+Back up `/data/utilities` with the rest of application state. A changed installation path/base Python image makes an old
+managed set incompatible; bundled tools remain usable until the next successful update.
+
+**Rollback previous tools** checks the retained release identity/files and selects that previously verified set. Both
+rollback and **Restore bundled tools** wait for an idle queue and disable automatic updates. Update failures show the
+last safe step in the panel; private command diagnostics go to service logs. Keep `/data` owned/writable by UID 1000,
+including any existing files. Source download checks and private job delivery remain unchanged. Real Pi/ARM64,
+signed-repository network access and post-update provider downloads still require deployment acceptance.
+
+Your `link_dock` service also supports these terminal commands:
+
+```bash
+docker compose exec link_dock node dist-server/server/cli.js updates
+docker compose exec link_dock node dist-server/server/cli.js update-tools
+docker compose exec link_dock node dist-server/server/cli.js cancel-update
+docker compose exec link_dock node dist-server/server/cli.js auto-updates off
+docker compose exec link_dock node dist-server/server/cli.js auto-updates on
+docker compose exec link_dock node dist-server/server/cli.js rollback-tools
+docker compose exec link_dock node dist-server/server/cli.js restore-tools
+```
+
+For the default `compose.yaml`, the service name is `linkdock`; substitute that name above. For the standalone Pi file,
+include `-f compose.rpi.yaml` if it is not selected through `COMPOSE_FILE`. Commands use authenticated loopback API
+access; provider URLs, executable names and shell command text cannot be submitted through the utility API. Protected
+`GET /api/utilities` returns safe status. JSON `POST` accepts fixed actions `settings` with boolean `enabled`, `update`,
+`cancel`, `rollback` and `restore` through the existing session/origin boundary.
+
+### Your Pi bind-mount configuration
+
+`compose.rpi.yaml` is a standalone example matching the `link_dock` service, host port 7489 and
+`localhost:5000/link_dock:latest` image tag. It stores app state at `/home/pi/configs/linkDock`, transfer bytes in
+`${LINKDOCK_DOWNLOAD_PATH}/transfers` and moved files in `${LINKDOCK_DOWNLOAD_PATH}/completed`. It uses bind mounts, not
+a Docker-managed named volume. The `volumes` YAML section is still the correct place to declare bind mounts.
+
+Keep your existing access token and add/update these `.env` settings:
+
+```dotenv
+PORT=7489
+LINKDOCK_DOWNLOAD_PATH=/home/pi/downloads/linkDock
+AUTO_UPDATE_TOOLS=true
+```
+
+Create the exact case-sensitive host directories on the Pi that runs Docker. The following example uses the path above:
+
+```bash
+sudo install -d -o 1000 -g 1000 -m 0750 \
+  /home/pi/configs/linkDock \
+  /home/pi/downloads/linkDock/transfers \
+  /home/pi/downloads/linkDock/completed
+docker compose -f compose.rpi.yaml config --quiet
+docker compose -f compose.rpi.yaml up -d --build
+```
+
+The standalone example builds from the extracted source and tags the result locally. If you build/push the image on
+another machine, retain your existing registry workflow. On existing installations, preserve/migrate data before
+changing mounts and repair existing app-file ownership if necessary. Your earlier history-file permission error needs
+ownership of existing files as well as the directory; an empty directory creation does not fix those files. App state
+maps to `/data`, transfer storage to `/data/downloads` and completed storage to `/completed`. Keep the container's
+`PORT=8080`; the host port is separate. Change the download root to a pre-existing writable SSD path if desired. Keep
+optional cookie/sensor/proxy configuration from your own deployment when using a customized Compose file.
 
 ## New in version 2.9
 
@@ -583,10 +709,10 @@ recognized. Use **Video** for other yt-dlp-supported sites. Platform support can
 available does not guarantee access to every post. Private, removed, region-restricted, account-restricted or
 DRM-protected media may not be available. No DRM bypass is implemented.
 
-Video quality defaults to up to **1080p**. Choose up to 720p or best available. Existing video/audio streams are
-selected and merged without re-encoding. When separate streams need merging, the container can be MKV; the final
-filename reports the actual extension. Audio-only sources may produce an audio file. Only one video is requested;
-playlist expansion is disabled.
+Video quality defaults to up to **1080p**. Select 360p, 480p, 720p, 1080p, 1440p, 2160p/4K or best available. Existing
+video/audio streams are selected and merged without re-encoding. When separate streams need merging, the container can
+be MKV; the final filename reports the actual extension. Audio-only sources may produce an audio file. Only one video is
+requested; playlist expansion is disabled.
 
 Instagram accepts individual `/p/`, `/reel/`, `/reels/` and `/tv/` links. Profiles, bulk account archives, stories and
 highlights are not included in this workflow. Carousel items are saved as separate files. Pre-merged Instagram videos
@@ -1031,24 +1157,27 @@ format. Do not replace your volume with an empty directory. The new image instal
 is required, not just restarting the old image. An old page already open in a browser should be reloaded after
 upgrading. Version 2.2 introduces a default 1 GiB free-space buffer; change it in Station controls if needed. Backups
 must include `settings.json` as well as the existing history and files. Older versions cannot read paused states;
-restore a complete pre-upgrade backup if you need to downgrade. Version 2.3 adds optional priority fields and a private
-notification directory; preserve that identity and its registrations when upgrading. Version 2.4 adds optional library
-metadata in history and read-only diagnostics. Version 2.5 adds media/ZIP routes; version 2.6 adds bulk operations
-without new deployment variables, dependencies or persisted-history fields. Version 2.7 adds an optional private
-notification outbox; keep the complete notification directory. Version 2.8 adds private system readings and an optional
-read-only temperature override; retain that override in Compose commands if enabled. Downgrading to 2.6 will not drain
-the new backlog. Version 2.9 adds optional torrent selection, payload-publication and destination fields plus
-`controls.json`. Preserve that file and the complete completion storage alongside `/data`. Keep any
-`compose.destinations.yaml` override when recreating the service; moved files stay on that mount. Avoid downgrading
+restore a complete pre-upgrade backup if you need to downgrade. Version 2.10 adds quality values that older servers
+cannot validate and a private utility-state directory; preserve that directory with app state. Version 2.3 adds optional
+priority fields and a private notification directory; preserve that identity and its registrations when upgrading.
+Version 2.4 adds optional library metadata in history and read-only diagnostics. Version 2.5 adds media/ZIP routes;
+version 2.6 adds bulk operations without new deployment variables, dependencies or persisted-history fields. Version 2.7
+adds an optional private notification outbox; keep the complete notification directory. Version 2.8 adds private system
+readings and an optional read-only temperature override; retain that override in Compose commands if enabled.
+Downgrading to 2.6 will not drain the new backlog. Version 2.9 adds optional torrent selection, payload-publication and
+destination fields plus `controls.json`. Preserve that file and the complete completion storage alongside `/data`. Keep
+any `compose.destinations.yaml` override when recreating the service; moved files stay on that mount. Avoid downgrading
 after moving files: older versions do not resolve completion destinations or honor the new file-selection state. Restore
 both data and completion storage from a matching pre-upgrade backup if a downgrade is necessary. Older releases do not
 display organization. HTTPS alert setup is opt-in.
 
-Media sites change frequently. To update an extractor, change its explicit version in `requirements-media.txt`, rebuild
-with `docker compose build --pull --no-cache` and recreate the service. Review engine release notes and test a small
-download after updating. The EJS solver is installed by yt-dlp's default extra; remote component fetching is disabled.
-ffmpeg and aria2 come from the base distribution repository. Engine Python packages use their ecosystem installer inside
-Docker; JavaScript packages remain managed exclusively by pnpm.
+Media sites change frequently. Use the utility updater for compatible stable extractor/aria2 updates. To change the
+packaged fallback, update its explicit version in `requirements-media.txt`, rebuild with
+`docker compose build --pull --no-cache` and recreate the service. Review engine release notes and test a small download
+after updating. The EJS solver is installed by yt-dlp's default extra; remote component fetching is disabled. Packaged
+ffmpeg and aria2 come from the base distribution repository. Managed aria2 uses compatible packages from those same
+signed image repositories. Engine Python packages use their ecosystem installer inside Docker; JavaScript packages
+remain managed exclusively by pnpm.
 
 Dark mode is the initial appearance. The sun/moon control switches the complete palette and saves the choice in your
 browser.

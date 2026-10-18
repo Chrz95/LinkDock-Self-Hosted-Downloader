@@ -81,7 +81,7 @@ export function Sidebar() {
         </p>
         <div className="device-label">
           <Icon name="drive" />
-          SELF-HOSTED · V2.9
+          SELF-HOSTED · V2.10
         </div>
       </div>
     </aside>

@@ -18,6 +18,8 @@ export interface ServerConfig {
   reservedFreeBytes?: number;
   webPushSubject?: string;
   completedDirectory?: string;
+  autoUpdateTools?: boolean;
+  runtimeEnvironment?: NodeJS.ProcessEnv;
 }
 
 /**
@@ -33,6 +35,13 @@ function parsePositiveInteger(value: string | undefined, fallback: number, maxim
     throw new Error('A numeric environment setting is outside its documented range.');
   }
   return parsedValue;
+}
+
+/** Copies inherited process settings without reading environment variables in engine/updater modules.
+ * @returns {NodeJS.ProcessEnv} Isolated environment for child processes.
+ */
+export function readRuntimeEnvironment(): NodeJS.ProcessEnv {
+  return { ...process.env };
 }
 
 /**
@@ -78,5 +87,7 @@ export function loadServerConfig(): ServerConfig {
     isProduction: process.env.NODE_ENV === 'production',
     mediaCookiesFile: process.env.MEDIA_COOKIES_FILE || undefined,
     webPushSubject,
+    autoUpdateTools: process.env.AUTO_UPDATE_TOOLS === 'true',
+    runtimeEnvironment: readRuntimeEnvironment(),
   };
 }

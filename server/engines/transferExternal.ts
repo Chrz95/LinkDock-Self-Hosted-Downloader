@@ -1,6 +1,6 @@
 import { mkdir, rename, rm } from 'node:fs/promises';
 import type { DownloadJob } from '../../shared/contracts.js';
-import { SOURCE_TYPE } from '../../shared/sources.js';
+import { SOURCE_TYPE, isAudioQuality } from '../../shared/sources.js';
 import type { ServerConfig } from '../config.js';
 import type { DownloadStore } from '../downloads/store.js';
 import { OUTPUT } from './constants.js';
@@ -56,6 +56,14 @@ export async function transferExternal(
       ) {
         throw new Error('Selected torrent output is incomplete or has changed.');
       }
+    }
+    if (!isTorrent && isAudioQuality(job.quality)) {
+      for (const artifact of artifacts) {
+        if (!artifact.relativePath.toLowerCase().endsWith('.mp3')) {
+          await rm(await resolveArtifactPath(workingDirectory, artifact.relativePath), { force: true });
+        }
+      }
+      artifacts = artifacts.filter((artifact) => artifact.relativePath.toLowerCase().endsWith('.mp3'));
     }
     const totalBytes = artifacts.reduce((total, file) => total + file.sizeBytes, 0);
     if (!artifacts.length) {

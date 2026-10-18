@@ -1,5 +1,5 @@
 import { DOWNLOAD_STATUS, type DownloadJob } from './contracts.js';
-import type { SourceType, VideoQuality } from './sources.js';
+import type { SourceType, DownloadQuality } from './sources.js';
 
 /** Bounded batch size shared by review controls and server validation. */
 export const MAXIMUM_BATCH_LINKS = 50;
@@ -10,7 +10,7 @@ export type JobPriority = (typeof JOB_PRIORITY)[keyof typeof JOB_PRIORITY];
 /** Source choices applied consistently to one batch. */
 export interface BatchOptions {
   sourceType?: SourceType;
-  quality?: VideoQuality;
+  quality?: DownloadQuality;
 }
 /** Owner-visible review; this never changes queue state. */
 export interface BatchPreview {

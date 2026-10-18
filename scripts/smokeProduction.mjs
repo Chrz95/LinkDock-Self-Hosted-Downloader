@@ -11,6 +11,7 @@ import { smokeDelivery } from './smokeDelivery.mjs';
 import { smokeBulkLibrary } from './smokeBulkLibrary.mjs';
 import { smokeOutbox } from './smokeOutbox.mjs';
 import { smokeWorkflows } from './smokeWorkflows.mjs';
+import { smokeUtilities } from './smokeUtilities.mjs';
 
 /** Native Node execution catches production module interop that the test transformer can mask. */
 const SMOKE = { port: 8_080, fileLimit: 1_024, origin: 'https://station.example' };
@@ -89,6 +90,7 @@ async function smokeProduction() {
     await client.get('/notifications/vapid.json').expect(HTTP_STATUS.notFound);
     await smokeOutbox(configuration, queue);
     await smokeWorkflows(configuration);
+    await smokeUtilities(configuration);
     process.stdout.write('Compiled production imports, mobile assets, organization and private diagnostics: passed.\n');
   } finally {
     await queue.stop();

@@ -1,3 +1,4 @@
+import { SOURCE_TYPE } from '../../../../shared/sources';
 import { Icon } from '../../../components/ui/Icon';
 import { SourceSelector } from './composer/SourceSelector';
 import { ComposerOptions } from './composer/ComposerOptions';
@@ -64,6 +65,7 @@ export function AddDownload({ onAdd, onUpload, onBatch }: AddDownloadProps) {
           <ComposerOptions
             quality={composer.quality}
             isDisabled={composer.isSubmitting}
+            supportsMedia={composer.sourceType === SOURCE_TYPE.video || composer.sourceType === SOURCE_TYPE.auto}
             canUpload={Boolean(onUpload)}
             fileInput={composer.fileInput}
             onQualityChange={composer.setQuality}

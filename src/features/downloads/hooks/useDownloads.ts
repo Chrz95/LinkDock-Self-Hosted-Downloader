@@ -1,4 +1,4 @@
-import type { SourceType, VideoQuality } from '../../../../shared/sources';
+import type { SourceType, DownloadQuality } from '../../../../shared/sources';
 import { useCallback, useEffect, useState } from 'react';
 import { API_PATH, HTTP_METHOD, type DashboardSnapshot, type JobAction } from '../../../../shared/contracts';
 import { POLL_INTERVAL_MILLISECONDS } from '../constants';
@@ -93,10 +93,10 @@ export function useDownloads() {
    * Adds a transfer and refreshes immediately; form errors remain available to its caller.
    * @param {string} url - Direct file link.
    * @param {SourceType} [sourceType] - Requested engine.
-   * @param {VideoQuality} [quality] - Maximum video resolution.
+   * @param {DownloadQuality} [quality] - Maximum video resolution.
    * @returns {Promise<void>} Completes after acceptance and refresh.
    */
-  async function queueDownload(url: string, sourceType?: SourceType, quality?: VideoQuality): Promise<void> {
+  async function queueDownload(url: string, sourceType?: SourceType, quality?: DownloadQuality): Promise<void> {
     try {
       await addDownload(url, sourceType, quality);
       await refreshDownloads();
@@ -159,10 +159,10 @@ export function useDownloads() {
    * Adds an atomic reviewed batch and refreshes the queue immediately.
    * @param {string[]} urls - Reviewed links.
    * @param {SourceType} [sourceType] - Shared engine.
-   * @param {VideoQuality} [quality] - Shared resolution.
+   * @param {DownloadQuality} [quality] - Shared resolution.
    * @returns {Promise<BatchResult>} Actual accepted records and skipped duplicates.
    */
-  async function queueBatch(urls: string[], sourceType?: SourceType, quality?: VideoQuality): Promise<BatchResult> {
+  async function queueBatch(urls: string[], sourceType?: SourceType, quality?: DownloadQuality): Promise<BatchResult> {
     const result = await addBatch(urls, sourceType, quality);
     await refreshDownloads();
     return result;

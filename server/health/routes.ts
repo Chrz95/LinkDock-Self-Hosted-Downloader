@@ -89,7 +89,7 @@ export function readStationHealth(
 export function createHealthRoutes(
   configuration: ServerConfig,
   queue: DownloadQueue,
-  inspector = new EngineInspector(),
+  inspector = new EngineInspector(configuration.dataDirectory, configuration.runtimeEnvironment),
   systemInspector = new SystemInspector(),
 ): Router {
   const router = Router();

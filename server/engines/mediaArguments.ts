@@ -1,6 +1,7 @@
 import path from 'node:path';
 import { ENGINE_LIMIT, MEDIA_LINE } from './constants.js';
-import { SOURCE_TYPE, VIDEO_QUALITY } from '../../shared/sources.js';
+import { SOURCE_TYPE } from '../../shared/sources.js';
+import { mediaFormatArguments } from './mediaFormat.js';
 import type { DownloadJob } from '../../shared/contracts.js';
 
 /**
@@ -48,8 +49,6 @@ export function buildMediaArguments(
       job.url,
     ];
   }
-  const quality = job.quality ?? VIDEO_QUALITY.balanced;
-  const format = quality === VIDEO_QUALITY.original ? 'bv*+ba/b' : `bv*[height<=${quality}]+ba/b[height<=${quality}]`;
   return [
     '--ignore-config',
     '--no-playlist',
@@ -70,10 +69,7 @@ export function buildMediaArguments(
     String(ENGINE_LIMIT.mediaRetryCount),
     '--fragment-retries',
     String(ENGINE_LIMIT.mediaRetryCount),
-    '--format',
-    format,
-    '--merge-output-format',
-    'mkv',
+    ...mediaFormatArguments(job.quality),
     '--max-filesize',
     String(maximumBytes),
     '--output',

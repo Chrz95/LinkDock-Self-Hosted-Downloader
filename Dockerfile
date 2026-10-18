@@ -9,7 +9,7 @@ RUN pnpm build
 RUN pnpm prune --prod
 
 FROM node:24.19.0-bookworm-slim AS runtime
-ENV NODE_ENV=production PORT=8080 DATA_DIRECTORY=/data XDG_CACHE_HOME=/data/.cache \
+ENV NODE_ENV=production PORT=8080 DATA_DIRECTORY=/data XDG_CACHE_HOME=/data/.cache AUTO_UPDATE_TOOLS=true \
     PATH="/opt/media/bin:${PATH}"
 RUN apt-get update && apt-get install -y --no-install-recommends \
     python3 python3-venv ffmpeg aria2 ca-certificates \

@@ -321,3 +321,37 @@
   color: var(--muted);
   font-size: 0.8rem;
 }
+
+.utility-updates {
+  margin-top: 1.25rem;
+  padding: 1rem;
+  border: 1px solid var(--line);
+  border-radius: 0.85rem;
+  background: var(--field);
+}
+.utility-updates summary {
+  min-height: 44px;
+  align-content: center;
+  cursor: pointer;
+  color: var(--text);
+  font-weight: 550;
+}
+.utility-updates p,
+.utility-updates li {
+  color: var(--muted);
+  font-size: 0.8rem;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.utility-auto {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 44px;
+  color: var(--text);
+}
+.utility-auto input {
+  width: 1.15rem;
+  height: 1.15rem;
+  accent-color: var(--accent);
+}

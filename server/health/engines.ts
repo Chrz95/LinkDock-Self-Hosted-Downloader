@@ -1,4 +1,5 @@
 import { execFile } from 'node:child_process';
+import { resolveUtility } from '../utilities/resolve.js';
 import { ENGINE_COMMAND } from '../engines/constants.js';
 import { ENGINE_STATE, HEALTH_LIMIT, type EngineHealth } from '../../shared/health.js';
 
@@ -9,7 +10,7 @@ export const ENGINE_CHECKS = [
     id: 'instagram',
     label: 'Instagram',
     command: ENGINE_COMMAND.instagram,
-    arguments: ['--ignore-config', '--version'],
+    arguments: ['--config-ignore', '--version'],
   },
   { id: 'torrent', label: 'Torrents', command: ENGINE_COMMAND.torrent, arguments: ['--no-conf=true', '--version'] },
   { id: 'merge', label: 'Video merging', command: 'ffmpeg', arguments: ['-version'] },
@@ -20,15 +21,26 @@ type EngineCheck = (typeof ENGINE_CHECKS)[number];
 /**
  * Caps command runtime and output while withholding raw errors, paths and stderr from API responses.
  * @param {EngineCheck} check - Fixed executable definition.
+ * @param {string} [dataDirectory] - Optional managed tool state.
+ * @param {NodeJS.ProcessEnv} [environment] - Existing service environment for native libraries.
  * @returns {Promise<EngineHealth>} Sanitized point-in-time command result.
  */
-export function inspectEngine(check: EngineCheck): Promise<EngineHealth> {
+export function inspectEngine(
+  check: EngineCheck,
+  dataDirectory?: string,
+  environment?: NodeJS.ProcessEnv,
+): Promise<EngineHealth> {
+  const execution =
+    dataDirectory && check.id !== 'merge'
+      ? resolveUtility(check.id, dataDirectory, environment)
+      : { command: check.command };
   return new Promise((resolve) => {
     execFile(
-      check.command,
+      execution.command,
       check.arguments,
       {
         encoding: 'utf8',
+        env: execution.environment,
         shell: false,
         windowsHide: true,
         timeout: HEALTH_LIMIT.commandTimeoutMilliseconds,
@@ -69,6 +81,15 @@ export function inspectEngine(check: EngineCheck): Promise<EngineHealth> {
 
 /** One coalesced inspection at a time, with completed results reused across all authenticated browser requests. */
 export class EngineInspector {
+  /**
+   * Resolves active managed binaries for the station instead of only inspecting packaged defaults.
+   * @param {string} [dataDirectory] - Optional persistent utility state.
+   * @param {NodeJS.ProcessEnv} [environment] - Existing service environment.
+   */
+  constructor(
+    private readonly dataDirectory?: string,
+    private readonly environment?: NodeJS.ProcessEnv,
+  ) {}
   private cached: EngineHealth[] | undefined;
   private expiresAt = 0;
   private pending: Promise<EngineHealth[]> | undefined;
@@ -91,7 +112,7 @@ export class EngineInspector {
   private async run(): Promise<EngineHealth[]> {
     const results: EngineHealth[] = [];
     for (const check of ENGINE_CHECKS) {
-      results.push(await inspectEngine(check));
+      results.push(await inspectEngine(check, this.dataDirectory, this.environment));
     }
     this.cached = results;
     this.expiresAt = Date.now() + HEALTH_LIMIT.cacheMilliseconds;

@@ -1,6 +1,6 @@
 import { useRef, useState, type ChangeEvent, type SubmitEvent } from 'react';
 import { SOURCE_TYPE, VIDEO_QUALITY } from '../../../../../shared/sources';
-import type { SourceType, VideoQuality } from '../../../../../shared/sources';
+import type { SourceType, DownloadQuality } from '../../../../../shared/sources';
 import { MAXIMUM_TORRENT_BYTES } from './composerConstants';
 import type { AddDownloadProps } from './composer.types';
 import { MAXIMUM_BATCH_LINKS, type BatchPreview } from '../../../../../shared/batch';
@@ -17,7 +17,7 @@ import { readSharedDraft, clearSharedDraft } from '../../../mobile';
  */
 export function useDownloadComposer({ onAdd, onUpload, onBatch }: AddDownloadProps) {
   const [sourceType, updateSourceType] = useState<SourceType>(SOURCE_TYPE.auto);
-  const [quality, updateQuality] = useState<VideoQuality>(VIDEO_QUALITY.balanced);
+  const [quality, updateQuality] = useState<DownloadQuality>(VIDEO_QUALITY.balanced);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const fileInput = useRef<HTMLInputElement>(null);
@@ -103,13 +103,16 @@ export function useDownloadComposer({ onAdd, onUpload, onBatch }: AddDownloadPro
    */
   function setSourceType(value: SourceType): void {
     updateSourceType(value);
+    if (value !== SOURCE_TYPE.auto && value !== SOURCE_TYPE.video) {
+      updateQuality(VIDEO_QUALITY.balanced);
+    }
     setReview(null);
   }
   /**
    * Changes resolution and invalidates previous duplicate matching.
-   * @param {VideoQuality} value - Resolution preference.
+   * @param {DownloadQuality} value - Resolution preference.
    */
-  function setQuality(value: VideoQuality): void {
+  function setQuality(value: DownloadQuality): void {
     updateQuality(value);
     setReview(null);
   }

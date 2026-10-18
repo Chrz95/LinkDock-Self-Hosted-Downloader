@@ -1,4 +1,4 @@
-import type { SourceType, VideoQuality } from '../../../../shared/sources';
+import type { SourceType, DownloadQuality } from '../../../../shared/sources';
 import type { BatchPreview, BatchResult } from '../../../../shared/batch';
 import {
   API_PATH,
@@ -29,10 +29,10 @@ export function organizeDownload(jobId: string, metadata: LibraryMetadata): Prom
  * Reviews or atomically queues a bounded batch through the existing authenticated API.
  * @param {string[]} urls - One link per entry.
  * @param {SourceType} sourceType - Shared engine selection.
- * @param {VideoQuality} quality - Shared resolution policy.
+ * @param {DownloadQuality} quality - Shared resolution policy.
  * @returns {Promise<BatchPreview>} Validated review without starting work.
  */
-export function previewBatch(urls: string[], sourceType: SourceType, quality: VideoQuality): Promise<BatchPreview> {
+export function previewBatch(urls: string[], sourceType: SourceType, quality: DownloadQuality): Promise<BatchPreview> {
   return requestApi(`${API_PATH.downloads}${DOWNLOAD_PATH.batchPreview}`, {
     method: HTTP_METHOD.post,
     body: JSON.stringify({ urls, sourceType, quality }),
@@ -43,10 +43,10 @@ export function previewBatch(urls: string[], sourceType: SourceType, quality: Vi
  * Commits all valid unique links together and reports skips that changed since review.
  * @param {string[]} urls - Reviewed links.
  * @param {SourceType} [sourceType] - Shared engine selection.
- * @param {VideoQuality} [quality] - Shared resolution policy.
+ * @param {DownloadQuality} [quality] - Shared resolution policy.
  * @returns {Promise<BatchResult>} Accepted records and duplicate feedback.
  */
-export function addBatch(urls: string[], sourceType?: SourceType, quality?: VideoQuality): Promise<BatchResult> {
+export function addBatch(urls: string[], sourceType?: SourceType, quality?: DownloadQuality): Promise<BatchResult> {
   return requestApi(`${API_PATH.downloads}${DOWNLOAD_PATH.batch}`, {
     method: HTTP_METHOD.post,
     body: JSON.stringify({ urls, sourceType, quality }),
@@ -66,10 +66,10 @@ export function fetchDownloads(signal?: AbortSignal): Promise<DashboardSnapshot>
  * Queues a single direct file URL.
  * @param {string} url - Submitted HTTP/HTTPS link.
  * @param {SourceType} [sourceType] - Explicit engine or automatic detection.
- * @param {VideoQuality} [quality] - Site-video resolution policy.
+ * @param {DownloadQuality} [quality] - Site-video resolution policy.
  * @returns {Promise<void>} Resolves after the server accepts it.
  */
-export async function addDownload(url: string, sourceType?: SourceType, quality?: VideoQuality): Promise<void> {
+export async function addDownload(url: string, sourceType?: SourceType, quality?: DownloadQuality): Promise<void> {
   await requestApi(API_PATH.downloads, {
     method: HTTP_METHOD.post,
     body: JSON.stringify({ url, sourceType, quality }),

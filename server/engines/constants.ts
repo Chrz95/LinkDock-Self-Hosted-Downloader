@@ -1,3 +1,4 @@
+import { TOOL_COMMAND } from '../../shared/utilities.js';
 /** Resource limits and polling units for external download engines. */
 export const ENGINE_LIMIT = {
   gidBytes: 8,
@@ -20,7 +21,7 @@ export const ENGINE_LIMIT = {
   stagingSpaceMultiplier: 2,
 } as const;
 /** All subprocess executables are fixed by the application, never supplied by request bodies. */
-export const ENGINE_COMMAND = { video: 'yt-dlp', instagram: 'gallery-dl', torrent: 'aria2c' } as const;
+export const ENGINE_COMMAND = TOOL_COMMAND;
 /** Staged output is published only after successful worker completion. */
 export const OUTPUT = {
   workingSuffix: '.work',

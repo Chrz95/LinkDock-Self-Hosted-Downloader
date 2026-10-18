@@ -3,11 +3,12 @@ import path from 'node:path';
 import { SOURCE_TYPE } from '../../shared/sources.js';
 import type { DownloadJob } from '../../shared/contracts.js';
 import type { ServerConfig } from '../config.js';
-import { ENGINE_COMMAND, ENGINE_LIMIT, MEDIA_LINE } from './constants.js';
+import { ENGINE_LIMIT, MEDIA_LINE } from './constants.js';
 import { buildMediaArguments } from './mediaArguments.js';
 import { createPublicProxy } from './publicProxy.js';
 import { runEngineProcess } from './runProcess.js';
 import { prepareMediaCookies } from './cookies.js';
+import { resolveUtility } from '../utilities/resolve.js';
 import { ensureStorage } from '../policy/storage.js';
 
 /**
@@ -96,7 +97,8 @@ export async function downloadMedia(
   });
   const controller = new AbortController();
   const combinedSignal = AbortSignal.any([signal, controller.signal]);
-  const command = job.sourceType === SOURCE_TYPE.instagram ? ENGINE_COMMAND.instagram : ENGINE_COMMAND.video;
+  const tool = job.sourceType === SOURCE_TYPE.instagram ? 'instagram' : 'video';
+  const execution = resolveUtility(tool, configuration.dataDirectory, configuration.runtimeEnvironment);
   job.stage = 'Connecting to source';
   let measurement: Promise<void> | undefined;
   let previousBytes = initialBytes;
@@ -132,7 +134,7 @@ export async function downloadMedia(
   }, ENGINE_LIMIT.progressIntervalMilliseconds);
   try {
     await runEngineProcess(
-      command,
+      execution.command,
       buildMediaArguments(
         job,
         outputDirectory,
@@ -143,6 +145,7 @@ export async function downloadMedia(
       ),
       combinedSignal,
       (line) => applyMediaProgress(job, line),
+      { env: execution.environment },
     );
   } finally {
     clearInterval(interval);

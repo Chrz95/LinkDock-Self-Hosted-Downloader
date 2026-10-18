@@ -1,12 +1,19 @@
 import { spawn } from 'node:child_process';
 import { ENGINE_LIMIT } from './constants.js';
 
+export interface EngineProcessOptions {
+  onFailure?: (diagnostic: string) => void;
+  cwd?: string;
+  env?: NodeJS.ProcessEnv;
+}
+
 /**
  * Runs an argument vector without a shell and terminates its full Linux process group on cancellation.
  * @param {string} executable - Fixed engine command.
  * @param {string[]} argumentsList - Application-built arguments.
  * @param {AbortSignal} signal - Cancellation source.
  * @param {(line: string) => void} onLine - Receives bounded output lines for progress parsing.
+ * @param {EngineProcessOptions} [options] - Private execution directory and managed native library environment.
  * @returns {Promise<void>} Successful process completion after all children have exited.
  */
 export function runEngineProcess(
@@ -14,10 +21,16 @@ export function runEngineProcess(
   argumentsList: string[],
   signal: AbortSignal,
   onLine: (line: string) => void,
+  options: EngineProcessOptions = {},
 ): Promise<void> {
   signal.throwIfAborted();
   return new Promise<void>((resolve, reject) => {
-    const child = spawn(executable, argumentsList, { detached: true, stdio: ['ignore', 'pipe', 'pipe'] });
+    const child = spawn(executable, argumentsList, {
+      detached: true,
+      stdio: ['ignore', 'pipe', 'pipe'],
+      cwd: options.cwd,
+      env: options.env,
+    });
     let errorOutput = '';
     let pendingLine = '';
     let killTimeout: ReturnType<typeof setTimeout> | undefined;
@@ -68,8 +81,12 @@ export function runEngineProcess(
       if (signal.aborted) {
         reject(signal.reason);
       } else if (code === 0) {
+        if (pendingLine) {
+          onLine(pendingLine);
+        }
         resolve();
       } else {
+        options.onFailure?.(errorOutput);
         const needsLogin = /login|log in|sign in|cookies|authentication|private|age.restrict|bot/i.test(errorOutput);
         reject(
           new Error(

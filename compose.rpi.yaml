@@ -1,0 +1,52 @@
+# Standalone Raspberry Pi configuration with host bind mounts and a local image tag.
+services:
+  link_dock:
+    image: ${LINKDOCK_IMAGE:-localhost:5000/link_dock:latest}
+    build: .
+    container_name: link_dock
+    restart: unless-stopped
+    init: true
+    ports:
+      - '${PORT:-7489}:8080'
+      - '${TORRENT_PORT:-6881}:6881/tcp'
+      - '${TORRENT_PORT:-6881}:6881/udp'
+    environment:
+      LINKDOCK_ACCESS_TOKEN: ${LINKDOCK_ACCESS_TOKEN:?Set a random 32+ character password}
+      PORT: '8080'
+      MAX_CONCURRENT_DOWNLOADS: ${MAX_CONCURRENT_DOWNLOADS:-2}
+      MAX_FILE_SIZE_GIB: ${MAX_FILE_SIZE_GIB:-20}
+      SECURE_COOKIE: ${SECURE_COOKIE:-false}
+      PUBLIC_ORIGIN: ${PUBLIC_ORIGIN:-}
+      WEB_PUSH_SUBJECT: ${WEB_PUSH_SUBJECT:-}
+      AUTO_UPDATE_TOOLS: ${AUTO_UPDATE_TOOLS:-true}
+      DATA_DIRECTORY: /data
+      COMPLETED_DIRECTORY: /completed
+    volumes:
+      - type: bind
+        source: /home/pi/configs/linkDock
+        target: /data
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${LINKDOCK_DOWNLOAD_PATH:?Set LINKDOCK_DOWNLOAD_PATH}/transfers
+        target: /data/downloads
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${LINKDOCK_DOWNLOAD_PATH:?Set LINKDOCK_DOWNLOAD_PATH}/completed
+        target: /completed
+        bind:
+          create_host_path: false
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,noexec,nosuid
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    stop_grace_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'

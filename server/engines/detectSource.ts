@@ -1,4 +1,12 @@
-import { SOURCE_TYPE, SOURCE_URL, VIDEO_QUALITY, type DownloadRequest, type SourceType } from '../../shared/sources.js';
+import {
+  SOURCE_TYPE,
+  SOURCE_URL,
+  VIDEO_QUALITY,
+  DOWNLOAD_QUALITY,
+  isAudioQuality,
+  type DownloadRequest,
+  type SourceType,
+} from '../../shared/sources.js';
 import { parseTargetUrl } from '../security/target.js';
 import { getSafeFilename } from '../downloads/filename.js';
 import { LIMIT } from '../constants.js';
@@ -45,12 +53,15 @@ export function resolveDownloadRequest(sourceUrl: unknown, requestedType: unknow
   const sourceType = requestedType ?? SOURCE_TYPE.auto;
   if (
     !Object.values(SOURCE_TYPE).some((value) => value === sourceType) ||
-    (quality !== undefined && !Object.values(VIDEO_QUALITY).some((value) => value === quality))
+    (quality !== undefined && !Object.values(DOWNLOAD_QUALITY).some((value) => value === quality))
   ) {
     throw new Error('Choose a supported source and quality.');
   }
   const target = new URL(sourceUrl.trim());
   if (target.protocol === SOURCE_URL.magnetProtocol) {
+    if (isAudioQuality(quality)) {
+      throw new Error('MP3 extraction requires a video link.');
+    }
     if (sourceType !== SOURCE_TYPE.auto && sourceType !== SOURCE_TYPE.magnet && sourceType !== SOURCE_TYPE.torrent) {
       throw new Error('Choose Magnet or Auto detect for a magnet link.');
     }
@@ -89,6 +100,12 @@ export function resolveDownloadRequest(sourceUrl: unknown, requestedType: unknow
         : VIDEO_HOSTS.some((domain) => matchesDomain(hostname, domain))
           ? SOURCE_TYPE.video
           : SOURCE_TYPE.direct;
+  }
+  if (isAudioQuality(quality) && resolvedType === SOURCE_TYPE.direct && sourceType === SOURCE_TYPE.auto) {
+    resolvedType = SOURCE_TYPE.video;
+  }
+  if (isAudioQuality(quality) && resolvedType !== SOURCE_TYPE.video) {
+    throw new Error('Choose Video or Auto detect for MP3. For an Instagram video, choose Video explicitly.');
   }
   return {
     url: validatedTarget.href,

@@ -1,4 +1,4 @@
-import type { DownloadArtifact, SourceType, VideoQuality } from './sources.js';
+import type { DownloadArtifact, SourceType, DownloadQuality } from './sources.js';
 
 /** Stable transfer states shared by the service and interface. */
 export const DOWNLOAD_STATUS = {
@@ -23,7 +23,7 @@ export interface DownloadJob {
   finishedAt: string | null;
   errorMessage: string | null;
   sourceType?: SourceType;
-  quality?: VideoQuality;
+  quality?: DownloadQuality;
   files?: DownloadArtifact[];
   stage?: string;
   peers?: number;

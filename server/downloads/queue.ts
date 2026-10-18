@@ -27,6 +27,7 @@ import { ensureStorage, StorageHoldError } from '../policy/storage.js';
 import { validateLibraryMetadata } from '../../shared/library.js';
 import { ArchiveAccess } from './delivery/access.js';
 import { validateTorrentSelection, validateDestination } from '../../shared/jobOptions.js';
+import { UtilityService } from '../utilities/service.js';
 import { QueueControls } from '../control/service.js';
 import { moveCompleted } from './completion/move.js';
 import { destinationDirectory, removeManagedDirectory, safeDirectory } from './completion/paths.js';
@@ -41,6 +42,8 @@ export class DownloadQueue {
   private readonly torrentEngine: TorrentRpc;
   readonly policy: PolicyStore;
   readonly controls: QueueControls;
+  readonly utilities: UtilityService;
+  private utilityMaintenance = false;
   private readonly workers = new Map<string, Promise<void>>();
   private readonly policyTimer: ReturnType<typeof setInterval>;
   private minimumFreeBytes = 0;
@@ -51,10 +54,11 @@ export class DownloadQueue {
    * @param {ServerConfig} configuration - Validated runtime configuration.
    */
   constructor(private readonly configuration: ServerConfig) {
-    this.torrentEngine = new TorrentRpc(configuration.dataDirectory);
+    this.torrentEngine = new TorrentRpc(configuration.dataDirectory, configuration.runtimeEnvironment);
     this.store = new DownloadStore(configuration.dataDirectory, configuration.completedDirectory);
     this.policy = new PolicyStore(configuration.dataDirectory);
     this.controls = new QueueControls(configuration.dataDirectory, this);
+    this.utilities = new UtilityService(configuration, (work) => this.maintainUtilities(work));
     const resumableIds = new Set(
       this.store.jobs
         .filter((job) => job.status === DOWNLOAD_STATUS.queued || job.status === DOWNLOAD_STATUS.paused)
@@ -194,7 +198,7 @@ export class DownloadQueue {
 
   /** Schedules by priority, then FIFO, without exceeding the configured connection count. */
   schedule(): void {
-    if (this.isStopping || !this.controls.ready) {
+    if (this.isStopping || !this.controls.ready || this.utilityMaintenance) {
       return;
     }
     const holdReason = this.getHoldReason();
@@ -678,12 +682,33 @@ export class DownloadQueue {
   }
 
   /**
+   * Excludes download workers while verified tools are prepared/activated, without interrupting existing transfers.
+   * @param {() => Promise<void>} work - Private updater operation.
+   * @returns {Promise<boolean>} Whether the idle gate was acquired.
+   */
+  async maintainUtilities(work: () => Promise<void>): Promise<boolean> {
+    if (this.isStopping || this.utilityMaintenance || this.controllers.size) {
+      return false;
+    }
+    this.utilityMaintenance = true;
+    try {
+      await this.torrentEngine.stopAndWait();
+      await work();
+      return true;
+    } finally {
+      this.utilityMaintenance = false;
+      this.schedule();
+    }
+  }
+
+  /**
    * Stops new work and preserves progress for automatic recovery on the next startup.
    * @returns {Promise<void>} Active workers have released their resources and saved queue state.
    */
   async stop(): Promise<void> {
     this.isStopping = true;
     const controlsStopped = this.controls.stop();
+    const utilitiesStopped = this.utilities.stop();
     clearInterval(this.policyTimer);
     this.suspendActive('Waiting for the station to restart');
     for (const controller of this.controllers.values()) {
@@ -691,6 +716,7 @@ export class DownloadQueue {
     }
     await Promise.allSettled(this.workers.values());
     await controlsStopped;
+    await utilitiesStopped;
     this.torrentEngine.stop();
   }
 
@@ -711,6 +737,9 @@ export class DownloadQueue {
 
   /** Returns the current automatic hold. @returns {string | null} Human-readable scheduler reason. */
   private getHoldReason(): string | null {
+    if (this.utilityMaintenance) {
+      return 'Updating download utilities. New transfers will start afterward.';
+    }
     if (this.controls.isPaused) {
       return 'All downloads paused from terminal controls';
     }

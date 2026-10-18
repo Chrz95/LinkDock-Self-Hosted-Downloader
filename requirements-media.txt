@@ -1,3 +1,3 @@
-# Explicit media engine pins. Rebuild the image to apply version updates.
+# Pinned bundled fallbacks. The idle-time updater can install newer compatible tools into persistent app storage.
 yt-dlp[default]==2026.8.19
 gallery-dl==1.32.17

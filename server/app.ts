@@ -13,6 +13,8 @@ import { createPolicyRoutes } from './policy/routes.js';
 import { NotificationService } from './notifications/service.js';
 import { createNotificationRoutes } from './notifications/routes.js';
 import { createHealthRoutes } from './health/routes.js';
+import { UTILITY } from '../shared/utilities.js';
+import { createUtilityRoutes } from './utilities/routes.js';
 import { CONTROL } from '../shared/control.js';
 import { createControlRoutes } from './control/routes.js';
 
@@ -86,6 +88,7 @@ export function createApplication(
   );
   application.delete(API_PATH.session, session.requireSession, session.logout);
   application.use(API_PATH.downloads, session.requireSession, createDownloadRoutes(queue));
+  application.use(UTILITY.path, session.requireSession, createUtilityRoutes(queue.utilities));
   application.use(CONTROL.path, session.requireSession, createControlRoutes(queue));
   application.use(API_PATH.settings, session.requireSession, createPolicyRoutes(queue));
   application.use(API_PATH.notifications, session.requireSession, createNotificationRoutes(notifications));

@@ -4,8 +4,9 @@ import { mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { HTTP_METHOD } from '../../../shared/contracts.js';
+import { resolveUtility } from '../../utilities/resolve.js';
 import { LIMIT } from '../../constants.js';
-import { ENGINE_COMMAND, ENGINE_LIMIT } from '../constants.js';
+import { ENGINE_LIMIT } from '../constants.js';
 
 /** aria2's per-transfer status is string encoded by its JSON-RPC protocol. */
 export interface TorrentStatus {
@@ -29,8 +30,12 @@ export class TorrentRpc {
   /**
    * Binds engine state to the same persistent station volume.
    * @param {string} dataDirectory - Application state directory.
+   * @param {NodeJS.ProcessEnv} [environment] - Existing service environment for managed native libraries.
    */
-  constructor(private readonly dataDirectory: string) {}
+  constructor(
+    private readonly dataDirectory: string,
+    private readonly environment?: NodeJS.ProcessEnv,
+  ) {}
 
   /**
    * Starts the engine once, and waits for authenticated RPC readiness instead of assuming a fixed delay.
@@ -48,8 +53,9 @@ export class TorrentRpc {
   private async startEngine(): Promise<void> {
     const stateDirectory = path.join(this.dataDirectory, 'aria2');
     mkdirSync(stateDirectory, { recursive: true });
+    const execution = resolveUtility('torrent', this.dataDirectory, this.environment);
     this.child = spawn(
-      ENGINE_COMMAND.torrent,
+      execution.command,
       [
         '--enable-rpc=true',
         '--rpc-listen-all=false',
@@ -72,11 +78,14 @@ export class TorrentRpc {
         `--dht-file-path6=${path.join(stateDirectory, 'dht6.dat')}`,
         `--stop-with-process=${process.pid}`,
       ],
-      { stdio: 'ignore' },
+      { stdio: 'ignore', env: execution.environment },
     );
     let failedToStart = false;
+    const { child } = this;
     this.child.once('exit', () => {
-      this.startup = undefined;
+      if (this.child === child) {
+        this.startup = undefined;
+      }
     });
     this.child.once('error', () => {
       failedToStart = true;
@@ -119,6 +128,29 @@ export class TorrentRpc {
       throw new Error(envelope.error?.message ?? 'The torrent engine did not respond.');
     }
     return envelope.result;
+  }
+
+  /** Stops and reaps the old executable before another managed version can bind its RPC port.
+   * @returns {Promise<void>} Old process has closed, with forced termination after the grace interval.
+   */
+  async stopAndWait(): Promise<void> {
+    const { child } = this;
+    if (!child?.pid || child.exitCode !== null) {
+      this.startup = undefined;
+      return;
+    }
+    await new Promise<void>((resolve) => {
+      const timeout = setTimeout(() => child.kill('SIGKILL'), ENGINE_LIMIT.shutdownGraceMilliseconds);
+      child.once('close', () => {
+        clearTimeout(timeout);
+        resolve();
+      });
+      child.kill('SIGTERM');
+    });
+    if (this.child === child) {
+      this.child = undefined;
+      this.startup = undefined;
+    }
   }
 
   /** Stops the private engine along with peer connections; no RPC listener is published by Docker. */

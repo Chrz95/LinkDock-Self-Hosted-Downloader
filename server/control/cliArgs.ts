@@ -1,5 +1,6 @@
 import { API_PATH, HTTP_METHOD } from '../../shared/contracts.js';
 import { CONTROL, CONTROL_ID } from '../../shared/control.js';
+import { UTILITY, UTILITY_ACTION } from '../../shared/utilities.js';
 import { JOB_OPTIONS } from '../../shared/jobOptions.js';
 
 const ARGUMENTS = { target: 2, value: 3, scheduled: 4 } as const;
@@ -13,6 +14,12 @@ export const CLI_HELP = `LinkDock station commands:
   select <job-uuid> <indexes, e.g. 1,3-5>
   destination <job-uuid> <relative-folder|->
   retry-move <job-uuid>
+  updates
+  update-tools
+  cancel-update
+  restore-tools
+  rollback-tools
+  auto-updates <on|off>
 Run inside Docker: docker compose exec linkdock node dist-server/server/cli.js <command>
 Scheduled times must include seconds and Z or an explicit offset. '-' clears a destination.`;
 export interface CliRequest {
@@ -67,6 +74,29 @@ export function parseCliArguments(args: string[]): CliRequest | null {
   }
   if (args.length === 1 && command === 'schedules') {
     return { path: CONTROL.path, method: HTTP_METHOD.get };
+  }
+  if (args.length === 1 && command === 'updates') {
+    return { path: UTILITY.path, method: HTTP_METHOD.get };
+  }
+  const toolActions = {
+    'update-tools': UTILITY_ACTION.update,
+    'cancel-update': UTILITY_ACTION.cancel,
+    'restore-tools': UTILITY_ACTION.restore,
+    'rollback-tools': UTILITY_ACTION.rollback,
+  } as const;
+  if (args.length === 1 && command && Object.hasOwn(toolActions, command)) {
+    return {
+      path: UTILITY.path,
+      method: HTTP_METHOD.post,
+      body: { action: toolActions[command as keyof typeof toolActions] },
+    };
+  }
+  if (command === 'auto-updates' && args.length === ARGUMENTS.target && (target === 'on' || target === 'off')) {
+    return {
+      path: UTILITY.path,
+      method: HTTP_METHOD.post,
+      body: { action: UTILITY_ACTION.settings, enabled: target === 'on' },
+    };
   }
   if (!target || (target !== CONTROL.all && !CONTROL_ID.test(target))) {
     throw new Error('Use a job UUID or all.');

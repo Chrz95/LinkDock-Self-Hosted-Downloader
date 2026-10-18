@@ -1,4 +1,4 @@
-# LinkDock 2.9 delivery and validation
+# LinkDock 2.10 delivery and validation
 
 Validated on 18 October 2026 using Node 24.19.0 and the committed dependency lockfile. The project pins pnpm 12.14.0;
 this session's provided command wrapper reports 11.25.0. A fresh Docker/Pi toolchain build remains unverified. Version
@@ -188,6 +188,48 @@ commit, digest-mismatch recovery, aborted work and move-only retry after storage
 indexes and destinations and retain rejected drafts. The native compiled smoke executes CLI, schedule creation/cancel,
 selection and a saved-payload move without starting a torrent engine or contacting a content source.
 
+## Version 2.10 changes
+
+- Video source ceilings expand to 360p/480p/720p/1080p/1440p/2160p plus best available, with separate output format UI.
+- MP3 extraction uses an actual ffmpeg conversion with 128/192/320 kbps targets and removal of source intermediates.
+- Persisted MP3 quality values survive reload/retry; batch identity separates video, audio and different bitrates.
+- Auto routes direct media links through extraction for MP3; incompatible file/torrent/magnet requests fail validation.
+- Instagram's collector retains original media; explicit Video mode can request extraction for video posts.
+- Mobile format/quality controls reset and disable unsupported choices; failed requests keep their inputs.
+- An idle-time utility updater installs yt-dlp/gallery-dl into private Python releases and checks dependencies/versions.
+- aria2/libaria2 candidates use signed image repositories, strict package identity and native dependency compatibility.
+- Active pointers publish only verified sets; package/native files are never installed into system/host directories.
+- A queue-owned maintenance gate excludes new downloads, waits for active workers and reaps idle torrent daemons.
+- Runtime executable selection applies to media/torrent workers and version diagnostics, with packaged fallback.
+- Persisted update preferences, requests, statuses, safe step feedback, cancellation, previous-version rollback and
+  bundled restore are provided.
+- Docker initially enables daily updates after startup grace; saved owner settings take precedence over that default.
+- Private authenticated JSON API, lazy browser controls and fixed CLI utility commands accept no executable/repository
+  input.
+- Process-group cancellation, per-command timeouts, sampled free-space/staging/file limits and bounded output are
+  enforced.
+- Installer temporary files use private writable state; the container continues to run as UID 1000 with a read-only
+  root.
+- A standalone Pi Compose example matches the user's bind mounts, `link_dock` service and port 7489.
+- No JavaScript dependencies changed; pinned packaged tools remain fallbacks. ffmpeg/base updates require an image
+  rebuild.
+
+New tests cover every quality, MP3 argument vectors, history persistence, representation-aware duplicates, unsafe input,
+selected-only MP3 publication and actual UI submissions. Updater tests cover waiting/restart, automatic cadence,
+coalescing, cancellation, failed preparation, failed activation writes, corrupt-state fallback, idle restore,
+authentication/origin checks, command-output bounds and signed-package argument/dependency boundaries. Real child tests
+verify final stdout without a newline and queue maintenance exclusion; a local fixture daemon exercises RPC-port reuse
+after reaping. Fixture binaries validate execution routing without an external package download. New native production
+smoke coverage checks compiled quality persistence, managed execution and authenticated update CLI control.
+
+An additional offline verification used the installed yt-dlp/ffmpeg to generate a two-second synthetic MP4 and convert
+it with the application's MP3 policy. `ffprobe` confirmed codec `mp3` and 192,000 bit/s; the intermediate converted MP4
+was removed. All six height filters and MP3 arguments parsed with the installed yt-dlp. The installed gallery-dl parser
+accepted `--config-ignore`; health/updater probes now use that option. A local Debian metadata fixture confirmed an
+absent Pre-Depends field returns an empty successful result. These checks do not certify live provider access or a
+complete Docker/ARM64 update installation. Signed-index downloads/extraction are exercised with command fixtures, not a
+real external APT/PyPI upgrade in the deployed container.
+
 ## Executed checks
 
 | Check                                 | Result                                                             |
@@ -196,9 +238,9 @@ selection and a saved-payload move without starting a torrent engine or contacti
 | `pnpm lint`                           | Passed; zero errors and zero warnings                              |
 | `pnpm format:check`                   | Passed                                                             |
 | `pnpm typecheck`                      | Passed for browser, tests and server                               |
-| `pnpm test:run`                       | Passed; 347 tests across 44 files                                  |
+| `pnpm test:run`                       | Passed; 372 tests across 52 files                                  |
 | `pnpm build`                          | Passed; frontend and compiled server produced                      |
-| `pnpm test:production`                | Passed; compiled CLI, controls, moves, outbox and media delivery   |
+| `pnpm test:production`                | Passed; compiled MP3, utilities, CLI, moves and private delivery   |
 | Component-size and source-line checks | Passed; at most 100 lines and 120 columns                          |
 | Named function documentation checks   | Passed; typed parameters and JSDoc present                         |
 | Manual constants/prop review          | Completed for new source, engine and appearance boundaries         |
@@ -332,7 +374,7 @@ remain future work. Pause/recovery, station controls, mobile installation/sharin
 are implemented; version 2.4 adds organization/private diagnostics, version 2.5 adds media/ZIP delivery and version 2.6
 adds bulk organization and reviewed deletion; version 2.7 adds durable alert retries, and version 2.8 adds system
 readings and optional CPU temperature. Version 2.9 adds torrent selection, terminal scheduling and completion moves.
-Platform acceptance remains pending.
+Version 2.10 adds quality/MP3 choices and idle utility updates. Platform acceptance remains pending.
 
 - **Live Web Push and installation:** provider delivery, VAPID contact acceptance, device permission behavior, native
   installation, share-target availability and worker update behavior have not been verified in a real browser. Secure
@@ -354,6 +396,11 @@ Platform acceptance remains pending.
 - **Live torrent network:** real paused metadata/file-selection behavior needs Pi acceptance; no aria2 executable or
   public peer swarm was used here; RPC lifecycle behavior is tested with fixtures. Port forwarding, tracker
   reachability, DHT and real swarm throughput depend on the deployment network.
+- **Live utility updates:** real PyPI/APT access, signature/index failures on an actual network, private data-mount
+  execution, image-library compatibility, noexec/read-only mount behavior and post-update source downloads need Pi
+  acceptance. aria2 follows the image repository rather than the newest upstream release. ffmpeg/base packages update by
+  image rebuild. Package updates intentionally execute trusted external utility code; disabling automatic checks
+  preserves the selected set.
 - **Live site downloads:** no YouTube/Instagram account or cookie jar was accessed. The installed engine parsers and
   progress formatter were verified, but a successful authenticated third-party media download is not claimed.
 - **Browser visual QA:** a bundled Chromium was obtained, but it exited before opening a browser page in this
@@ -363,6 +410,6 @@ Platform acceptance remains pending.
   remote device, account, certificate or mount was changed.
 
 The handover includes `QUICKSTART.md`, detailed `README.md`, `compose.yaml`, optional `compose.cookies.yaml`,
-`compose.destinations.yaml`, a Dockerfile, explicit media engine requirements and all source/tests. Keep the old data
-volume when upgrading, rebuild the image, then verify a small direct file, one site video, an Instagram post and a
-well-seeded public torrent on your Pi.
+`compose.destinations.yaml`, standalone `compose.rpi.yaml`, a Dockerfile, explicit media engine requirements and all
+source/tests. Keep the old data volume when upgrading, rebuild the image, then verify a small direct file, one site
+video, an Instagram post and a well-seeded public torrent on your Pi.
