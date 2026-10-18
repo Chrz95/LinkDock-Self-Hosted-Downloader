@@ -7,6 +7,7 @@ export interface StationPolicy {
   windowStart: string;
   windowEnd: string;
   timeZone: string;
+  completionDirectory: string | null;
 }
 
 /** Current scheduler decision displayed beside the owner's configured preferences. */
@@ -35,4 +36,5 @@ export const DEFAULT_POLICY: StationPolicy = {
   windowStart: '23:00',
   windowEnd: '07:00',
   timeZone: 'Europe/Athens',
+  completionDirectory: null,
 };

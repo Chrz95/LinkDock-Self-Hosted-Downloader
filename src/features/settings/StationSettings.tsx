@@ -21,12 +21,12 @@ export function StationSettings({ policy }: StationSettingsProps) {
       <summary>
         <Icon name="clock" />
         <span>
-          Station controls<small>{policy.holdReason ?? 'Bandwidth, download window & free space'}</small>
+          Station controls<small>{policy.holdReason ?? 'Completed folder, bandwidth & download window'}</small>
         </span>
         <Icon name="plus" />
       </summary>
       <p className="policy-footnote">
-        Saving changes reconnects active downloads. Sources that cannot resume may start over.
+        Changing bandwidth, free space or the download window reconnects active downloads. Some sources may start over.
       </p>
       <SettingsForm settings={policy.settings} />
       <p className="policy-footnote">Changes apply to all downloads and devices. Manually paused jobs stay paused.</p>

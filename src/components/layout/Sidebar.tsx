@@ -1,16 +1,20 @@
 import { Icon } from '../ui/Icon';
 import { MobileNavigation } from './MobileNavigation';
+import { WorkspaceNavigation } from './WorkspaceNavigation';
+import { PAGE_INFO, type WorkspaceNavigationProps } from '../../app/navigation';
 
 /**
  * Presents station navigation and supported source families without invented connection states.
+ * @param {WorkspaceNavigationProps} props - Active route.
+ * @param {WorkspacePage} props.page - Current page for desktop and phone links.
  * @returns {JSX.Element} Persistent desktop rail and compact mobile navigation.
  */
-export function Sidebar() {
+export function Sidebar({ page }: WorkspaceNavigationProps) {
   return (
     <aside className="sidebar">
       <a
         className="brand"
-        href="#main"
+        href={PAGE_INFO.overview.href}
         aria-label="LinkDock home"
       >
         <span className="brand-symbol">
@@ -18,7 +22,7 @@ export function Sidebar() {
         </span>
         LinkDock<span className="brand-period">.</span>
       </a>
-      <MobileNavigation />
+      <MobileNavigation page={page} />
       <div className="station-identity">
         <span className="station-avatar">LD</span>
         <div>
@@ -28,21 +32,7 @@ export function Sidebar() {
         <Icon name="lock" />
       </div>
       <div className="sidebar-section">WORKSPACE</div>
-      <a
-        href="#main"
-        className="nav-item selected"
-        aria-current="page"
-      >
-        <Icon name="grid" />
-        Overview
-      </a>
-      <a
-        href="#downloads"
-        className="nav-item"
-      >
-        <Icon name="download" />
-        Download library
-      </a>
+      <WorkspaceNavigation page={page} />
       <div className="sidebar-section source-section">DOWNLOAD SOURCES</div>
       <div className="source-legend">
         <span>
@@ -81,7 +71,7 @@ export function Sidebar() {
         </p>
         <div className="device-label">
           <Icon name="drive" />
-          SELF-HOSTED · V2.10
+          SELF-HOSTED · V2.12
         </div>
       </div>
     </aside>

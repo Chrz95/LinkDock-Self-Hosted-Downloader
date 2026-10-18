@@ -25,10 +25,12 @@ export async function smokeWorkflows(configuration) {
   let server;
   try {
     await queue.controls.command('pause', 'all');
+    queue.updateSettings({ ...queue.policy.settings, completionDirectory: '.' });
     server = createApplication(settings, queue).listen(0, '127.0.0.1');
     await new Promise((resolve) => server.once('listening', resolve));
     settings.port = server.address().port;
     const torrent = queue.addTorrent(Buffer.from('d4:infod4:name4:testee').toString('base64'), 'selection.torrent');
+    assert.equal(torrent.destination.directory, '.');
     torrent.status = DOWNLOAD_STATUS.paused;
     torrent.torrentSelection = { files: [{ index: 1, name: 'chosen.bin', sizeBytes: 1 }] };
     queue.store.save();
@@ -39,6 +41,7 @@ export async function smokeWorkflows(configuration) {
     queue.cancel(torrent);
     queue.remove(torrent);
     const job = queue.add('https://example.com/saved.bin?secret=signed-source');
+    assert.equal(job.destination.directory, '.');
     job.filename = 'saved.bin';
     job.status = DOWNLOAD_STATUS.completed;
     const bytes = Buffer.from('compiled completed output');
@@ -71,7 +74,25 @@ export async function smokeWorkflows(configuration) {
     assert.ok(!listing.includes(settings.accessToken));
     assert.ok(!listing.includes('signed-source'));
     queue.remove(job);
-    process.stdout.write('Compiled CLI, scheduled commands, torrent selection and completion moves: passed.\n');
+    await queue.controls.command('pause', 'all');
+    const automatic = queue.add('https://example.com/automatic.bin');
+    automatic.filename = 'automatic.bin';
+    automatic.receivedBytes = bytes.length;
+    automatic.totalBytes = bytes.length;
+    automatic.payloadReady = true;
+    writeFileSync(queue.store.getFilePath(automatic.id), bytes);
+    queue.store.save();
+    await runStationCommand(settings, ['resume', 'all']);
+    for (let attempt = 0; attempt < WORKFLOW.attempts && automatic.status !== DOWNLOAD_STATUS.completed; attempt += 1) {
+      await delay(WORKFLOW.waitMilliseconds);
+    }
+    assert.equal(automatic.destination.moved, true);
+    assert.deepEqual(
+      readFileSync(path.join(queue.store.completedDirectory, automatic.id, 'files', 'automatic.bin')),
+      bytes,
+    );
+    queue.remove(automatic);
+    process.stdout.write('Compiled CLI, torrent selection, global completion default and overridden moves: passed.\n');
   } finally {
     if (server) {
       await new Promise((resolve) => server.close(resolve));

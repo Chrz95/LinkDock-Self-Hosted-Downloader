@@ -1,6 +1,7 @@
 import { Icon } from '../../components/ui/Icon';
 import { InstallApp } from './InstallApp';
 import { NotificationControls } from './NotificationControls';
+import { ThemeToggle } from '../theme/ThemeToggle';
 
 /**
  * Groups optional device capabilities separately from station-wide transfer preferences.
@@ -17,6 +18,13 @@ export function DeviceTools() {
         <Icon name="plus" />
       </summary>
       <div className="device-tools-content">
+        <section className="device-appearance">
+          <div>
+            <h3>Appearance</h3>
+            <p className="policy-footnote">Choose dark or light mode. Your choice stays on this browser.</p>
+          </div>
+          <ThemeToggle />
+        </section>
         <InstallApp />
         <NotificationControls />
       </div>

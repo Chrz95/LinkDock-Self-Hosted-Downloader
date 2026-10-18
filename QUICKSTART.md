@@ -1,4 +1,4 @@
-# Run LinkDock 2.10 on your Raspberry Pi
+# Run LinkDock 2.12 on your Raspberry Pi
 
 1. Use 64-bit Raspberry Pi OS and install Docker Engine with the Compose plugin.
 2. Extract this project and open a terminal in its `linkdock` directory.
@@ -25,9 +25,10 @@ Downloads continue when you close the tab. Files and history survive ordinary co
 copy a completed file to your current device. Delete requires confirmation and removes both the stored file and its
 record.
 
-On a phone or tablet, open the same station address while connected to that network. Phone shortcuts lead to Overview,
-Add link and Library. The layout uses larger touch controls, a full-width composer/search and stacked file actions. The
-website needs no installation. HTTPS enables optional installation, supported share menus and browser alerts.
+On a phone or tablet, open the same station address while connected to that network. Phone navigation links lead to
+Overview, Library and Settings. The layout uses larger touch controls, a full-width composer/search and stacked file
+actions. The website needs no installation. HTTPS enables optional installation, supported share menus and browser
+alerts.
 
 For USB storage, backups, HTTPS, configuration, development and troubleshooting, see `README.md`. For checks and
 requirement adjustments, see `VALIDATION.md`.
@@ -125,8 +126,9 @@ automated DOM tests cover selection, review and errors.
 - Optional completion/failure alerts now persist in a bounded private outbox and resume after a container restart.
 - Temporary failures retry up to six total attempts with bounded backoff; pending records expire after one hour.
 - Bursts coalesce per device/category. New devices and rotated browser keys do not receive old queued alerts.
-- Open **On this device → Alert delivery · all registered devices** for private aggregate counts, refresh and an
-  explicit **Clear pending alerts** action. Clearing does not disable registrations or recall requests already sending.
+- Open **Settings → On this device → Alert delivery · all registered devices** for private aggregate counts, refresh and
+  an explicit **Clear pending alerts** action. Clearing does not disable registrations or recall requests already
+  sending.
 - Explicit test alerts remain immediate and do not retry automatically. Alerts are best effort: duplicates or missed
   events remain possible around crashes or storage failures, and provider acceptance does not prove device display.
 
@@ -137,7 +139,8 @@ Real-provider delivery and physical Pi/mobile acceptance remain deployment check
 
 ## New in version 2.8
 
-- Open **Station health → System view** for OS-visible CPU threads, 1/5/15-minute load, uptime and total/free memory.
+- Open **Settings → Station health → System view** for OS-visible CPU threads, 1/5/15-minute load, uptime and total/free
+  memory.
 - Recognized CPU sensors expose temperature in Celsius. Missing or restricted values show **Unavailable**.
 - System counters are separate from LinkDock's process data and Docker resource limits; load is not a CPU percentage.
 - System readings cache for five seconds; a bounded single thermal probe prevents accumulating stalled reads.
@@ -199,8 +202,8 @@ physical Pi, live swarm and rendered mobile acceptance remain unverified in this
 - Choose **Video** or **Auto detect**, then select **Output format → Video** and your desired video quality.
 - Select **MP3 audio** to extract audio at a target 128, 192 or 320 kbps. The result is an MP3 file, not a renamed
   video. Conversion uses ffmpeg, already included in the image. Higher bitrates cannot restore missing source detail.
-- Open **Station health → Download utility updates** for automatic daily checks, update now, cancellation,
-  previous-version rollback and restore. Updates wait for idle workers and hold new transfers until
+- Open **Settings → Download utilities → Download utility updates** for automatic daily checks, update now,
+  cancellation, previous-version rollback and restore. Updates wait for idle workers and hold new transfers until
   verification/activation finishes. Failed candidates leave the current tools selected. The Docker default enables
   automatic updates after a startup grace period; saved browser preferences persist. Keep at least 1 GiB free in
   writable/executable app storage.
@@ -253,3 +256,41 @@ docker compose -f compose.rpi.yaml exec link_dock node dist-server/server/cli.js
 
 Read `README.md` for update sources, persistence, resource limits and compatibility. Physical Pi/ARM64, real provider
 access, signed-repository update downloads and mobile rendering remain deployment checks.
+
+## New in version 2.11: set the completed folder once
+
+1. Open **Settings → Station controls → Completed downloads**.
+2. Enable **Automatically move completed downloads**.
+3. Leave **Default completed folder** as `.` for the mounted completed folder, or enter `Movies` for a subfolder.
+4. Click **Save preferences**. New downloads now inherit the destination, including batch links, magnets and torrents.
+
+With the supplied Pi Compose file and `LINKDOCK_DOWNLOAD_PATH=/home/pi/downloads/linkDock`, `.` means completed files
+appear under `/home/pi/downloads/linkDock/completed/<job-uuid>/files/`. `Movies` means
+`/home/pi/downloads/linkDock/completed/Movies/<job-uuid>/files/`. Original filenames are preserved within job folders.
+
+The setting survives restarts and applies across devices. It starts disabled to preserve existing installation behavior.
+Existing jobs retain their destination; use their optional **Move on completion** override to move them. Clearing an
+individual job's destination opts it out. Changing only the global folder does not interrupt active transfers. Disabling
+it affects future jobs only. A failed move retains internal files and offers **Retry move**.
+
+Keep your completed-directory bind mount and app state. Rebuild/recreate the image as above; no new environment
+variables or dependencies are required. The UI accepts a relative folder beneath the existing completion mount, not a
+host absolute path. Root-destination records need the updated server; downgrade using a matching backup.
+
+## New in version 2.12: Library and Settings pages
+
+Use the sidebar or phone navigation to switch between **Overview**, **Library** and **Settings**.
+
+- Add links and review live totals on **Overview**.
+- Track downloads, choose torrent files, search saved files and use previews/save actions on **Library**.
+- Open **Settings → Station controls** for the global completed folder, speed limits, free space and daily window.
+- Open **Settings → On this device** for dark/light appearance, installation and optional browser alerts.
+- Open **Settings → Download utilities** for automatic checks, manual updates, rollback and restore.
+- Open **Settings → Station health** for system/storage/engine diagnostics.
+
+Switching pages preserves unsaved drafts and local library filters; it does not pause downloads. Open video previews
+pause when you leave the Library. Bookmarks, browser Back/Forward and reloads work for `/#main`, `/#downloads` and
+`/#settings`. Shared links still open the composer. Every page remains behind the station password.
+
+Rebuild/recreate the image using the commands above and reload your browser. Keep the same `.env` and all storage
+mounts. No new environment variables or data migration are needed. Drafts last for this open session, not a full reload.

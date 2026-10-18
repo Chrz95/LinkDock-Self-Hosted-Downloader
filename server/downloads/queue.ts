@@ -26,7 +26,7 @@ import { isWindowOpen } from '../policy/schedule.js';
 import { ensureStorage, StorageHoldError } from '../policy/storage.js';
 import { validateLibraryMetadata } from '../../shared/library.js';
 import { ArchiveAccess } from './delivery/access.js';
-import { validateTorrentSelection, validateDestination } from '../../shared/jobOptions.js';
+import { validateTorrentSelection, validateDestination, type CompletionDestination } from '../../shared/jobOptions.js';
 import { UtilityService } from '../utilities/service.js';
 import { QueueControls } from '../control/service.js';
 import { moveCompleted } from './completion/move.js';
@@ -132,6 +132,7 @@ export class DownloadQueue {
     const review = reviewBatch(urls, sourceType, quality, this.store.jobs);
     const added = review.unique.map(createQueuedJob);
     for (const job of added) {
+      job.destination = this.defaultDestination();
       if (job.sourceType === SOURCE_TYPE.torrent || job.sourceType === SOURCE_TYPE.magnet) {
         job.torrentSelection = {};
       }
@@ -174,11 +175,20 @@ export class DownloadQueue {
       finishedAt: null,
       errorMessage: null,
       torrentSelection: {},
+      destination: this.defaultDestination(),
     };
     this.store.jobs.unshift(job);
     this.store.save();
     this.schedule();
     return job;
+  }
+
+  /** Snapshots the station default for a new job; later settings changes leave existing jobs untouched.
+   * @returns {CompletionDestination | undefined} Independent destination or opt-out.
+   */
+  private defaultDestination(): CompletionDestination | undefined {
+    const directory = this.policy.settings.completionDirectory;
+    return directory === null ? undefined : { directory, moved: false, error: null };
   }
 
   /**
@@ -725,9 +735,9 @@ export class DownloadQueue {
    * @param {unknown} input - Complete settings submitted by the authenticated owner.
    */
   updateSettings(input: unknown): void {
-    const previousSettings = JSON.stringify(this.policy.settings);
+    const previousSettings = JSON.stringify({ ...this.policy.settings, completionDirectory: null });
     this.policy.update(input);
-    if (JSON.stringify(this.policy.settings) === previousSettings) {
+    if (JSON.stringify({ ...this.policy.settings, completionDirectory: null }) === previousSettings) {
       return;
     }
     this.minimumFreeBytes = 0;

@@ -1,4 +1,4 @@
-# LinkDock 2.10 delivery and validation
+# LinkDock 2.12 delivery and validation
 
 Validated on 18 October 2026 using Node 24.19.0 and the committed dependency lockfile. The project pins pnpm 12.14.0;
 this session's provided command wrapper reports 11.25.0. A fresh Docker/Pi toolchain build remains unverified. Version
@@ -230,6 +230,40 @@ absent Pre-Depends field returns an empty successful result. These checks do not
 complete Docker/ARM64 update installation. Signed-index downloads/extraction are exercised with command fixtures, not a
 real external APT/PyPI upgrade in the deployed container.
 
+## Version 2.11 changes
+
+- A station-wide `completionDirectory` preference supplies the destination for all newly created downloads.
+- Single/batch links, magnets and uploaded torrent jobs inherit an independent snapshot of the saved default.
+- The exact `.` marker selects the configured completion root while other dot/traversal/absolute paths remain rejected.
+- The mobile settings form exposes automatic moves, a default folder, persistence feedback and reset/disable controls.
+- Legacy settings load disabled; older clients omitting the field preserve the saved default on writes.
+- Existing jobs and per-job overrides stay unchanged when the default changes or is disabled.
+- Destination-only preference changes do not abort or reconnect active downloads.
+- Inherited destinations use the existing verified copy/publication, recovery, permission and private delivery paths.
+
+New tests exercise settings authentication, legacy migration, persistence after reload, safe path validation, all job
+creation entry points, explicit per-job overrides/opt-out, global disable and a real streamed fixture moving into the
+completion root. UI tests save/disable the default and reset drafts. An active-stream test checks folder changes leave
+the source's abort signal untouched. The compiled production smoke covers inherited uploaded torrents and actual
+root-folder publication, alongside existing CLI overrides. Docker/ARM64 and physical storage acceptance remain pending.
+
+## Version 2.12 changes
+
+- Separate Overview, Download library and Settings pages with shared active links on desktop and phone.
+- Stable fragments retain bookmarks, Back/Forward, reloads, old notification links and shared-link composer entry.
+- Station controls, global completion settings, device appearance/install/alerts, utility updates and diagnostics now
+  reside on Settings; utility updates no longer depend on a successful health snapshot.
+- React Activity retains local drafts, filters and selection while hidden pages disconnect effects.
+- The shared authentication/queue polling owner remains mounted; page changes do not change server scheduling.
+- Video previews pause on navigation and retain their player; canceled preflight becomes retryable on return.
+- Page-specific titles, active-link announcements, visible headings and skip-to-content focus support keyboard users.
+
+UI tests cover both navigation surfaces, page separation, global settings discoverability, draft/filter preservation,
+Back/Forward/remount, bookmarks behind the password gate, old share/notification entry points, transfer action routing,
+independent update controls, request cancellation, skip-link focus, paused hidden video and canceled preview retry. All
+existing private API, source engine, completion and production smoke coverage remains in place. The page-layout checks
+use jsdom, not rendered browser screenshots; physical mobile/Docker/Pi acceptance remains pending.
+
 ## Executed checks
 
 | Check                                 | Result                                                             |
@@ -238,7 +272,7 @@ real external APT/PyPI upgrade in the deployed container.
 | `pnpm lint`                           | Passed; zero errors and zero warnings                              |
 | `pnpm format:check`                   | Passed                                                             |
 | `pnpm typecheck`                      | Passed for browser, tests and server                               |
-| `pnpm test:run`                       | Passed; 372 tests across 52 files                                  |
+| `pnpm test:run`                       | Passed; 390 tests across 53 files                                  |
 | `pnpm build`                          | Passed; frontend and compiled server produced                      |
 | `pnpm test:production`                | Passed; compiled MP3, utilities, CLI, moves and private delivery   |
 | Component-size and source-line checks | Passed; at most 100 lines and 120 columns                          |
@@ -325,9 +359,10 @@ prove string semantics or visual quality. The generated dependency lockfile is e
 8. **Complementary convention enforcement.** Prettier is not a hard line-length validator; the custom convention script
    verifies source lengths and component sizes. String meanings, useful documentation and naming still require review;
    there is no claim that a linter proves the absence of magic strings.
-9. **Single screen without a router.** The app has no separate routes, so React Router was not added. Plain tokenized
-   CSS avoids an unnecessary styling runtime. Inline single-use labels and HTML attributes follow the attachment's
-   explicit self-explanatory-string exception. CSS values are design declarations in the styling files.
+9. **Native fragment navigation.** Version 2.12 adds Overview, Library and Settings pages using the browser history and
+   hashchange event without a routing dependency. React Activity preserves view state and disconnects hidden effects.
+   Plain tokenized CSS avoids an extra styling runtime. Inline single-use labels and HTML attributes follow the
+   attachment's explicit self-explanatory-string exception. CSS values are design declarations in styling files.
 
 All other supplied Oxlint rule values remain unchanged. `typescript/no-explicit-any` is additionally enabled. No broad
 suppression comments or ignored TypeScript errors are used.
@@ -374,7 +409,8 @@ remain future work. Pause/recovery, station controls, mobile installation/sharin
 are implemented; version 2.4 adds organization/private diagnostics, version 2.5 adds media/ZIP delivery and version 2.6
 adds bulk organization and reviewed deletion; version 2.7 adds durable alert retries, and version 2.8 adds system
 readings and optional CPU temperature. Version 2.9 adds torrent selection, terminal scheduling and completion moves.
-Version 2.10 adds quality/MP3 choices and idle utility updates. Platform acceptance remains pending.
+Version 2.10 adds quality/MP3 choices and idle utility updates. Version 2.11 adds a global completion-folder default.
+Version 2.12 separates the Library and Settings pages. Platform acceptance remains pending.
 
 - **Live Web Push and installation:** provider delivery, VAPID contact acceptance, device permission behavior, native
   installation, share-target availability and worker update behavior have not been verified in a real browser. Secure

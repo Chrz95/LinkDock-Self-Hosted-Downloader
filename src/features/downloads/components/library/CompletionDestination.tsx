@@ -46,7 +46,7 @@ export function CompletionDestination({ job }: CompletionDestinationProps) {
               onChange={(event) => setDirectory(event.target.value)}
             />
           </label>
-          <p>Relative to your completion storage. Files go into a separate job folder and stay available here.</p>
+          <p>Override for this job. Use . for the completion root, or a subfolder. Clear to keep files in transfers.</p>
           <button
             type="submit"
             disabled={directory === saved}

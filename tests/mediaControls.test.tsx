@@ -15,6 +15,7 @@ import {
   type DownloadJob,
 } from '../shared/contracts';
 import { DELIVERY_LIMIT } from '../shared/media';
+import { PageView } from '../src/app/PageView';
 
 const FILE_BYTES = 128;
 const job: DownloadJob = {
@@ -148,4 +149,49 @@ it('checks archive errors inline before handing a successful URL to the native d
   expect(anchor).toHaveAttribute('href', `${API_PATH.downloads}/${job.id}${DOWNLOAD_PATH.archive}`);
   expect(anchor).toHaveAttribute('download');
   expect(screen.getByText(/Your browser manages/)).toBeVisible();
+});
+
+it('pauses a playing preview when its page is hidden and retains the player when returning', async () => {
+  const user = userEvent.setup();
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(null, { status: HTTP_STATUS.ok })));
+  const content = <CompletedFiles job={{ ...job, filename: 'clip.mp4' }} />;
+  const view = render(<PageView active>{content}</PageView>);
+  await user.click(screen.getByRole('button', { name: 'Preview clip.mp4' }));
+  const video = (await screen.findByLabelText('Video preview for clip.mp4')) as HTMLVideoElement;
+  Object.defineProperty(video, 'paused', { configurable: true, value: false });
+  const pause = vi.spyOn(video, 'pause').mockImplementation(() => {
+    Object.defineProperty(video, 'paused', { configurable: true, value: true });
+  });
+  view.rerender(<PageView active={false}>{content}</PageView>);
+  expect(pause).toHaveBeenCalledTimes(1);
+  expect(video).not.toBeVisible();
+  view.rerender(<PageView active>{content}</PageView>);
+  expect(await screen.findByLabelText('Video preview for clip.mp4')).toBe(video);
+  expect(video.paused).toBe(true);
+});
+
+it('cancels preview preflight on navigation and leaves the preview control usable on return', async () => {
+  const user = userEvent.setup();
+  const fetch = vi
+    .fn()
+    .mockImplementationOnce(
+      (_url: unknown, options: RequestInit) =>
+        new Promise<Response>((_resolve, reject) => {
+          options.signal!.addEventListener('abort', () => reject(new DOMException('Canceled', 'AbortError')));
+        }),
+    )
+    .mockResolvedValueOnce(new Response(null, { status: HTTP_STATUS.ok }));
+  vi.stubGlobal('fetch', fetch);
+  const content = <CompletedFiles job={job} />;
+  const view = render(<PageView active>{content}</PageView>);
+  await user.click(screen.getByRole('button', { name: 'Preview photo.png' }));
+  expect(screen.getByRole('button', { name: 'Preview photo.png' })).toBeDisabled();
+  const [, options] = fetch.mock.calls[0]!;
+  view.rerender(<PageView active={false}>{content}</PageView>);
+  expect(options.signal.aborted).toBe(true);
+  view.rerender(<PageView active>{content}</PageView>);
+  const button = await screen.findByRole('button', { name: 'Preview photo.png' });
+  await waitFor(() => expect(button).toBeEnabled());
+  await user.click(button);
+  expect(await screen.findByRole('img', { name: 'photo.png' })).toBeVisible();
 });

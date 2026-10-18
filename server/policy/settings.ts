@@ -1,6 +1,7 @@
 import { existsSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { DEFAULT_POLICY, POLICY_LIMIT, type StationPolicy } from '../../shared/policy.js';
+import { validateDestination } from '../../shared/jobOptions.js';
 
 /** Validated wall-clock input; a time window repeats daily in its explicit IANA timezone. */
 const CLOCK_TIME = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
@@ -51,6 +52,10 @@ export function validatePolicy(input: unknown): StationPolicy {
     windowStart: value.windowStart,
     windowEnd: value.windowEnd,
     timeZone: value.timeZone,
+    completionDirectory:
+      value.completionDirectory === undefined || value.completionDirectory === null
+        ? null
+        : validateDestination(value.completionDirectory),
   };
 }
 
@@ -81,6 +86,9 @@ export class PolicyStore {
    */
   update(input: unknown): void {
     const next = validatePolicy(input);
+    if (input && typeof input === 'object' && !Object.hasOwn(input, 'completionDirectory')) {
+      next.completionDirectory = this.value.completionDirectory;
+    }
     const temporaryPath = `${this.filename}.tmp`;
     writeFileSync(temporaryPath, JSON.stringify(next), { mode: 0o600 });
     renameSync(temporaryPath, this.filename);

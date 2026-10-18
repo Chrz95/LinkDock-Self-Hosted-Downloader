@@ -44,6 +44,18 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
 }
+.policy-completion {
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 20px;
+  margin-bottom: 20px;
+}
+.policy-completion h3 {
+  margin: 0 0 16px;
+  font-size: 15px;
+}
+.policy-completion .policy-fields {
+  grid-template-columns: minmax(0, 1fr);
+}
 .policy-fields label {
   display: grid;
   align-content: start;

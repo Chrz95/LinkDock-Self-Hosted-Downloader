@@ -1,17 +1,14 @@
-import { AddDownload } from '../features/downloads/components/AddDownload';
-import { Overview } from '../features/downloads/components/Overview';
-import { DownloadList } from '../features/downloads/components/DownloadList';
-import { StorageCard } from '../features/downloads/components/StorageCard';
-import { Icon } from '../components/ui/Icon';
 import type { StationWorkspaceProps } from './StationWorkspace.types';
-import { StationSettings } from '../features/settings/StationSettings';
-import { StationHeading } from './StationHeading';
-import { DeviceTools } from '../features/mobile';
-import { StationHealth } from '../features/health/StationHealth';
+import { WORKSPACE_PAGE } from './navigation';
+import { PageView } from './PageView';
+import { OverviewPage } from './OverviewPage';
+import { LibraryPage } from './LibraryPage';
+import { SettingsPage } from './SettingsPage';
 
 /**
- * Composes the authenticated workspace with a clear hierarchy from overview to collection.
- * @param {StationWorkspaceProps} props - Data and commands.
+ * Keeps page drafts alive while queue polling and authentication remain owned by the application shell.
+ * @param {StationWorkspaceProps} props - Active page, data and commands.
+ * @param {WorkspacePage} props.page - Selected workspace page.
  * @param {DashboardSnapshot} props.snapshot - Current queue and storage metrics.
  * @param {string | null} props.busyJobId - Transfer with a pending mutation.
  * @param {StationWorkspaceProps['onAdd']} props.onAdd - Adds a link.
@@ -20,9 +17,10 @@ import { StationHealth } from '../features/health/StationHealth';
  * @param {StationWorkspaceProps['onBatch']} [props.onBatch] - Queues a reviewed batch atomically.
  * @param {StationWorkspaceProps['onOrganize']} [props.onOrganize] - Saves tags and folder labels.
  * @param {StationWorkspaceProps['onBulk']} [props.onBulk] - Applies reviewed bulk library actions.
- * @returns {JSX.Element} Complete station content.
+ * @returns {JSX.Element} One visible workspace page and a shared footer.
  */
 export function StationWorkspace({
+  page,
   snapshot,
   busyJobId,
   onAdd,
@@ -34,58 +32,26 @@ export function StationWorkspace({
 }: StationWorkspaceProps) {
   return (
     <div className="station-content">
-      <StationHeading />
-      <Overview snapshot={snapshot} />
-      <AddDownload
-        onAdd={onAdd}
-        onUpload={onUpload}
-        onBatch={onBatch}
-      />
-      <StationSettings policy={snapshot.policy} />
-      <DeviceTools />
-      <StationHealth />
-      <div className="dashboard-body">
-        <div className="queue-column">
-          <DownloadList
-            jobs={snapshot.jobs}
-            busyJobId={busyJobId}
-            onAction={onAction}
-            onOrganize={onOrganize}
-            onBulk={onBulk}
-          />
-        </div>
-        <aside className="insights-column">
-          <StorageCard snapshot={snapshot} />
-          <div className="quiet-note">
-            <span>ALWAYS ON. ENTIRELY YOURS.</span>
-            <h2>
-              Close the tab.
-              <br />
-              Keep the momentum.
-            </h2>
-            <p>Your station carries on while you get on with everything else.</p>
-            <div
-              className="quiet-decoration"
-              aria-hidden="true"
-            >
-              ↗
-            </div>
-          </div>
-          <details className="connection-guide">
-            <summary>
-              About connected sources
-              <Icon name="plus" />
-            </summary>
-            <p>Video mode supports sites handled by yt-dlp. Instagram saves photos, carousels and reels.</p>
-            <p>
-              Some sources require a signed-in cookie file. Follow the cookie setup in the included deployment guide.
-            </p>
-            <p>
-              Torrents need reachable peers. Uploading can occur while a torrent downloads; seeding stops on completion.
-            </p>
-          </details>
-        </aside>
-      </div>
+      <PageView active={page === WORKSPACE_PAGE.overview}>
+        <OverviewPage
+          snapshot={snapshot}
+          onAdd={onAdd}
+          onUpload={onUpload}
+          onBatch={onBatch}
+        />
+      </PageView>
+      <PageView active={page === WORKSPACE_PAGE.library}>
+        <LibraryPage
+          snapshot={snapshot}
+          busyJobId={busyJobId}
+          onAction={onAction}
+          onOrganize={onOrganize}
+          onBulk={onBulk}
+        />
+      </PageView>
+      <PageView active={page === WORKSPACE_PAGE.settings}>
+        <SettingsPage policy={snapshot.policy} />
+      </PageView>
       <footer className="page-footer">
         <span>
           LINKDOCK <span>/</span> THE INTERNET, ON YOUR TERMS.

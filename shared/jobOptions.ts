@@ -22,15 +22,19 @@ export const JOB_OPTIONS = {
   maximumPathCharacters: 1_024,
   maximumDirectoryCharacters: 240,
   maximumDirectorySegmentBytes: 240,
+  rootDirectory: '.',
 } as const;
 
 /**
- * Rejects absolute, hidden, traversal and control paths while accepting nested owner-chosen folders.
+ * Accepts the completion root marker or nested folders, rejecting absolute, hidden and traversal paths.
  * @param {unknown} input - Submitted relative completion folder.
  * @returns {string} Canonical slash-separated folder.
  */
 export function validateDestination(input: unknown): string {
   const directory = typeof input === 'string' ? input.normalize('NFC') : input;
+  if (directory === JOB_OPTIONS.rootDirectory) {
+    return directory;
+  }
   if (
     typeof directory !== 'string' ||
     !directory ||
@@ -46,7 +50,7 @@ export function validateDestination(input: unknown): string {
           new TextEncoder().encode(part).length > JOB_OPTIONS.maximumDirectorySegmentBytes,
       )
   ) {
-    throw new Error('Use a relative folder such as Movies or Media/Travel, without dot paths or backslashes.');
+    throw new Error('Use . for the completion root, or a relative folder such as Movies without traversal paths.');
   }
   return directory;
 }

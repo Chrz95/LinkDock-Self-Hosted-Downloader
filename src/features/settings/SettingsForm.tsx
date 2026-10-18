@@ -4,6 +4,7 @@ import type { StationPolicy } from '../../../shared/policy';
 import { requestApi } from '../../lib/api/requestApi';
 import { PolicyLimits } from './PolicyLimits';
 import { PolicySchedule } from './PolicySchedule';
+import { PolicyCompletion } from './PolicyCompletion';
 
 /** Last observed preferences; Reset reloads these without losing drafts on every poll. */
 interface SettingsFormProps {
@@ -55,6 +56,10 @@ export function SettingsForm({ settings }: SettingsFormProps) {
     <form onSubmit={(event) => void saveSettings(event)}>
       <fieldset disabled={isSaving}>
         <legend className="visually-hidden">Station preferences</legend>
+        <PolicyCompletion
+          draft={draft}
+          onChange={changeDraft}
+        />
         <PolicyLimits
           draft={draft}
           onChange={changeDraft}

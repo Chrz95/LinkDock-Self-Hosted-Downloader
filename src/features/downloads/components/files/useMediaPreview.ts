@@ -38,6 +38,10 @@ export function useMediaPreview(url: string) {
           error instanceof Error ? error.message : 'Preview unavailable. Save the original file instead.',
         );
       }
+    } finally {
+      if (request.signal.aborted && controller.current === request) {
+        setState((previous) => (previous === PREVIEW_STATE.checking ? PREVIEW_STATE.closed : previous));
+      }
     }
   }
   /** Exposes native codec, media decoding or expired-session failures without leaving a broken player visible. */

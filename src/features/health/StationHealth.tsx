@@ -1,7 +1,6 @@
 import { useStationHealth } from './useStationHealth';
 import { StationMetrics } from './StationMetrics';
 import { EngineChecks } from './EngineChecks';
-import { UtilityUpdates } from '../utilities/UtilityUpdates';
 import { SystemMetrics } from './SystemMetrics';
 
 /**
@@ -51,11 +50,10 @@ export function StationHealth() {
               <StationMetrics snapshot={health.snapshot} />
               <SystemMetrics system={health.snapshot.system} />
               <EngineChecks engines={health.snapshot.engines} />
-              <UtilityUpdates />
               <p className="policy-footnote">
                 Available means the local version command passed. Authentication, codecs, peer availability and actual
                 downloads still need a source test. Process memory and station uptime describe LinkDock; storage
-                describes its data filesystem. Utility updates have their own idle-time controls above.
+                describes its data filesystem. Utility updates have their own panel on the Settings page.
               </p>
             </div>
           )}

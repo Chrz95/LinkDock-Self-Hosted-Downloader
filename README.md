@@ -1,4 +1,4 @@
-# LinkDock 2.10
+# LinkDock 2.12
 
 A private download studio for your Raspberry Pi: videos, Instagram moments, torrents and files, collected in one place.
 The dark-first React + TypeScript workspace has a saved light/dark preference, source selection, real progress,
@@ -123,7 +123,7 @@ silently erased.
 
 ## Check station health
 
-Open **Station health** below **On this device** for a private operational snapshot. It reports the actual Node version,
+Open **Settings → Station health** for a private operational snapshot. It reports the actual Node version,
 platform/architecture, LinkDock process uptime and resident memory, data-filesystem capacity/free space, directory write
 permissions, queue counts and any current schedule/storage hold. A restricted runtime can report **Unavailable** for a
 measurement. Process memory and station uptime describe LinkDock; filesystem capacity includes other files on that same
@@ -229,7 +229,9 @@ safely from zero. Invalid range responses are never appended to existing bytes. 
 effort: expiring URLs, changed media formats, fragment protocols and source behavior can require starting again. A live
 swarm or authenticated media resume has not been verified in this environment. Media merge work may repeat.
 
-Open **Station controls** below the composer to configure:
+Open **Settings → Station controls** to configure:
+
+- A completed-folder default for every new download; enable automatic moves and select the root or a subfolder.
 
 - Download speed and torrent upload limits, in **KiB/s**; zero means unlimited.
 - A daily start/end window in an explicit **IANA timezone**, such as `Europe/Athens` (the default). Overnight windows
@@ -238,9 +240,10 @@ Open **Station controls** below the composer to configure:
 - A free-space buffer, in whole **GiB**, defaulting to **1 GiB**. Jobs wait below this threshold and resume after space
   is freed. Zero disables the configured buffer. No completed files are automatically deleted.
 
-Preferences are saved on the Pi, shared by every browser and retained in backups. Saving changed preferences reconnects
-active workers so the new limits take effect; sources that cannot resume may start over. Saving unchanged values leaves
-active workers alone. Draft edits survive dashboard polling; **Reset draft** loads the latest observed saved values.
+Preferences are saved on the Pi, shared by every browser and retained in backups. Changing speed, schedule or space
+preferences reconnects active workers so the new limits take effect; sources that cannot resume may start over. Changing
+only the completed-folder default leaves active workers alone, as does saving unchanged values. Draft edits survive
+dashboard polling; **Reset draft** loads the latest observed saved values.
 
 The configured speed budget is divided evenly among the configured queue slots, including idle slots. With a download
 budget of 2,048 KiB/s and two slots, each job receives up to 1,024 KiB/s; a single active job keeps that allocation.
@@ -254,15 +257,16 @@ Temporary media merges still need extra room. Free space or lower the buffer to 
 
 The authenticated API exposes `GET /api/settings` and `POST /api/settings` for the complete settings object. Its fields
 are `downloadKibPerSecond`, `uploadKibPerSecond`, `reserveGib`, `scheduleEnabled`, `windowStart`, `windowEnd` and
-`timeZone`. Rates accept integers from 0 through 1,048,576; reserved GiB accepts 0 through 65,535; times use `HH:mm`.
-Enabled start and end times must differ. Invalid values are rejected before replacing saved preferences. Settings use
-the same cookie, JSON-only mutation and origin checks as downloads. The queue's existing `/api/downloads/:id/retry`
-action remains the wire-level name for Restart; `/pause` and `/resume` add the retaining-progress actions.
+`timeZone`, plus the global `completionDirectory` described below. Rates accept integers from 0 through 1,048,576;
+reserved GiB accepts 0 through 65,535; times use `HH:mm`. Enabled start and end times must differ. Invalid values are
+rejected before replacing saved preferences. Settings use the same cookie, JSON-only mutation and origin checks as
+downloads. The queue's existing `/api/downloads/:id/retry` action remains the wire-level name for Restart; `/pause` and
+`/resume` add the retaining-progress actions.
 
 ## Phone and tablet use
 
 Open the same station URL from your phone or tablet on the Pi's network. The website works without installation. The
-phone layout provides Overview, Add link and Library shortcuts, a full-width link composer, large source buttons,
+phone layout provides Overview, Library and Settings page links, a full-width link composer, large source buttons,
 full-width search and download cards with their actions below the file details. Carousel and torrent file lists wrap
 long names and expose separate save controls. Dark and light mode both use the same responsive layouts.
 
@@ -276,9 +280,9 @@ Saving from the dashboard copies a file from the Pi to the current device; sourc
 
 ### Install and share links
 
-Use an HTTPS station address, unlock it and open **On this device** below Station controls. Choose **Install LinkDock**
-when the browser offers that button, or use **Install app / Add to Home Screen** from the browser menu. Installation,
-share targets and notifications depend on the browser and operating system; ordinary link pasting remains available.
+Use an HTTPS station address, unlock it and open **Settings → On this device**. Choose **Install LinkDock** when the
+browser offers that button, or use **Install app / Add to Home Screen** from the browser menu. Installation, share
+targets and notifications depend on the browser and operating system; ordinary link pasting remains available.
 
 After installation, supported phone share menus can send an HTTP(S) or magnet link to LinkDock. The composer retains
 candidate links in memory through the password gate, removes the share payload from the address bar and requires your
@@ -322,9 +326,10 @@ WEB_PUSH_SUBJECT=mailto:you@example.com
 ```
 
 Recreate the container with `docker compose up -d`. The station creates private VAPID signing keys on its persistent
-volume. Unlock the HTTPS station on each device, open **On this device**, choose **Enable alerts on this device** and
-accept the browser permission prompt. No permission prompt appears just from visiting the site. Some platforms require
-an installed Home Screen app. Use **Send a test alert** to check setup. Downloading does not depend on alerts.
+volume. Unlock the HTTPS station on each device, open **Settings → On this device**, choose **Enable alerts on this
+device** and accept the browser permission prompt. No permission prompt appears just from visiting the site. Some
+platforms require an installed Home Screen app. Use **Send a test alert** to check setup. Downloading does not depend on
+alerts.
 
 Alerts use encrypted Web Push with generic completion/failure text, without filenames or source links. Provider
 acceptance does not guarantee device delivery. The provider can observe destination and delivery metadata; your contact
@@ -371,12 +376,12 @@ stop the container, back up the full data volume, move only `notifications/outbo
 pending generic alerts while keeping `vapid.json` and `subscriptions.json`. Never modify managed state while running.
 Disabling HTTPS/alert configuration leaves saved state dormant; re-enabling prunes expired or revoked work before sends.
 
-Open **On this device → Alert delivery · all registered devices** for private aggregate pending, previously attempted
-and in-flight counts, plus the earliest scheduled attempt in your device's time. Counts overlap and are a snapshot;
-**Refresh delivery status** updates them. This panel loads only when opened. It displays no other device identifiers or
-notification contents. **Clear pending alerts** explicitly clears the station-wide backlog, without disabling browser
-registrations or sending any tests. Already-sending requests cannot be recalled, and later download events can enqueue
-new alerts. Closing/reopening cancels stale status requests without overwriting a newer snapshot.
+Open **Settings → On this device → Alert delivery · all registered devices** for private aggregate pending, previously
+attempted and in-flight counts, plus the earliest scheduled attempt in your device's time. Counts overlap and are a
+snapshot; **Refresh delivery status** updates them. This panel loads only when opened. It displays no other device
+identifiers or notification contents. **Clear pending alerts** explicitly clears the station-wide backlog, without
+disabling browser registrations or sending any tests. Already-sending requests cannot be recalled, and later download
+events can enqueue new alerts. Closing/reopening cancels stale status requests without overwriting a newer snapshot.
 
 Owner-only `GET /api/notifications/outbox` returns aggregate status; JSON-only `DELETE` on the same path clears it. Both
 use the existing session/origin checks and `Cache-Control: no-store`. Explicit test alerts share the two outbound
@@ -401,6 +406,58 @@ media/ZIP delivery in 2.5. Any retention policy should show what it will remove 
 configuration. Bundled engine versions stay pinned; runtime utility updates can be disabled for a frozen installation.
 
 [share-target]: https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps/Manifest/Reference/share_target
+
+## New in version 2.12: separate workspace pages
+
+- **Overview** (`/#main`) contains the composer, live transfer totals and storage overview.
+- **Download library** (`/#downloads`) contains the live queue, search, filters, organization, bulk actions, previews,
+  save links, torrent-file choices and individual completion overrides.
+- **Settings** (`/#settings`) gathers Station controls, the global completed folder, device appearance, installation,
+  optional browser alerts and delivery status, download utility updates, station diagnostics and source setup guidance.
+
+Desktop and phone navigation show the active page. Links are bookmarkable and support browser Back/Forward and reloads
+without reverse-proxy rewrite rules or a new dependency. Existing `#downloads` notification links open the Library;
+shared links using `#add-download` still open the Overview composer for review. Unknown fragments fall back to Overview.
+The password gate applies to every page and preserves the requested page after unlocking.
+
+Switching pages keeps composer drafts, settings drafts, library filters and file selections in memory. These drafts are
+not saved across a full reload. Hidden pages release their view effects, abort diagnostic/updater polling and pause
+playing video previews. Returning preserves the player position without autoplay. Source downloads keep running on the
+station, and the browser keeps polling the shared queue. Library actions retain the same private API and file delivery
+behavior.
+
+Utility updates are directly available on Settings and no longer require a successful Station health result. Appearance
+is grouped under On this device; the unlock screen retains its appearance switch. Station preferences apply across
+devices; appearance, installation and browser-alert permissions remain device-specific.
+
+Rebuild/recreate the image as before and reload the browser. Keep `.env`, `/data` and both download mounts. This release
+requires no new environment variables, dependencies or persistent data migration. Physical Pi and rendered mobile
+acceptance remain deployment checks.
+
+## New in version 2.11
+
+Set **Settings → Station controls → Completed downloads → Automatically move completed downloads** once, then save
+preferences. Enter `.` for the configured completion root, or a relative subfolder such as `Movies` or `Media/Travel`.
+Every new single link, batch item, magnet and uploaded torrent inherits that saved destination automatically. The
+preference is stored on the Pi in `settings.json`, shared across browsers/devices, and survives container restarts.
+
+For the supplied `compose.rpi.yaml`, with `LINKDOCK_DOWNLOAD_PATH=/home/pi/downloads/linkDock`, using `.` saves files at
+`/home/pi/downloads/linkDock/completed/<job-uuid>/files/`. Choosing `Movies` adds `Movies/` before the job UUID. The
+completion mount must exist and be writable by UID/GID 1000. The browser setting chooses folders beneath that mount;
+changing its host location still requires changing the Compose bind mount.
+
+This setting starts disabled on a fresh installation and when upgrading older preferences. Enable it and save to
+activate automatic moves. Existing jobs keep their original destination. Each job's **Move on completion** control is an
+optional override; clearing it opts that job out. Changing or disabling the global setting affects future jobs only and
+does not reconnect active downloads. Bandwidth/schedule/free-space changes retain their existing restart behavior. If a
+move fails, original files remain available in transfers and the job offers **Retry move** after fixing storage.
+
+The settings API adds `completionDirectory`: `null` disables automatic moves; `"."` selects the configured root; a
+validated relative folder selects a subfolder. Older settings without this field load with automatic moves disabled. An
+older client omitting it on save preserves the current default. Traversal, absolute paths and symlinked ancestors remain
+rejected. The sole dot marker is allowed; `./Movies`, `..` and nested dot segments remain invalid. Preserve both app
+state and completion storage when upgrading. Root-destination history requires this server version; use a matching
+pre-upgrade backup for a downgrade.
 
 ## New in version 2.10
 
@@ -430,9 +487,9 @@ keep a matching pre-upgrade backup if a downgrade is necessary.
 
 ### Automatic utility updates
 
-Open **Station health → Download utility updates**. You can enable daily automatic checks, choose **Check & update
-now**, cancel a pending/running candidate, roll back to the previous verified set or restore the packaged tools.
-Automatic updates are initially enabled in the Docker image, with about two minutes of startup grace and a daily
+Open **Settings → Download utilities → Download utility updates**. You can enable daily automatic checks, choose **Check
+& update now**, cancel a pending/running candidate, roll back to the previous verified set or restore the packaged
+tools. Automatic updates are initially enabled in the Docker image, with about two minutes of startup grace and a daily
 interval after each attempt. Your saved browser preference takes precedence over the initial `AUTO_UPDATE_TOOLS`
 environment default. Manual checks are available even when automatic checks are disabled. Updates wait until active
 download workers release their slots, then hold new transfers during preparation. They do not interrupt existing
@@ -598,11 +655,12 @@ running container or its environment. Keep that password private as with the das
 
 ### Move files on completion
 
-Open **Move on completion** on a job and save a folder such as `Movies` or `Media/Travel`. This is a physical
-destination, separate from the logical **Organize download** folder. Leave it empty to retain normal station storage.
-The default completion root is `/data/completed` in Docker, or `DATA_DIRECTORY/completed` outside Docker. Paths must be
-relative, without dot-prefixed segments, backslashes or traversal. The application refuses symlinked destination
-directories.
+Set the global default under **Settings → Station controls → Completed downloads** for automatic moves of new jobs.
+Optionally open **Move on completion** on a job to override it with a folder such as `Movies` or `Media/Travel`. This is
+a physical destination, separate from the logical **Organize download** folder. Clear that job field to opt it out. The
+default completion root is `/data/completed` in Docker, or `DATA_DIRECTORY/completed` outside Docker. Paths must be
+relative, or the exact `.` marker for the root, without other dot-prefixed segments, backslashes or traversal. The
+application refuses symlinked destination directories.
 
 Each job writes to `<completion-root>/<folder>/<job-uuid>/files/`, preserving selected torrent/media subfolders. A
 direct download uses its safe display filename. UUID directories avoid collisions between equally named downloads. These
@@ -808,17 +866,17 @@ temporary cookie sessions. Complete files stay until explicitly deleted.
 
 Compose creates a named volume mounted at `/data`. It contains:
 
-| Path                            | Responsibility                                        |
-| ------------------------------- | ----------------------------------------------------- |
-| `/data/settings.json`           | Owner speed, schedule and free-space preferences      |
-| `/data/history.json`            | Queue, original links, states and completed manifests |
-| `/data/downloads/<uuid>`        | Complete direct-file bytes, including v1 downloads    |
-| `/data/downloads/<uuid>.part`   | In-progress direct file                               |
-| `/data/downloads/<uuid>.work/`  | Isolated media or torrent staging                     |
-| `/data/downloads/<uuid>.files/` | Complete media, carousel or torrent file set          |
-| `/data/torrents/<uuid>.torrent` | Uploaded or pinned remote torrent metadata            |
-| `/data/aria2/`                  | DHT routing state                                     |
-| `/data/credentials/session-*/`  | Private temporary cookie copies, never served         |
+| Path                            | Responsibility                                          |
+| ------------------------------- | ------------------------------------------------------- |
+| `/data/settings.json`           | Owner completion, speed, schedule and space preferences |
+| `/data/history.json`            | Queue, original links, states and completed manifests   |
+| `/data/downloads/<uuid>`        | Complete direct-file bytes, including v1 downloads      |
+| `/data/downloads/<uuid>.part`   | In-progress direct file                                 |
+| `/data/downloads/<uuid>.work/`  | Isolated media or torrent staging                       |
+| `/data/downloads/<uuid>.files/` | Complete media, carousel or torrent file set            |
+| `/data/torrents/<uuid>.torrent` | Uploaded or pinned remote torrent metadata              |
+| `/data/aria2/`                  | DHT routing state                                       |
+| `/data/credentials/session-*/`  | Private temporary cookie copies, never served           |
 
 History is atomically replaced on lifecycle changes. Progress remains in memory while streaming, avoiding continuous
 SD-card writes. Partial downloads are retained for recoverable jobs. Atomic rename protects against torn JSON writes,

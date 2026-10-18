@@ -1,6 +1,7 @@
 import { getPreviewFormat, DELIVERY_LIMIT } from '../../../../../shared/media';
 import { fileDeliveryUrl } from '../../services/fileDelivery';
 import { useMediaPreview } from './useMediaPreview';
+import { useLayoutEffect, useRef } from 'react';
 
 /** File identity is taken from the published manifest rather than an external media URL. */
 export interface MediaPreviewProps {
@@ -23,6 +24,15 @@ export function MediaPreview({ jobId, filename, sizeBytes, fileIndex }: MediaPre
   const url = fileDeliveryUrl(jobId, true, fileIndex);
   const preview = useMediaPreview(url);
   const saveUrl = fileDeliveryUrl(jobId, false, fileIndex);
+  const video = useRef<HTMLVideoElement>(null);
+  useLayoutEffect(() => {
+    const player = video.current;
+    return () => {
+      if (player && !player.paused) {
+        player.pause();
+      }
+    };
+  }, [preview.isOpen]);
   if (!format || (format.kind === 'image' && sizeBytes > DELIVERY_LIMIT.maximumImageBytes)) {
     return null;
   }
@@ -50,6 +60,7 @@ export function MediaPreview({ jobId, filename, sizeBytes, fileIndex }: MediaPre
             />
           ) : (
             <video
+              ref={video}
               src={url}
               controls
               playsInline

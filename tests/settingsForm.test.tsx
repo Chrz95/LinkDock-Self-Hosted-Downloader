@@ -44,6 +44,41 @@ it('shows policy errors and exposes the current hold even before the controls ar
   expect(screen.getByRole('alert')).toHaveTextContent('timezone');
 });
 
+it('saves a global completion folder and can disable it for future downloads', async () => {
+  const user = userEvent.setup();
+  vi.mocked(requestApi).mockImplementation(async (_url, options) => JSON.parse(String(options?.body)));
+  render(<StationSettings policy={{ settings: DEFAULT_POLICY, holdReason: null }} />);
+  await user.click(screen.getByText('Station controls'));
+  const toggle = screen.getByRole('checkbox', { name: 'Automatically move completed downloads' });
+  expect(toggle).not.toBeChecked();
+  await user.click(toggle);
+  const folder = screen.getByRole('textbox', { name: 'Default completed folder' });
+  expect(folder).toHaveValue('.');
+  await user.clear(folder);
+  await user.type(folder, 'Media/Movies');
+  await user.click(screen.getByRole('button', { name: 'Save preferences' }));
+  expect(JSON.parse(vi.mocked(requestApi).mock.calls.at(-1)![1]!.body as string).completionDirectory).toBe(
+    'Media/Movies',
+  );
+  await user.click(toggle);
+  expect(screen.queryByRole('textbox', { name: 'Default completed folder' })).not.toBeInTheDocument();
+  await user.click(screen.getByRole('button', { name: 'Save preferences' }));
+  expect(JSON.parse(vi.mocked(requestApi).mock.calls.at(-1)![1]!.body as string).completionDirectory).toBeNull();
+});
+
+it('keeps the saved default when resetting a completion-folder draft', async () => {
+  const user = userEvent.setup();
+  const settings = { ...DEFAULT_POLICY, completionDirectory: 'Saved' };
+  render(<StationSettings policy={{ settings, holdReason: null }} />);
+  await user.click(screen.getByText('Station controls'));
+  const folder = screen.getByRole('textbox', { name: 'Default completed folder' });
+  await user.clear(folder);
+  await user.type(folder, 'Changed');
+  await user.click(screen.getByRole('button', { name: 'Reset draft' }));
+  expect(folder).toHaveValue('Saved');
+  expect(requestApi).not.toHaveBeenCalled();
+});
+
 it('distinguishes resume from discarding partial data when operating a paused download', async () => {
   const user = userEvent.setup();
   const onAction = vi.fn().mockResolvedValue(undefined);

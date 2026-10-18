@@ -3,6 +3,7 @@ import { Header } from '../components/layout/Header';
 import { useDownloads } from '../features/downloads/hooks/useDownloads';
 import { UnlockStation } from '../features/session/UnlockStation';
 import { StationWorkspace } from './StationWorkspace';
+import { useWorkspacePage } from './useWorkspacePage';
 
 /**
  * Owns authentication and connectivity while the workspace composes the download features.
@@ -10,6 +11,7 @@ import { StationWorkspace } from './StationWorkspace';
  */
 export function App() {
   const station = useDownloads();
+  const page = useWorkspacePage();
   if (station.isLocked) {
     return <UnlockStation onUnlock={station.unlockStation} />;
   }
@@ -18,17 +20,23 @@ export function App() {
       <a
         href="#main"
         className="skip-link"
+        onClick={(event) => {
+          event.preventDefault();
+          document.getElementById('main')?.focus();
+        }}
       >
-        Skip to downloads
+        Skip to content
       </a>
-      <Sidebar />
+      <Sidebar page={page} />
       <div className="workspace">
         <Header
+          page={page}
           isConnected={Boolean(station.snapshot) && !station.errorMessage}
           onLock={station.lockStation}
         />
         <main
           id="main"
+          tabIndex={-1}
           className="main-content"
         >
           {station.errorMessage && (
@@ -41,6 +49,7 @@ export function App() {
           )}
           {station.snapshot ? (
             <StationWorkspace
+              page={page}
               snapshot={station.snapshot}
               busyJobId={station.busyJobId}
               onAdd={station.queueDownload}

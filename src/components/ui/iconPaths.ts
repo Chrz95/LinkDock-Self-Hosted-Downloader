@@ -1,6 +1,7 @@
 /** Hand-drawn SVG paths; never used as interactive elements. */
 export const ICON_PATH = {
   pause: 'M7 4h3v16H7zM14 4h3v16h-3z',
+  settings: 'M4 7h7m4 0h5M4 17h3m4 0h9M11 4v6h4V4zM7 14v6h4v-6z',
   play: 'M6 3l15 9-15 9z',
   sun: 'M12 1v2m0 18v2M1 12h2m18 0h2M4 4l2 2m12 12 2 2M4 20l2-2M18 6l2-2M16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0',
   moon: 'M21 13a9 9 0 0 1-10-10 9 9 0 1 0 10 10',
