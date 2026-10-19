@@ -21,7 +21,11 @@ export function DeviantartSettings() {
             gallery, folder or post link in Overview.
           </p>
           <fieldset disabled={access.busy}>
-            <DeviantartConnect />
+            <DeviantartConnect
+              onConnected={access.refresh}
+              account={access.snapshot}
+              accountError={access.error}
+            />
             <DeviantartPreferences access={access} />
             <DeviantartAccount access={access} />
           </fieldset>

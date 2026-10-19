@@ -2,6 +2,13 @@
 export const DEVIANTART_OAUTH = {
   path: '/api/deviantart/oauth',
   callback: '/api/deviantart/oauth/callback',
+  landing: 'https://mikf.github.io/gallery-dl/oauth-redirect.html',
+  loopbackReturn: 'http://localhost:6414/',
+  maximumReturnCharacters: 8_192,
+  proofCharacters: 43,
+  homepageMessage:
+    'This is a DeviantArt page, not an authorization response. Sign in there, return to LinkDock, ' +
+    'start a new sign-in and open its full authorization link.',
   resultParameter: 'deviantart',
   lifetimeMilliseconds: 600_000,
   requestTimeoutMilliseconds: 30_000,
@@ -14,6 +21,7 @@ export const DEVIANTART_OAUTH = {
 export interface DeviantartOAuthSnapshot {
   configured: boolean;
   callbackUrl: string;
+  returnMode: 'direct' | 'copy';
 }
 /** Fixed outcome text keeps authorization codes and provider diagnostics out of the page and history. */
 export const DEVIANTART_OAUTH_RESULT = {

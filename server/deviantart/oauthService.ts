@@ -13,6 +13,7 @@ interface PendingAuthorization {
   revision: string | null;
   expires: number;
   timer: ReturnType<typeof setTimeout>;
+  returnMode: 'direct' | 'copy';
 }
 /** Short-lived, browser-bound PKCE grants; neither tokens nor provider errors are returned to the browser. */
 export class DeviantartOAuthService {
@@ -32,9 +33,16 @@ export class DeviantartOAuthService {
    * Creates a fresh one-use state, browser binding and PKCE challenge after owner authentication.
    * @param {string} callbackUrl - Validated station callback URL, pinned for this transaction.
    * @param {string} [previousBrowser] - Binding from a canceled sign-in in the same browser.
+   * @param {'direct' | 'copy'} [returnMode] - Direct HTTPS callback or owner-submitted HTTP-friendly response.
    * @returns {{url: string; browser: string}} Provider authorization URL and HttpOnly cookie value.
    */
-  begin(callbackUrl: string, previousBrowser = ''): { url: string; browser: string } {
+  begin(callbackUrl: string, previousBrowser = '', returnMode: 'direct' | 'copy' = 'direct') {
+    if (
+      new URL(callbackUrl).protocol !== 'https:' ||
+      (returnMode === 'copy' && callbackUrl !== DEVIANTART_OAUTH.landing)
+    ) {
+      throw new Error('DeviantArt requires the supported HTTPS authorization redirect.');
+    }
     const previous = createHash('sha256').update(previousBrowser).digest();
     for (const [key, pending] of this.pending) {
       if (pending.expires <= Date.now()) {
@@ -76,6 +84,7 @@ export class DeviantartOAuthService {
       revision,
       expires: Date.now() + DEVIANTART_OAUTH.lifetimeMilliseconds,
       timer,
+      returnMode,
     });
     const url = new URL('https://www.deviantart.com/oauth2/authorize');
     url.search = new URLSearchParams({
@@ -83,6 +92,7 @@ export class DeviantartOAuthService {
       response_type: 'code',
       redirect_uri: callbackUrl,
       scope: 'browse',
+      view: 'login',
       state,
       code_challenge: createHash('sha256').update(verifier).digest('base64url'),
       code_challenge_method: 'S256',
@@ -95,13 +105,21 @@ export class DeviantartOAuthService {
    * @param {string} browser - HttpOnly SameSite=Lax browser binding.
    * @param {unknown} code - One-use authorization code.
    * @param {unknown} error - Provider denial flag; its text is never retained or rendered.
+   * @param {'direct' | 'copy'} [returnMode] - Completion transport, pinned at authorization start.
    * @returns {Promise<DeviantartOAuthResult>} Fixed, non-secret outcome only.
    */
-  async complete(state: unknown, browser: string, code: unknown, error: unknown): Promise<DeviantartOAuthResult> {
+  async complete(
+    state: unknown,
+    browser: string,
+    code: unknown,
+    error: unknown,
+    returnMode: 'direct' | 'copy' = 'direct',
+  ): Promise<DeviantartOAuthResult> {
     const pending = typeof state === 'string' ? this.pending.get(state) : undefined;
     if (
       !pending ||
       !browser ||
+      pending.returnMode !== returnMode ||
       pending.expires <= Date.now() ||
       !timingSafeEqual(pending.browser, createHash('sha256').update(browser).digest())
     ) {

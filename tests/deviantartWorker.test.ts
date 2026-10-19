@@ -7,6 +7,7 @@ import { downloadMedia } from '../server/engines/media';
 import { runEngineProcess } from '../server/engines/runProcess';
 import { createPublicProxy } from '../server/engines/publicProxy';
 import { DeviantartStore } from '../server/deviantart/store';
+import { BrowserAccessStore } from '../server/browserAccess/store';
 import { tryDeviantartLock } from '../server/deviantart/lock';
 import { DEVIANTART, DEVIANTART_ACTION } from '../shared/deviantart';
 import { HTTP_STATUS } from '../shared/contracts';
@@ -164,4 +165,42 @@ it('pins an empty legacy job durably before the first recovered worker writes an
   } finally {
     await recovered.stop();
   }
+});
+
+it('retains OAuth, imported cookies and rotation cache after a browser verification block', async () => {
+  const { directory, configuration, queue, login, client } = await createDeliveryFixture();
+  await login();
+  await client
+    .post(DEVIANTART.path)
+    .send({ action: DEVIANTART_ACTION.account, refreshToken: REFRESH_TOKEN })
+    .expect(HTTP_STATUS.ok);
+  const { account } = new DeviantartStore(directory).read();
+  const browser = new BrowserAccessStore(directory);
+  const cookies = '# Netscape HTTP Cookie File\n.deviantart.com\tTRUE\t/\tTRUE\t0\tauth\tprivate-cookie\n';
+  browser.save({ ...browser.read(), cookies, userAgent: 'Browser/1' });
+  vi.mocked(createPublicProxy).mockResolvedValue({ url: 'http://proxy.example', close });
+  let cookiePath = '';
+  let cachePath = '';
+  vi.mocked(runEngineProcess).mockImplementation(async (_command, args, signal, _progress, options) => {
+    cookiePath = args[args.indexOf('--cookies') + 1]!;
+    cachePath = args[args.indexOf('--cache-file') + 1]!;
+    expect(readFileSync(cookiePath, 'utf8')).toBe(cookies);
+    expect(readFileSync(args[args.indexOf('--config') + 1]!, 'utf8')).toContain(REFRESH_TOKEN);
+    expect(args[args.indexOf('--user-agent') + 1]).toBe('Browser/1');
+    expect(JSON.stringify(args)).not.toMatch(/private-worker-token|private-cookie/);
+    writeFileSync(cachePath, 'retained-rotation-cache');
+    options?.onDiagnostic?.('[deviantart][info] Waiting 300 seconds (CloudFront block)');
+    signal.throwIfAborted();
+  });
+  const job = queue.add('https://www.deviantart.com/artist/gallery');
+  await expect(
+    downloadMedia(job, queue.store.filesDirectory, new AbortController().signal, configuration),
+  ).rejects.toMatchObject({ reason: MEDIA_FAILURE.verification });
+  expect(new DeviantartStore(directory).read().account).toEqual(account);
+  expect(new BrowserAccessStore(directory).read().cookies).toBe(cookies);
+  expect(readFileSync(cachePath, 'utf8')).toBe('retained-rotation-cache');
+  expect(existsSync(cookiePath)).toBe(false);
+  const release = tryDeviantartLock(directory);
+  expect(release).not.toBeNull();
+  release?.();
 });

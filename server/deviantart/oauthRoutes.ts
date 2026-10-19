@@ -5,6 +5,7 @@ import type { ServerConfig } from '../config.js';
 import { readOAuthApp, saveOAuthApp } from './oauthApp.js';
 import { DeviantartOAuthService } from './oauthService.js';
 import { tryDeviantartLock } from './lock.js';
+import { DeviantartHomepageError, deviantartReturnMode, parseDeviantartReturn } from './oauthReturn.js';
 /**
  * Extracts only the dedicated, bounded OAuth binding cookie, independent of the strict station cookie.
  * @param {Request} request - Browser request.
@@ -47,16 +48,17 @@ export function createDeviantartOAuthRoutes(
       request.query.error,
     );
     response.setHeader('Referrer-Policy', 'no-referrer');
-    response.clearCookie(DEVIANTART_OAUTH.cookie, cookie);
+    if (result !== 'expired') {
+      response.clearCookie(DEVIANTART_OAUTH.cookie, cookie);
+    }
     response.redirect(DEVIANTART_OAUTH.redirectStatus, `/?${DEVIANTART_OAUTH.resultParameter}=${result}#settings`);
   });
   router.use(requireSession);
   router.get('/', (request, response) => {
-    const origin = configuration.publicOrigin ?? `${request.protocol}://${request.get('host')}`;
     try {
       response.json({
         configured: Boolean(readOAuthApp(configuration.dataDirectory)),
-        callbackUrl: new URL(DEVIANTART_OAUTH.callback, origin).href,
+        ...deviantartReturnMode(configuration, request),
       });
     } catch {
       response.status(HTTP_STATUS.conflict).json({ error: 'DeviantArt app setup is unreadable. Save it again.' });
@@ -71,8 +73,7 @@ export function createDeviantartOAuthRoutes(
     try {
       saveOAuthApp(configuration.dataDirectory, request.body);
       service.invalidate();
-      const origin = configuration.publicOrigin ?? `${request.protocol}://${request.get('host')}`;
-      response.json({ configured: true, callbackUrl: new URL(DEVIANTART_OAUTH.callback, origin).href });
+      response.json({ configured: true, ...deviantartReturnMode(configuration, request) });
     } catch {
       response.status(HTTP_STATUS.badRequest).json({ error: 'Enter a valid confidential app client ID and secret.' });
     } finally {
@@ -80,14 +81,14 @@ export function createDeviantartOAuthRoutes(
     }
   });
   router.post('/start', (request, response) => {
-    const origin = configuration.publicOrigin ?? `${request.protocol}://${request.get('host')}`;
     try {
-      const pending = service.begin(new URL(DEVIANTART_OAUTH.callback, origin).href, browserBinding(request));
+      const mode = deviantartReturnMode(configuration, request);
+      const pending = service.begin(mode.callbackUrl, browserBinding(request), mode.returnMode);
       response.cookie(DEVIANTART_OAUTH.cookie, pending.browser, {
         ...cookie,
         maxAge: DEVIANTART_OAUTH.lifetimeMilliseconds,
       });
-      response.json({ authorizationUrl: pending.url });
+      response.json({ authorizationUrl: pending.url, returnMode: mode.returnMode });
     } catch (error) {
       response.status(HTTP_STATUS.conflict).json({
         error:
@@ -96,6 +97,25 @@ export function createDeviantartOAuthRoutes(
             : 'DeviantArt sign-in could not start. Check app setup and private storage.',
       });
     }
+  });
+  router.post('/complete', async (request, response) => {
+    let input;
+    try {
+      input = parseDeviantartReturn(request.body?.responseUrl);
+    } catch (error) {
+      response.status(HTTP_STATUS.badRequest).json({
+        error:
+          error instanceof DeviantartHomepageError
+            ? DEVIANTART_OAUTH.homepageMessage
+            : 'Paste the complete authorization response URL.',
+      });
+      return;
+    }
+    const result = await service.complete(input.state, browserBinding(request), input.code, input.error, 'copy');
+    if (result !== 'expired') {
+      response.clearCookie(DEVIANTART_OAUTH.cookie, cookie);
+    }
+    response.json({ result });
   });
   return router;
 }

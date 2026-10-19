@@ -26,11 +26,14 @@ export function useDeviantart() {
       .then((value) => {
         if (!controller.signal.aborted && !active.current && current === revision.current) {
           setSnapshot(value);
+          setError('');
         }
       })
       .catch(() => {
         if (!controller.signal.aborted && current === revision.current) {
-          setError('DeviantArt settings are unavailable. Remove the account to reset damaged source settings.');
+          setError(
+            'DeviantArt settings could not be loaded. Reopen this panel to retry; your saved account is unchanged.',
+          );
         }
       });
     return () => controller.abort();
@@ -76,5 +79,23 @@ export function useDeviantart() {
       setBusy(false);
     }
   }
-  return { open, setOpen, snapshot, busy, error, message, command };
+  /**
+   * Reloads account flags after OAuth without accepting any token material.
+   * @returns {Promise<void>} Fresh metadata.
+   */
+  async function refresh(): Promise<void> {
+    const current = ++revision.current;
+    try {
+      const value = await requestApi<DeviantartSnapshot>(DEVIANTART.path);
+      if (current === revision.current && !active.current) {
+        setSnapshot(value);
+        setError('');
+      }
+    } catch {
+      if (current === revision.current) {
+        setError('Account status could not be refreshed. Reopen DeviantArt settings to check the connection.');
+      }
+    }
+  }
+  return { open, setOpen, snapshot, busy, error, message, command, refresh };
 }

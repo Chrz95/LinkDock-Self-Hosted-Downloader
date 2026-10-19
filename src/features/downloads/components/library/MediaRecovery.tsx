@@ -1,6 +1,8 @@
 import { DOWNLOAD_STATUS, type DownloadJob } from '../../../../../shared/contracts';
 import { MEDIA_FAILURE_INFO } from '../../../../../shared/mediaFailures';
 import { PAGE_INFO } from '../../../../app/navigation';
+import { SOURCE_TYPE } from '../../../../../shared/sources';
+import { MEDIA_FAILURE } from '../../../../../shared/mediaFailures';
 interface MediaRecoveryProps {
   job: DownloadJob;
 }
@@ -22,6 +24,13 @@ export function MediaRecovery({ job }: MediaRecoveryProps) {
     >
       <h4>{information.title}</h4>
       <p>{information.guidance}</p>
+      {job.sourceType === SOURCE_TYPE.deviantart && job.mediaFailure === MEDIA_FAILURE.verification && (
+        <p>
+          DeviantArt browser or network checks are separate from OAuth authorization. This error does not remove saved
+          account credentials. Check DeviantArt account connection and Browser verification &amp; waits in Settings.
+          Imported cookies may help, but some browser-bound or network blocks cannot be reused by the Pi.
+        </p>
+      )}
       {['browser', 'tools', 'settings'].includes(information.action) && (
         <a href={PAGE_INFO.settings.href}>
           {information.action === 'tools' ? 'Review utilities in Settings' : 'Open source settings'}

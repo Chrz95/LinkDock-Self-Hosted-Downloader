@@ -1,4 +1,4 @@
-# Run LinkDock 2.18 on your Raspberry Pi
+# Run LinkDock 2.22 on your Raspberry Pi
 
 1. Use 64-bit Raspberry Pi OS and install Docker Engine with the Compose plugin.
 2. Extract this project and open a terminal in its `linkdock` directory.
@@ -413,23 +413,41 @@ automatically when you open Library. Older records remain readable and keep gene
 Rebuild and recreate the service, then reload your browser. Existing mounts, credentials and utility updates continue to
 work. No additional environment variables or dependencies are required.
 
-## New in version 2.18: connect DeviantArt in the app
+## Connect DeviantArt in the app · HTTP supported in version 2.19
 
 1. Pause active DeviantArt downloads. Open **Settings → DeviantArt collections & account → One-time app setup**.
 2. Copy the displayed **OAuth callback URL**. At
    [DeviantArt Applications & Keys](https://www.deviantart.com/developers/apps), register a **confidential** application
-   and add that exact URL to its OAuth redirect URI whitelist. Save its client ID and secret in LinkDock's setup form.
-   This is a one-time registration; subsequent account connections do not require retrieving/copying refresh tokens.
-3. Choose **Continue to DeviantArt**, sign in there and approve access. The same browser returns to Settings after
-   LinkDock retrieves and privately stores the refresh token. Refreshes run automatically as downloads need them.
+   and add that exact URL to its **OAuth2 Redirect URI Whitelist**, not its **Website URL** field. Save the application
+   on DeviantArt, then save its client ID and secret in LinkDock's setup form. This is a one-time registration;
+   subsequent account connections do not require retrieving/copying refresh tokens.
+3. Choose **Sign in to DeviantArt first**, finish the provider login, then return to LinkDock. Choose **Continue to
+   DeviantArt**. On HTTP, the app now displays **Full authorization URL**. Open it using **Open DeviantArt sign-in** or
+   select/copy the complete URL into the same signed-in browser. Approve access, then copy the resulting address into
+   **Authorization response URL** in the original LinkDock tab. Select **Finish connection**. The app retrieves and
+   saves the refresh token automatically. On HTTPS, the browser returns automatically. Refreshes for subsequent
+   downloads run as needed without another paste.
 4. Open Library and **Restart** the affected download. Restart clears that job's previous partial staging. Completed
    downloads remain intact. An issued token does not override file permissions, site quotas or browser challenges.
 
-Use the same station address during setup and sign-in. At `http://192.168.1.50:7489`, the callback is
-`http://192.168.1.50:7489/api/deviantart/oauth/callback`; use the exact URL accepted by DeviantArt's registration. For a
-reverse proxy, configure the browser-facing HTTPS `PUBLIC_ORIGIN` and `SECURE_COOKIE=true`, recreate the service, then
-register the HTTPS callback shown in Settings. The gallery-dl localhost callback cannot return directly to the Pi. No
-new container port or mount is needed. Keep the existing `/home/pi/configs/linkDock` bind mount.
+For your HTTP-only Pi, register this exact HTTPS callback in the DeviantArt app:
+
+```text
+https://mikf.github.io/gallery-dl/oauth-redirect.html
+```
+
+The landing page currently redirects to `http://localhost:6414/?code=...&state=...`. A connection error at that address
+is expected without a local gallery-dl helper. Copy the entire URL from the address bar, including all query parameters,
+and paste it back in LinkDock. If your browser remains on the HTTPS landing page, its full response URL is accepted too.
+Keep the original LinkDock tab open and finish within ten minutes. Do not open port 6414 on your Pi. No helper, domain,
+VPN, certificate or public port forwarding is needed for this one-paste flow. The landing page is maintained by
+gallery-dl; its use does not make the Pi public.
+
+Keep `SECURE_COOKIE=false` and an unset or correct HTTP `PUBLIC_ORIGIN` for LAN access. When upgrading from 2.18,
+replace the invalid HTTP redirect in your DeviantArt app whitelist with the HTTPS landing URL above. Existing app
+ID/secret setup can be reused. For an actual HTTPS proxy, configure its browser-facing HTTPS `PUBLIC_ORIGIN` and
+`SECURE_COOKIE=true`, then register that station's own HTTPS callback shown in Settings for automatic return. Setting
+PUBLIC_ORIGIN alone does not enable HTTPS. Keep the existing `/home/pi/configs/linkDock` and download/completed mounts.
 
 DeviantArt rate-limit and CloudFront retry loops now stop with a clear recovery message. Rejected credentials prompt
 reconnection; source request limits prompt waiting before retrying. Silent downloads stop after three minutes without
@@ -447,3 +465,31 @@ docker compose up -d --force-recreate --pull never link_dock
 Reload the browser after recreating the container. Your private app registration, account and rotating token cache stay
 under `/data/credentials/deviantart` in the existing bind mount. If the container restarts during sign-in, start again.
 Removing an account keeps reusable app setup; provider-side grant revocation is managed on DeviantArt.
+
+If the browser only opens DeviantArt's homepage, that address is not an authorization response. After logging in, return
+to LinkDock and use **Start a new sign-in**, then open the new full link. It should start with
+`https://www.deviantart.com/oauth2/authorize?` and retain all query parameters. Never replace it with the homepage or
+open the static HTTPS callback by itself. Version 2.20 makes this request URL visible and selectable, requests the
+provider's login view, and gives a specific error if a homepage/login URL is pasted into the response field. Reload the
+rebuilt app and check the sidebar shows **V2.20**. Keep the existing HTTP configuration and mounts.
+
+## Finding the DeviantArt response field · version 2.21
+
+Open **Settings → DeviantArt collections & account**. HTTP stations show **Authorization response URL** immediately,
+above **One-time app setup**. It is disabled until you save your app setup and select **Continue to DeviantArt**. After
+authorization, copy the complete resulting address containing `code` and `state` from the provider tab and paste it
+here. If the station says its HTTPS return is automatic but you use HTTP only, remove an HTTPS `PUBLIC_ORIGIN` override,
+recreate the container and reload. Use `SECURE_COOKIE=false` on HTTP.
+
+## DeviantArt connection after reload and browser verification · version 2.22
+
+In **Settings → DeviantArt collections & account**, check **DeviantArt account saved on this station**. The secret
+fields intentionally stay blank. **Reconnect DeviantArt** is optional; a reload does not remove a completed connection.
+If no account is saved, finish the HTTP response-URL step. If status cannot be loaded, reopen the panel and check the
+station connection before changing credentials.
+
+For browser verification failures, open the original source in your browser, complete any verification and export only
+DeviantArt's cookies in Netscape cookies.txt format. Import them in **Settings → Browser verification & waits**,
+optionally supply the same browser's User-Agent, then **Restart** the failed download. Use the Pi's public network where
+possible. Imports replace the previous cookie jar; browser-bound or network blocks may still prevent access. OAuth
+authorization and browser verification are separate, and reconnecting OAuth alone is not a verification fix.

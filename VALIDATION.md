@@ -1,10 +1,37 @@
-# LinkDock 2.18 delivery and validation
+# LinkDock 2.22 delivery and validation
 
 Validated on 19 October 2026 using Node 24.19.0 and the committed dependency lockfile. The project pins pnpm 12.14.0;
 this session's provided command wrapper reports 11.25.0. A fresh Docker/Pi toolchain build remains unverified. Version
 2.3 adds `web-push` 3.6.7 and development types 3.6.4 for maintained encryption and VAPID signing; the application uses
 its own bounded, public-DNS-pinned HTTPS transport rather than the package's buffered delivery transport. Existing
 frontend and media-engine versions remain pinned by the committed manifests and lockfile.
+
+## Version 2.22 changes
+
+- Main DeviantArt connection panel shows server-loaded saved/absent/unknown account state and a reconnect action.
+- Metadata read failures offer a nondestructive retry; recovery clears the stale status error.
+- UI distinguishes durable saved credentials from unfinished OAuth and separate browser/CDN verification.
+- Library recovery gives DeviantArt-specific cookie import guidance without promising challenge bypass.
+- New regression tests cover remount recovery, transient read failure, OAuth persistence across reconstructed server
+  applications, and cookies plus OAuth/cache retention after a blocked worker.
+- Live source acceptance, actual account validity, mobile screenshots and Raspberry Pi/Docker remain unverified.
+
+## Version 2.21.1 changes
+
+- In-app setup names OAuth2 Redirect URI Whitelist and distinguishes it from Website URL.
+- Instructions require saving the provider app before entering the same app's credentials in LinkDock.
+- Homepage recovery guidance points to the whitelist and a fresh sign-in after correction.
+- This copy-only patch uses existing connection/form tests plus lint, formatting and production build checks. The full
+  556-test and native production smoke results below are from version 2.21.
+
+## Version 2.21 changes
+
+- HTTP authorization response field is visible before sign-in, with explicit setup/start guidance and disabled controls.
+- Success, expiry and failed starts retain a visible response step; new attempts discard old links and clear responses.
+- HTTPS stations explain their automatic return and how an HTTP-only deployment can correct a stale origin override.
+- DOM tests cover initial visibility before setup, enabled pending submission, completed/expired disabled controls,
+  failed replacement attempts and clearing response drafts when restarting.
+- Live provider/account, Raspberry Pi/Docker and rendered mobile/browser acceptance remain unverified.
 
 ## Implemented changes
 
@@ -405,6 +432,64 @@ verified. App registration and callback acceptance must be checked against the o
 browser-facing station address. These changes bound known waits and expose failures; they cannot establish the exact
 cause on a user's running Pi without a new download attempt. Existing Restart clears private partial staging as before.
 
+## Version 2.19 changes
+
+- Corrected the 2.18 direct callback assumption for HTTP-only deployments. HTTP browser origins now use gallery-dl's
+  documented HTTPS landing page as the registered redirect; HTTPS origins keep their direct automatic callback.
+- HTTP owners start authorization in Settings, open the provider in a separate tab, copy the full resulting HTTPS or
+  localhost response URL back into a password input and finish the exchange through the app. One response paste is
+  required per authorization. The app still retrieves, stores and refreshes the token; there is no token copying.
+- The original page remains open through a user-activated `noopener noreferrer` link, avoiding asynchronous popup
+  blockers and cross-origin opener dependencies. Successful exchange refreshes only non-secret account metadata.
+- Copied responses require an authenticated same-origin JSON POST, the originating browser's HttpOnly binding cookie,
+  one-use state, matching return mode and server-held PKCE verifier. The original HTTPS redirect is pinned through
+  exchange. A public direct callback cannot consume a copy-mode transaction or clear its cookie on a mismatch.
+- Only the exact gallery-dl HTTPS landing address or its known localhost:6414 root is accepted. Arbitrary hosts, altered
+  ports/paths, URL credentials, fragments, duplicate state/code/error parameters, missing/ambiguous responses and
+  oversized fields are rejected. The pasted URL is never fetched; the fixed HTTPS token endpoint is the only exchange
+  destination. Responses/errors contain application-owned result categories only.
+- Return inputs clear immediately on submission and unmount; authorization codes are not held in React state,
+  local/session storage or download history. The pending authorization URL contains only the provider request's state
+  and challenge. Existing ten-minute expiration, pending caps, account locks and token rotation cache apply.
+- Setup documentation now provides the correct HTTPS redirect for HTTP stations, upgrade instructions, expected
+  localhost error behavior and the limits of automation. It no longer directs HTTP users to register their LAN callback.
+  HTTP station cookies stay non-Secure as configured; no new mount, port, domain, certificate, VPN or dependency is
+  added.
+
+Regression tests cover both allowed response destinations, exact HTTPS redirect reuse during PKCE exchange, private
+account persistence and replay, missing owner cookies, different browsers, rejected origins, transport mismatch,
+arbitrary/malformed/oversized URLs, swapped state, provider denial/failure, expiration, account changes and active
+download locks. DOM checks cover HTTP new-tab instructions, cleared response fields, automatic account metadata refresh,
+invalid-return correction and expired-flow restart. Existing direct HTTPS flow tests remain intact. The native
+production smoke exchanges a copied response through the compiled HTTP API using an offline token response and verifies
+replay.
+
+The public landing page was fetched for inspection: its script forwards the query to `http://localhost:6414/`. No live
+user authorization, external token exchange/download, mobile browser layout or physical Pi/ARM64 Docker run was
+performed. Actual DeviantArt app registration and acceptance of the HTTPS landing redirect require the owner's account.
+This mode automates token retrieval and subsequent refresh, with one explicit response-URL paste at sign-in.
+
+## Version 2.20 changes
+
+- HTTP authorization now exposes a selectable read-only **Full authorization URL**, alongside the provider button.
+  Selection works without the HTTPS-only Clipboard API. A login-first link and homepage recovery guidance explain when
+  to return to LinkDock and generate a fresh request using the same signed-in browser.
+- New provider requests set the documented `view=login` parameter. Existing PKCE S256, confidential app, browse scope,
+  fixed HTTPS redirect and browser-bound state remain unchanged.
+- Client link validation now requires the complete single-valued OAuth request fields, fixed provider endpoint,
+  generated proof formats and HTTPS callback. Bare/malformed links, duplicate fields and URLs containing private token,
+  verifier or secret fields are rejected with fixed messages. Parser errors do not echo submitted URL material.
+- The copied-response API identifies a provider homepage/login URL using a fixed application-owned error class and
+  returns recovery guidance instead of a generic URL error. It does not consume the pending authorization, clear its
+  binding cookie or contact the provider for that invalid paste. Untrusted URL parser messages remain suppressed.
+- Regression coverage verifies selecting the complete link, refreshed request URLs on new starts, malformed-link
+  rejection in the UI, homepage-paste recovery without loss of the valid pending grant, and actual backend-generated
+  URLs passing the browser validator. Native production smoke checks the compiled generator includes `view=login`.
+
+The provider documents the login-view parameter. No real account, logged-out/login redirect chain, mobile layout or
+physical Pi/ARM64 Docker execution was verified. These changes expose the request and improve login recovery; they do
+not establish why the owner's specific browser/provider session reached the homepage.
+
 ## Executed checks
 
 | Check                                 | Result                                                             |
@@ -413,7 +498,7 @@ cause on a user's running Pi without a new download attempt. Existing Restart cl
 | `pnpm lint`                           | Passed; zero errors and zero warnings                              |
 | `pnpm format:check`                   | Passed                                                             |
 | `pnpm typecheck`                      | Passed for browser, tests and server                               |
-| `pnpm test:run`                       | Passed; 505 tests across 67 files                                  |
+| `pnpm test:run`                       | Passed; 560 tests across 69 files                                  |
 | `pnpm build`                          | Passed; frontend and compiled server produced                      |
 | `pnpm test:production`                | Passed; compiled MP3, utilities, CLI, moves and private delivery   |
 | Component-size and source-line checks | Passed; at most 100 lines and 120 columns                          |

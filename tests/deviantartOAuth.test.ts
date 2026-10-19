@@ -12,7 +12,7 @@ import { DeviantartOAuthService } from '../server/deviantart/oauthService';
 import { tryDeviantartLock } from '../server/deviantart/lock';
 import { cleanupDeliveryFixtures, createDeliveryFixture } from './helpers/deliveryFixture';
 const APP = { clientId: '123456', clientSecret: 'private-confidential-app-secret' };
-const ORIGIN = 'http://station.example:7489';
+const ORIGIN = 'https://station.example';
 const CODE = 'one-use-provider-code';
 const TOKEN = 'new-private-refresh-token';
 const FILE_MODE = 0o600;
@@ -76,7 +76,11 @@ it('requires an owner session and same-origin JSON for every app setup and autho
 it('stores confidential setup privately and exposes only its configured flag and exact callback URL', async () => {
   const { client, directory } = await fixture();
   const metadata = await client.get(DEVIANTART_OAUTH.path).expect(HTTP_STATUS.ok);
-  expect(metadata.body).toEqual({ configured: true, callbackUrl: `${ORIGIN}${DEVIANTART_OAUTH.callback}` });
+  expect(metadata.body).toEqual({
+    configured: true,
+    callbackUrl: `${ORIGIN}${DEVIANTART_OAUTH.callback}`,
+    returnMode: 'direct',
+  });
   expect(metadata.headers['cache-control']).toBe('no-store');
   expect(JSON.stringify(metadata.body)).not.toMatch(/123456|private-confidential/);
   const filename = path.join(new DeviantartStore(directory).directory, 'oauth-app.json');
@@ -96,6 +100,7 @@ it('exchanges a browser-bound PKCE code privately and returns clean Settings nav
   expect(url.searchParams.get('redirect_uri')).toBe(`${ORIGIN}${DEVIANTART_OAUTH.callback}`);
   expect(url.searchParams.get('code_challenge_method')).toBe('S256');
   expect(url.searchParams.get('scope')).toBe('browse');
+  expect(url.searchParams.get('view')).toBe('login');
   expect(url.searchParams.has('client_secret')).toBe(false);
   expect(response.headers['set-cookie']![0]).toMatch(/HttpOnly; SameSite=Lax/);
   expect(response.headers['set-cookie']![0]).toContain(`Path=${DEVIANTART_OAUTH.path}`);

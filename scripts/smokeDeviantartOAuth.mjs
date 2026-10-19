@@ -20,9 +20,17 @@ export async function smokeDeviantartOAuth(configuration, client) {
   const start = await client.post(`${DEVIANTART_OAUTH.path}/start`).send({}).expect(HTTP_STATUS.ok);
   const url = new URL(start.body.authorizationUrl);
   assert.equal(url.origin, 'https://www.deviantart.com');
+  assert.equal(start.body.returnMode, 'copy');
+  assert.equal(url.searchParams.get('redirect_uri'), DEVIANTART_OAUTH.landing);
   assert.equal(url.searchParams.get('scope'), 'browse');
+  assert.equal(url.searchParams.get('view'), 'login');
   assert.equal(url.searchParams.has('client_secret'), false);
   const [cookie] = start.headers['set-cookie'][0].split(';');
+  const homepage = await client
+    .post(`${DEVIANTART_OAUTH.path}/complete`)
+    .send({ responseUrl: 'https://www.deviantart.com/' })
+    .expect(HTTP_STATUS.badRequest);
+  assert.equal(homepage.body.error, DEVIANTART_OAUTH.homepageMessage);
   const originalFetch = globalThis.fetch;
   let exchanges = 0;
   try {
@@ -39,12 +47,17 @@ export async function smokeDeviantartOAuth(configuration, client) {
         JSON.stringify({ access_token: 'temporary-access', refresh_token: 'compiled-refresh-token' }),
       );
     };
+    const responseUrl = new URL(DEVIANTART_OAUTH.loopbackReturn);
+    responseUrl.search = new URLSearchParams({
+      state: url.searchParams.get('state'),
+      code: 'compiled-code',
+    }).toString();
     const result = await client
-      .get(DEVIANTART_OAUTH.callback)
+      .post(`${DEVIANTART_OAUTH.path}/complete`)
       .set('Cookie', cookie)
-      .query({ state: url.searchParams.get('state'), code: 'compiled-code' })
-      .expect(DEVIANTART_OAUTH.redirectStatus);
-    assert.equal(result.headers.location, '/?deviantart=connected#settings');
+      .send({ responseUrl: responseUrl.href })
+      .expect(HTTP_STATUS.ok);
+    assert.equal(result.body.result, 'connected');
     assert.equal(
       new DeviantartStore(configuration.dataDirectory).read().account.refreshToken,
       'compiled-refresh-token',
@@ -53,10 +66,10 @@ export async function smokeDeviantartOAuth(configuration, client) {
     assert.equal(metadata.body.hasAccount, true);
     assert.ok(!JSON.stringify(metadata.body).includes('compiled-refresh-token'));
     const replay = await client
-      .get(DEVIANTART_OAUTH.callback)
+      .post(`${DEVIANTART_OAUTH.path}/complete`)
       .set('Cookie', cookie)
-      .query({ state: url.searchParams.get('state'), code: 'compiled-code' });
-    assert.equal(replay.headers.location, '/?deviantart=expired#settings');
+      .send({ responseUrl: responseUrl.href });
+    assert.equal(replay.body.result, 'expired');
     assert.equal(exchanges, 1);
   } finally {
     globalThis.fetch = originalFetch;
@@ -75,6 +88,6 @@ export async function smokeDeviantartOAuth(configuration, client) {
     (error) => error.reason === MEDIA_FAILURE.rate,
   );
   process.stdout.write(
-    'Compiled DeviantArt PKCE, private token exchange, replay rejection and rate-loop recovery: passed.\n',
+    'Compiled HTTP-compatible DeviantArt PKCE, private exchange, replay rejection and rate-loop recovery: passed.\n',
   );
 }

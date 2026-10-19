@@ -181,6 +181,15 @@
   background: var(--accent-soft);
   font-weight: 600;
 }
+.source-oauth-return {
+  padding: 1rem;
+  border: 1px solid var(--accent-line);
+  border-radius: 0.75rem;
+  background: var(--accent-soft);
+}
+.source-oauth-return .primary-button {
+  white-space: normal;
+}
 .source-account {
   margin-top: 1.5rem;
   padding-top: 1.5rem;
