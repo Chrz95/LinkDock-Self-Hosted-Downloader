@@ -1,9 +1,27 @@
-# LinkDock 2.17
+# LinkDock 2.18
 
 A private download studio for your Raspberry Pi: videos, Instagram moments, torrents and files, collected in one place.
 The dark-first React + TypeScript workspace has a saved light/dark preference, source selection, real progress,
 searchable history, batch review, queue priorities and individual access to every completed file. Downloads run on the
 Pi when your browser is closed.
+
+## New in version 2.18: DeviantArt sign-in and stalled-download recovery
+
+Connect from **Settings → DeviantArt collections & account → Continue to DeviantArt**. One-time app setup registers your
+own self-hosted callback with DeviantArt; subsequent sign-ins retrieve and save the refresh token automatically. You
+sign in on DeviantArt, and LinkDock exchanges the authorization code on the Pi using PKCE. No terminal commands or
+manual refresh-token copying are needed. See [account authorization](#optional-account-authorization) below.
+
+DeviantArt's upstream extractor can retry API rate limits and CloudFront blocks indefinitely. LinkDock now stops those
+loops with a fixed, useful recovery reason instead of remaining in **Downloading**. Rejected account grants ask you to
+reconnect, request limits ask you to wait, and explicit browser blocks point to verification assistance. Silent workers
+stop after three minutes without file progress. Growing partial files and distinct completed/skipped files during a
+resume count as progress; repeated diagnostic output does not. Network requests use a 30-second timeout and three HTTP
+retries. These controls bound waiting; they do not bypass source restrictions or guarantee every link will work.
+
+For an already-stuck job, pause it, rebuild/recreate LinkDock with this release, complete the account connection, then
+use **Library → Restart**. Restart uses the existing fresh-download behavior and clears that job's previous partial
+staging; completed downloads remain intact. Source errors are categorized without exposing private engine output.
 
 ## Bulk actions for your library
 
@@ -530,19 +548,47 @@ and video/MP3 quality settings are independent.
 
 ### Optional account authorization
 
-Public downloads need no account setup. For account-authorized DeviantArt API requests:
+Public downloads need no account setup. For account-authorized DeviantArt API requests, use the in-app connection:
 
-1. On a trusted computer with a browser and current gallery-dl, run `gallery-dl oauth:deviantart` and follow its
-   authorization flow. See the [upstream OAuth guide](https://github.com/mikf/gallery-dl#oauth). No DeviantArt password
-   is entered into LinkDock.
-2. Paste the freshly issued **refresh token** into the Settings account form. If you authorized a custom OAuth app,
-   supply its matching numeric client ID and client secret too; otherwise leave both blank. Tokens from a custom app
-   must use that same app. LinkDock accepts these fixed fields, not arbitrary gallery-dl configuration.
-3. Save, then retry a DeviantArt download from Library. Saving validates/stores the fields; it does not contact
-   DeviantArt or claim the account has been verified. The worker uses the account token for API requests.
+1. Pause DeviantArt transfers. In **Settings → DeviantArt collections & account**, open **One-time app setup** and copy
+   **OAuth callback URL**. It is your browser-facing station origin plus `/api/deviantart/oauth/callback`. For example,
+   a station at `http://192.168.1.50:7489` displays `http://192.168.1.50:7489/api/deviantart/oauth/callback`. Use the
+   exact address accepted by DeviantArt's app registration. For an HTTPS reverse proxy, set
+   `PUBLIC_ORIGIN=https://downloads.example.com` and `SECURE_COOKIE=true`, open that same address, and register its
+   HTTPS callback. No additional Docker port is needed.
+2. Open [DeviantArt Applications & Keys](https://www.deviantart.com/developers/apps) and register a **confidential**
+   application. Add the copied callback to its OAuth redirect URI whitelist. Save its client ID and client secret in
+   LinkDock's app setup. New OAuth 2.1 registrations are supported using PKCE S256. Public apps without a secret are not
+   supported by this connection. A previously imported custom app can be reused after adding the LinkDock callback to
+   that application's whitelist; the gallery-dl localhost redirect alone cannot return to your Pi.
+3. Select **Continue to DeviantArt**, sign in there and approve the requested `browse` access. LinkDock retrieves the
+   grant, saves a new private account generation and returns to the open Settings panel. It does not request account
+   management scope or enable automatic watching. No DeviantArt password is entered into LinkDock.
+4. Restart the failed download from Library. Token exchange confirms grant issuance; a later download can still be
+   denied by per-file permissions, download quotas, browser checks or source availability. Reconnect through the same
+   button if the provider expires/revokes the grant. Token refreshes run automatically when download workers need them.
+
+App registration is needed once because DeviantArt requires the callback to be registered for the client ID; LinkDock
+cannot create that registration on your behalf. See the
+[provider authentication documentation](https://deviantart.readme.io/docs/authentication).
+
+**Manual token import · advanced** remains available for existing gallery-dl grants. Authorize on a trusted computer
+using `gallery-dl oauth:deviantart`, then paste the fresh refresh token in that form. Supply both matching app fields
+for a custom app, or leave both blank for gallery-dl's default app. Saving manual fields validates/stores them; the next
+download checks access. Manual imports do not perform a remote login test.
+
+Sign-in setup and starts are owner-authenticated same-origin JSON actions. The callback uses a separate HttpOnly
+SameSite=Lax transaction cookie because the station's existing SameSite=Strict cookie is absent on cross-site returns.
+Random browser-bound one-use state and a server-only PKCE verifier expire after ten minutes. Pending transactions are
+bounded, are invalidated by explicit app/account changes, and do not survive a server restart. Token exchange has a
+30-second deadline, a 16 KiB body cap and no redirects. The callback redirects to a fixed Settings destination with only
+a fixed outcome marker; codes, tokens and provider error descriptions are not returned in API bodies or UI text. Account
+replacement is locked against active/waiting downloads and other account writes during exchange. Canceled or rejected
+exchanges retain the previous account. Collection preference changes during sign-in are preserved.
 
 Account fields are password inputs where appropriate and clear on submission or leaving the settings page. The API
-returns setup flags and collection preferences only. Credentials are saved in private mode-0600 JSON beneath
+returns setup flags, the callback URL and collection preferences only. App setup is retained in `oauth-app.json`;
+removing an account retains this reusable application setup. Credentials are saved in private mode-0600 JSON beneath
 `/data/credentials/deviantart`; token-bearing worker configs use disposable private session files. Process arguments
 contain only file paths, never the token/client secret. Gallery-dl's rotating OAuth cache persists in a private
 account-specific directory across restarts and utility updates. Back up the entire credentials directory privately,

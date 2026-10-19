@@ -19,6 +19,9 @@ import { CONTROL } from '../shared/control.js';
 import { createControlRoutes } from './control/routes.js';
 import { DEVIANTART } from '../shared/deviantart.js';
 import { createDeviantartRoutes } from './deviantart/routes.js';
+import { DEVIANTART_OAUTH } from '../shared/deviantartOAuth.js';
+import { createDeviantartOAuthRoutes } from './deviantart/oauthRoutes.js';
+import { DeviantartOAuthService } from './deviantart/oauthService.js';
 import { BROWSER_ACCESS } from '../shared/browserAccess.js';
 import { createBrowserAccessRoutes } from './browserAccess/routes.js';
 
@@ -36,6 +39,7 @@ export function createApplication(
 ): express.Express {
   const application = express();
   const session = createSessionHandlers(configuration);
+  const deviantartOAuth = new DeviantartOAuthService(configuration.dataDirectory);
   queue.onTerminal((job) => notifications.enqueue(job));
   application.disable('x-powered-by');
   application.use(
@@ -96,7 +100,15 @@ export function createApplication(
   application.use(CONTROL.path, session.requireSession, createControlRoutes(queue));
   application.use(API_PATH.settings, session.requireSession, createPolicyRoutes(queue));
   application.use(BROWSER_ACCESS.path, session.requireSession, createBrowserAccessRoutes(configuration.dataDirectory));
-  application.use(DEVIANTART.path, session.requireSession, createDeviantartRoutes(configuration.dataDirectory));
+  application.use(
+    DEVIANTART_OAUTH.path,
+    createDeviantartOAuthRoutes(configuration, session.requireSession, deviantartOAuth),
+  );
+  application.use(
+    DEVIANTART.path,
+    session.requireSession,
+    createDeviantartRoutes(configuration.dataDirectory, () => deviantartOAuth.invalidate()),
+  );
   application.use(API_PATH.notifications, session.requireSession, createNotificationRoutes(notifications));
   application.use(API_PATH.station, session.requireSession, createHealthRoutes(configuration, queue));
   application.use(API_PATH.prefix, (_request, response) =>

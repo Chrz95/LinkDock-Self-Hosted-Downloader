@@ -7,9 +7,10 @@ import { tryDeviantartLock } from './lock.js';
 /**
  * Exposes private metadata and bounded owner actions behind the existing session and CSRF middleware.
  * @param {string} dataDirectory - Private station state.
+ * @param {() => void} [onAccountChange] - Invalidates pending sign-ins after an explicit account mutation.
  * @returns {Router} Preferences and write-only account setup.
  */
-export function createDeviantartRoutes(dataDirectory: string): Router {
+export function createDeviantartRoutes(dataDirectory: string, onAccountChange?: () => void): Router {
   const router = Router();
   router.get('/', (_request, response) => {
     try {
@@ -47,6 +48,9 @@ export function createDeviantartRoutes(dataDirectory: string): Router {
         store.replaceAccount(state, null);
       } else {
         throw new Error('Choose a supported DeviantArt action.');
+      }
+      if (changesAccount) {
+        onAccountChange?.();
       }
       response.json(store.snapshot());
     } catch {

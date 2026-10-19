@@ -29,7 +29,7 @@ export function DeviantartAccount({ access }: DeviantartAccountProps) {
         });
       }}
     >
-      <h3>Account access · optional</h3>
+      <h3>Manual token import · advanced</h3>
       <p
         className="policy-saved"
         aria-live="polite"
@@ -70,9 +70,9 @@ export function DeviantartAccount({ access }: DeviantartAccountProps) {
         />
       </label>
       <p className="policy-footnote">
-        Use a fresh token from gallery-dl account authorization. For a custom OAuth app, supply both matching app
-        fields. Save it to your trusted station over HTTPS. Tokens rotate: keep the private Pi credentials directory and
-        avoid using the same grant elsewhere. Saving stores credentials; the next download checks whether they work.
+        Already have a fresh token? Import it here. For a custom OAuth app, supply both matching app fields. Save it to
+        your trusted station over HTTPS. Tokens rotate: keep the private Pi credentials directory and avoid using the
+        same grant elsewhere. Saving stores credentials; the next download checks whether they work.
       </p>
       <button
         type="submit"

@@ -13,6 +13,7 @@ import { ensureStorage } from '../policy/storage.js';
 import { BrowserAccessStore } from '../browserAccess/store.js';
 import { acquireDeviantartLock } from '../deviantart/lock.js';
 import { prepareDeviantartSession, type DeviantartExecution } from '../deviantart/session.js';
+import { createDeviantartProgress } from '../deviantart/progress.js';
 
 /**
  * Counts staging bytes, including temporary merge files, without following symlinks.
@@ -157,6 +158,8 @@ async function runMediaDownload(
   });
   const controller = new AbortController();
   const combinedSignal = AbortSignal.any([signal, controller.signal]);
+  const deviantartProgress =
+    job.sourceType === SOURCE_TYPE.deviantart ? createDeviantartProgress(job, controller, initialBytes) : undefined;
   job.stage = 'Connecting to source';
   let measurement: Promise<void> | undefined;
   let previousBytes = initialBytes;
@@ -179,10 +182,11 @@ async function runMediaDownload(
         job.receivedBytes = bytes;
         previousBytes = bytes;
         previousTime = Date.now();
-        job.stage =
-          job.sourceType === SOURCE_TYPE.deviantart
-            ? 'Collecting DeviantArt gallery & stories'
-            : 'Collecting post media';
+        if (deviantartProgress) {
+          deviantartProgress.sample(bytes);
+        } else {
+          job.stage = 'Collecting post media';
+        }
       }
     } catch (error) {
       controller.abort(error);
@@ -207,12 +211,16 @@ async function runMediaDownload(
         deviantartSession,
       ),
       combinedSignal,
-      (line) => applyMediaProgress(job, line),
+      (line) => {
+        applyMediaProgress(job, line);
+        deviantartProgress?.output(line, outputDirectory);
+      },
       {
         env: execution.environment,
+        onDiagnostic: deviantartProgress?.diagnostic,
         authenticationMessage:
           job.sourceType === SOURCE_TYPE.deviantart
-            ? 'DeviantArt needs account access. Check the refresh token in Settings, then retry from Library.'
+            ? 'DeviantArt needs account access. Reconnect or replace the refresh token in Settings, then restart.'
             : undefined,
       },
     );

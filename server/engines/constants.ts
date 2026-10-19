@@ -5,6 +5,7 @@ export const ENGINE_LIMIT = {
   maximumDirectoryDepth: 32,
   mediaRetryCount: 3,
   mediaSocketTimeoutSeconds: 30,
+  deviantartStallMilliseconds: 180_000,
   maximumRpcResults: 1_000,
   secretBytes: 32,
   progressIntervalMilliseconds: 750,

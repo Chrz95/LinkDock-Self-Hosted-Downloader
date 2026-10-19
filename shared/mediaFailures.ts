@@ -29,7 +29,7 @@ export const MEDIA_FAILURE_INFO = {
   login: {
     title: 'Account session required',
     message: 'This source needs a valid account session.',
-    guidance: 'Refresh site cookies in Settings. For DeviantArt, check its account token, then use Restart.',
+    guidance: 'Refresh site cookies in Settings. For DeviantArt, reconnect the account, then use Restart.',
     action: 'browser',
   },
   access: {

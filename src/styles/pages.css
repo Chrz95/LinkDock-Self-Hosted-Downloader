@@ -142,10 +142,44 @@
 
 /* Source setup keeps long forms and checkbox labels comfortable on narrow screens. */
 .source-preferences,
-.source-account {
+.source-account,
+.source-connect,
+.source-app-fields {
   display: grid;
   gap: 1rem;
   min-width: 0;
+}
+.source-connect {
+  padding: 1.25rem;
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  background: var(--field);
+  margin-bottom: 1.5rem;
+}
+.source-connect h3,
+.source-connect p {
+  margin: 0;
+}
+.source-connect fieldset,
+.source-app-setup[open] {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+}
+.source-app-setup summary {
+  font-size: 0.875rem;
+  min-height: 44px;
+  align-content: center;
+  cursor: pointer;
+}
+.source-app-fields button {
+  min-height: 44px;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--accent-line);
+  border-radius: 0.75rem;
+  color: var(--accent);
+  background: var(--accent-soft);
+  font-weight: 600;
 }
 .source-account {
   margin-top: 1.5rem;

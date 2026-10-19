@@ -15,6 +15,7 @@ import { smokeUtilities } from './smokeUtilities.mjs';
 import { smokeMediaRecovery } from './smokeMediaRecovery.mjs';
 import { smokeCollectionScope } from './smokeCollectionScope.mjs';
 import { smokeDeviantart } from './smokeDeviantart.mjs';
+import { smokeDeviantartOAuth } from './smokeDeviantartOAuth.mjs';
 import { smokeBrowserAccess } from './smokeBrowserAccess.mjs';
 
 /** Native Node execution catches production module interop that the test transformer can mask. */
@@ -97,6 +98,7 @@ async function smokeProduction() {
     await smokeUtilities(configuration);
     await smokeBrowserAccess(configuration, client);
     await smokeDeviantart(configuration, client);
+    await smokeDeviantartOAuth(configuration, client);
     await smokeCollectionScope(configuration, client);
     await smokeMediaRecovery(queue, client);
     process.stdout.write('Compiled production imports, mobile assets, organization and private diagnostics: passed.\n');

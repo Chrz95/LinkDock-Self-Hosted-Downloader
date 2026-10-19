@@ -13,7 +13,10 @@ const PATTERNS: [MediaFailure, RegExp][] = [
     MEDIA_FAILURE.region,
     /not available (?:in|from) your (?:country|region)|geo[- ]restricted|geographic restriction/iu,
   ],
-  [MEDIA_FAILURE.login, /login|log in|sign in|authentication|private video|age.?restrict|cookies/iu],
+  [
+    MEDIA_FAILURE.login,
+    /login|log in|sign in|authentication|invalid_grant|invalid_client|private video|age.?restrict|cookies/iu,
+  ],
   [MEDIA_FAILURE.access, /http(?: error)?[: ]+403|403:\s*forbidden|access denied/iu],
   [
     MEDIA_FAILURE.unavailable,

@@ -6,6 +6,7 @@ import { ENGINE_LIMIT } from './constants.js';
 export interface EngineProcessOptions {
   authenticationMessage?: string;
   onFailure?: (diagnostic: string) => void;
+  onDiagnostic?: (line: string) => void;
   cwd?: string;
   env?: NodeJS.ProcessEnv;
 }
@@ -36,6 +37,7 @@ export function runEngineProcess(
     });
     let errorOutput = '';
     let pendingLine = '';
+    let pendingDiagnostic = '';
     let killTimeout: ReturnType<typeof setTimeout> | undefined;
     /** Terminates the engine and subprocesses such as ffmpeg, escalating only after a grace period. */
     function handleAbort(): void {
@@ -69,9 +71,18 @@ export function runEngineProcess(
     });
     child.stderr.on('data', (chunk: Buffer) => {
       errorOutput = `${errorOutput}${chunk.toString()}`.slice(-ENGINE_LIMIT.maximumErrorCharacters);
+      if (options.onDiagnostic) {
+        pendingDiagnostic = `${pendingDiagnostic}${chunk.toString()}`.slice(-ENGINE_LIMIT.maximumErrorCharacters);
+        const lines = pendingDiagnostic.split(/\r?\n/);
+        pendingDiagnostic = lines.pop() ?? '';
+        lines.forEach((line) => options.onDiagnostic?.(line));
+      }
     });
     child.once('error', () => reject(new EngineProcessError(MEDIA_FAILURE.utility)));
     child.once('close', (code) => {
+      if (pendingDiagnostic) {
+        options.onDiagnostic?.(pendingDiagnostic);
+      }
       clearTimeout(killTimeout);
       if (signal.aborted && child.pid) {
         try {

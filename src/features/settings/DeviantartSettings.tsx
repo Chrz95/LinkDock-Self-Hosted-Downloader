@@ -1,6 +1,7 @@
 import { useDeviantart } from './useDeviantart';
 import { DeviantartAccount } from './DeviantartAccount';
 import { DeviantartPreferences } from './DeviantartPreferences';
+import { DeviantartConnect } from './DeviantartConnect';
 /** Source-specific collection defaults and write-only account setup in the dedicated settings destination.
  * @returns {JSX.Element} Responsive, lazy-loaded source controls.
  */
@@ -20,6 +21,7 @@ export function DeviantartSettings() {
             gallery, folder or post link in Overview.
           </p>
           <fieldset disabled={access.busy}>
+            <DeviantartConnect />
             <DeviantartPreferences access={access} />
             <DeviantartAccount access={access} />
           </fieldset>

@@ -2,11 +2,14 @@ import { useEffect, useRef, useState } from 'react';
 import { DEVIANTART, DEVIANTART_ACTION, type DeviantartSnapshot } from '../../../shared/deviantart';
 import { HTTP_METHOD } from '../../../shared/contracts';
 import { requestApi } from '../../lib/api/requestApi';
+import { DEVIANTART_OAUTH } from '../../../shared/deviantartOAuth';
 /** Loads non-secret source metadata lazily and serializes explicit owner setup actions.
  * @returns {object} Metadata, disclosure state and bounded action handler.
  */
 export function useDeviantart() {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(() =>
+    new URLSearchParams(window.location.search).has(DEVIANTART_OAUTH.resultParameter),
+  );
   const [snapshot, setSnapshot] = useState<DeviantartSnapshot | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');

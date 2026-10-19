@@ -1,4 +1,4 @@
-# Run LinkDock 2.17 on your Raspberry Pi
+# Run LinkDock 2.18 on your Raspberry Pi
 
 1. Use 64-bit Raspberry Pi OS and install Docker Engine with the Compose plugin.
 2. Extract this project and open a terminal in its `linkdock` directory.
@@ -341,10 +341,10 @@ once for the station. A specific gallery or post URL retains its own scope. Defa
 original files and plain TXT. Version 2.15 pins these choices when a new job is queued. Existing jobs keep their
 snapshot when paused, resumed or restarted; changed Settings apply to newly queued jobs.
 
-For account access, authorize on a trusted computer using `gallery-dl oauth:deviantart`, then paste the fresh refresh
-token in the account form. Leave both custom app fields blank unless you authorized your own OAuth app; if so, enter
-both matching fields. Save, then retry the download to test access. Saving credentials does not perform a login check.
-See the [authorization guide](https://github.com/mikf/gallery-dl#oauth) for the browser flow.
+For account access, version 2.18 adds **Continue to DeviantArt** directly in Settings. Complete the one-time application
+setup below, then sign in on DeviantArt. LinkDock retrieves and saves the refresh token automatically. The advanced
+manual-import form remains available for existing grants. Only manual imports defer credential validation to the next
+download; in-app sign-in performs the actual authorization-code exchange before reporting a connected account.
 
 Tokens rotate. Preserve all of `/data/credentials/deviantart`, including its private cache, across container
 recreations. Your bind mount retains this under `/home/pi/configs/linkDock/credentials/deviantart`. Do not reuse the
@@ -412,3 +412,38 @@ automatically when you open Library. Older records remain readable and keep gene
 
 Rebuild and recreate the service, then reload your browser. Existing mounts, credentials and utility updates continue to
 work. No additional environment variables or dependencies are required.
+
+## New in version 2.18: connect DeviantArt in the app
+
+1. Pause active DeviantArt downloads. Open **Settings → DeviantArt collections & account → One-time app setup**.
+2. Copy the displayed **OAuth callback URL**. At
+   [DeviantArt Applications & Keys](https://www.deviantart.com/developers/apps), register a **confidential** application
+   and add that exact URL to its OAuth redirect URI whitelist. Save its client ID and secret in LinkDock's setup form.
+   This is a one-time registration; subsequent account connections do not require retrieving/copying refresh tokens.
+3. Choose **Continue to DeviantArt**, sign in there and approve access. The same browser returns to Settings after
+   LinkDock retrieves and privately stores the refresh token. Refreshes run automatically as downloads need them.
+4. Open Library and **Restart** the affected download. Restart clears that job's previous partial staging. Completed
+   downloads remain intact. An issued token does not override file permissions, site quotas or browser challenges.
+
+Use the same station address during setup and sign-in. At `http://192.168.1.50:7489`, the callback is
+`http://192.168.1.50:7489/api/deviantart/oauth/callback`; use the exact URL accepted by DeviantArt's registration. For a
+reverse proxy, configure the browser-facing HTTPS `PUBLIC_ORIGIN` and `SECURE_COOKIE=true`, recreate the service, then
+register the HTTPS callback shown in Settings. The gallery-dl localhost callback cannot return directly to the Pi. No
+new container port or mount is needed. Keep the existing `/home/pi/configs/linkDock` bind mount.
+
+DeviantArt rate-limit and CloudFront retry loops now stop with a clear recovery message. Rejected credentials prompt
+reconnection; source request limits prompt waiting before retrying. Silent downloads stop after three minutes without
+file progress. Growing files and distinct completed/skipped file messages count as progress; repeated diagnostics do
+not. Ordinary HTTP operations use a 30-second timeout and three retries. Browser blocks still require source access or
+verified cookies; the application does not solve CAPTCHAs or bypass restrictions.
+
+Update using the source in this archive, from the directory containing its Dockerfile and your Compose file:
+
+```bash
+docker build -t localhost:5000/link_dock:latest .
+docker compose up -d --force-recreate --pull never link_dock
+```
+
+Reload the browser after recreating the container. Your private app registration, account and rotating token cache stay
+under `/data/credentials/deviantart` in the existing bind mount. If the container restarts during sign-in, start again.
+Removing an account keeps reusable app setup; provider-side grant revocation is managed on DeviantArt.

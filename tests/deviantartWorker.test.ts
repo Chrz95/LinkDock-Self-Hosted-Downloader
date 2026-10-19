@@ -10,6 +10,7 @@ import { DeviantartStore } from '../server/deviantart/store';
 import { tryDeviantartLock } from '../server/deviantart/lock';
 import { DEVIANTART, DEVIANTART_ACTION } from '../shared/deviantart';
 import { HTTP_STATUS } from '../shared/contracts';
+import { MEDIA_FAILURE } from '../shared/mediaFailures';
 import { cleanupDeliveryFixtures, createDeliveryFixture } from './helpers/deliveryFixture';
 
 vi.mock('../server/engines/runProcess', () => ({ runEngineProcess: vi.fn() }));
@@ -111,6 +112,33 @@ it('uses the pinned job choices after global collection defaults change', async 
   });
   await downloadMedia(job, queue.store.filesDirectory, new AbortController().signal, configuration);
   expect(runEngineProcess).toHaveBeenCalledOnce();
+});
+
+it('marks an upstream rate-limit loop failed, persists the safe reason and releases account ownership', async () => {
+  const { directory, configuration, queue } = await createDeliveryFixture();
+  vi.mocked(createPublicProxy).mockResolvedValue({ url: 'http://proxy.example', close });
+  vi.mocked(runEngineProcess).mockImplementation(async (_command, _args, signal, _progress, options) => {
+    options?.onDiagnostic?.('[deviantart][warning] API responded with 429 Too Many Requests. Using 30s delay.');
+    signal.throwIfAborted();
+  });
+  writeFileSync(path.join(directory, 'controls.json'), JSON.stringify({ paused: true, tasks: [] }));
+  const job = queue.add('https://deviantart.com/artist');
+  const running = new DownloadQueue(configuration);
+  try {
+    await running.controls.command('resume', 'all');
+    await vi.waitFor(() => expect(running.store.jobs[0]?.status).toBe(DOWNLOAD_STATUS.failed));
+    expect(running.store.jobs[0]?.mediaFailure).toBe(MEDIA_FAILURE.rate);
+    const [saved] = JSON.parse(readFileSync(path.join(directory, 'history.json'), 'utf8'));
+    expect(saved.id).toBe(job.id);
+    expect(saved.mediaFailure).toBe(MEDIA_FAILURE.rate);
+    expect(saved.errorMessage).toBe('The source is limiting download requests.');
+    expect(saved.stage).not.toContain('429');
+    const release = tryDeviantartLock(directory);
+    expect(release).not.toBeNull();
+    release?.();
+  } finally {
+    await running.stop();
+  }
 });
 
 it('pins an empty legacy job durably before the first recovered worker writes any output', async () => {

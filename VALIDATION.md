@@ -1,4 +1,4 @@
-# LinkDock 2.17 delivery and validation
+# LinkDock 2.18 delivery and validation
 
 Validated on 19 October 2026 using Node 24.19.0 and the committed dependency lockfile. The project pins pnpm 12.14.0;
 this session's provided command wrapper reports 11.25.0. A fresh Docker/Pi toolchain build remains unverified. Version
@@ -368,6 +368,43 @@ choices, source scoping, recovery links, no automatic requests and category-spec
 executes a real compiled subprocess failure and queues a new version through the compiled API while retaining originals.
 No live provider failure, media download, fresh OAuth session or physical Pi/ARM64 Docker run is claimed verified.
 
+## Version 2.18 changes
+
+- A mobile-compatible Settings connection uses a confidential DeviantArt app, one-time registered station callback,
+  authorization code + PKCE S256, random browser-bound state and same-tab provider sign-in. Only `browse` is requested.
+- Owner-only app setup and starts use existing JSON/origin checks. The callback alone accepts the cross-site return,
+  bound to a dedicated HttpOnly SameSite=Lax cookie; the station session cookie retains SameSite=Strict.
+- The Pi exchanges the code through a fixed HTTPS endpoint with a 30-second deadline, 16 KiB body cap and no redirects.
+  Tokens/client secrets never enter browser responses, navigation URLs, queue history, logs or process arguments.
+  Provider authorization codes travel only in the standard provider callback request and server-side exchange.
+- Pending state/verifiers are memory-only, one-use, capped at eight and expire after ten minutes. Restarting invalidates
+  them. Repeated starts replace that browser's abandoned flow only after a new start can proceed. Explicit app/account
+  changes invalidate pending flows. Account writes/exchanges serialize with downloads; preferences are preserved.
+- Private mode-0600 app setup survives restarts under the existing private DeviantArt directory. New account generations
+  reuse the persistent rotation-cache mechanism. Canceled/rejected exchanges preserve the existing account. Removing an
+  account retains reusable app setup. Advanced manual imports remain supported independently.
+- DeviantArt engine arguments explicitly set HTTP timeout/retry limits and disable automatic watching/unwatching. Live
+  bounded stderr hints interrupt upstream's unbounded API 429 and CloudFront block loops; rejected grants get a
+  reconnect message. All visible text is application-authored and raw diagnostic text remains private.
+- A three-minute no-progress watchdog measures staging changes and distinct completed/skipped file output. Repeated logs
+  cannot keep a worker alive indefinitely; legitimate growing files and resumed collection scans remain active. Failure
+  terminates the process group, releases private sessions and account ownership, and persists a safe reason.
+
+New regression checks cover authorization/setup authentication and origin rejection, private file permissions, exact
+callback selection, PKCE challenge verification, cross-site cookie handling without the strict owner cookie, replay and
+cross-browser rejection, expiration, denial, account/app changes, pending caps and symlink rejection. Concurrent
+exchange tests preserve preference changes and reject account writes/replays. UI checks cover write-only setup, return
+navigation, outcome cleanup, failed connection recovery and stale metadata races. Process tests terminate a real looping
+child on a rate-limit diagnostic; queue integration verifies the durable failure category and released account lock.
+Watchdog checks cover actual byte progress, fixed error text and distinct resumed-file activity versus repeated
+diagnostic output. The native production smoke repeats compiled authorization with a mocked token endpoint and a real
+looping subprocess.
+
+No real user account, live provider authorization/download, physical Pi/ARM64 image build or rendered browser layout was
+verified. App registration and callback acceptance must be checked against the owner's actual DeviantArt app and
+browser-facing station address. These changes bound known waits and expose failures; they cannot establish the exact
+cause on a user's running Pi without a new download attempt. Existing Restart clears private partial staging as before.
+
 ## Executed checks
 
 | Check                                 | Result                                                             |
@@ -376,7 +413,7 @@ No live provider failure, media download, fresh OAuth session or physical Pi/ARM
 | `pnpm lint`                           | Passed; zero errors and zero warnings                              |
 | `pnpm format:check`                   | Passed                                                             |
 | `pnpm typecheck`                      | Passed for browser, tests and server                               |
-| `pnpm test:run`                       | Passed; 475 tests across 64 files                                  |
+| `pnpm test:run`                       | Passed; 505 tests across 67 files                                  |
 | `pnpm build`                          | Passed; frontend and compiled server produced                      |
 | `pnpm test:production`                | Passed; compiled MP3, utilities, CLI, moves and private delivery   |
 | Component-size and source-line checks | Passed; at most 100 lines and 120 columns                          |
