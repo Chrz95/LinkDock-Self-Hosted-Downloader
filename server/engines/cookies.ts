@@ -1,4 +1,4 @@
-import { chmod, copyFile, mkdir, mkdtemp, rm } from 'node:fs/promises';
+import { chmod, copyFile, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { OUTPUT } from './constants.js';
 
@@ -9,10 +9,11 @@ const PRIVATE_COOKIE_MODE = 0o600;
  * Copies an owner-mounted cookie jar into private writable session storage outside all published output.
  * @param {string} dataDirectory - Persistent station root.
  * @param {string} [sourceFile] - Optional read-only Netscape cookie file.
+ * @param {string | null} [importedCookies] - Private owner-imported jar, taking precedence over a mounted file.
  * @returns {Promise<{filename?: string; cleanup: () => Promise<void>}>} Disposable engine credential copy.
  */
-export async function prepareMediaCookies(dataDirectory: string, sourceFile?: string) {
-  if (!sourceFile) {
+export async function prepareMediaCookies(dataDirectory: string, sourceFile?: string, importedCookies?: string | null) {
+  if (!sourceFile && !importedCookies) {
     return { filename: undefined, cleanup: async () => {} };
   }
   const privateDirectory = path.join(dataDirectory, OUTPUT.credentialsDirectory);
@@ -20,7 +21,11 @@ export async function prepareMediaCookies(dataDirectory: string, sourceFile?: st
   const directory = await mkdtemp(path.join(privateDirectory, OUTPUT.credentialSessionPrefix));
   const filename = path.join(directory, 'cookies.txt');
   try {
-    await copyFile(sourceFile, filename);
+    if (importedCookies) {
+      await writeFile(filename, importedCookies, { mode: PRIVATE_COOKIE_MODE });
+    } else {
+      await copyFile(sourceFile!, filename);
+    }
     await chmod(filename, PRIVATE_COOKIE_MODE);
   } catch {
     await rm(directory, { recursive: true, force: true });

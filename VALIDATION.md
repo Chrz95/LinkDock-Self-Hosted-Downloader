@@ -1,6 +1,6 @@
-# LinkDock 2.12 delivery and validation
+# LinkDock 2.17 delivery and validation
 
-Validated on 18 October 2026 using Node 24.19.0 and the committed dependency lockfile. The project pins pnpm 12.14.0;
+Validated on 19 October 2026 using Node 24.19.0 and the committed dependency lockfile. The project pins pnpm 12.14.0;
 this session's provided command wrapper reports 11.25.0. A fresh Docker/Pi toolchain build remains unverified. Version
 2.3 adds `web-push` 3.6.7 and development types 3.6.4 for maintained encryption and VAPID signing; the application uses
 its own bounded, public-DNS-pinned HTTPS transport rather than the package's buffered delivery transport. Existing
@@ -264,6 +264,110 @@ independent update controls, request cancellation, skip-link focus, paused hidde
 existing private API, source engine, completion and production smoke coverage remains in place. The page-layout checks
 use jsdom, not rendered browser screenshots; physical mobile/Docker/Pi acceptance remains pending.
 
+## Version 2.13 changes
+
+- DeviantArt gets a dedicated source selector and automatic routing for art/story/gallery/profile URLs.
+- Gallery-dl collects originals, available videos, galleries/subfolders and plain-text literature/journals.
+- Profile dispatch includes galleries and journals, with no automatic unwatch or extra-content crawling enabled.
+- Gallery mode reuses managed gallery-dl, private browser cookies, public-only egress, per-file delivery and completion.
+- Media staging measurements now also enforce file count and directory depth during collection.
+- Tests cover DeviantArt URL families, host/MP3 validation, fixed collector options, history, UI submission and a mixed
+  story/photo/video gallery published through the actual queue and moved to the global completed folder.
+- The installed gallery-dl recognized all checked DeviantArt entry classes without contacting the site, and its actual
+  literature formatter produced plain-text story content. This does not verify live source/API/account access.
+
+- A 29-family catalogue expands automatic extractor routing and adds searchable source guidance on Settings.
+- Private Netscape import, bounded User-Agent, metadata-only responses and explicit removal support browser
+  verification.
+- Imported media jars become disposable private copies; direct cookies are scoped by domain/path/HTTPS/expiry on every
+  redirect and remain outside history and published files. Mounted media-cookie fallback remains supported.
+- Failed/canceled file/media records expose an explicit browser/final-link handoff with no automatic source submission.
+- Direct 429/503 responses honor bounded Retry-After with cancellation and visible wait stages; persistent cooldowns
+  fail.
+- Unattached HTML/XHTML responses fail before publication rather than pretending to be downloaded files.
+- Fixed video identity/pacing options and extractor retries retain shell-free invocation and public-only media proxying.
+
+New checks cover cookie parsing/scope, authentication/origin boundaries, no-secret metadata/history, private file modes,
+import/remove/corrupt recovery, mounted fallback, safe engine vectors, all catalogue domains and lookalikes, final-link
+handoff, HTML challenge rejection and real local HTTP headers/retry attempts. UI checks import/remove sessions, save
+pacing, queue final links and search sources. Native production smoke checks compiled session routes, scoped headers and
+disposable credential copies. Installed yt-dlp/gallery-dl parsers accepted the new identity/pacing flags, and the
+installed yt-dlp extractor catalogue contains the added families (Odysee uses the LBRY extractor). These offline checks
+are not live media-provider or CAPTCHA success tests. Physical Pi/ARM64, browser-bound verification, countdown host
+compatibility and network/IP-bound cookie acceptance remain deployment checks.
+
+## Version 2.14 changes
+
+- Settings adds saved DeviantArt profile collections, original-file selection and TXT/HTML/skip textual content.
+- Optional refresh-token and matching custom-client setup uses a write-only private API with session/CSRF protection.
+- Bounded credentials and whitelisted preferences remain outside history, public output and process arguments.
+- Private disposable worker configuration combines with persistent account-specific SQLite token rotation caches.
+- Account import/removal creates/deletes cache generations; explicit removal also recovers damaged private state.
+- Cancellable per-station source serialization prevents concurrent refreshes; credential changes reject busy accounts.
+- Active workers retain their source settings snapshot; new starts read saved preferences.
+- Password drafts clear on submission, disclosure close and settings-page effect cleanup.
+- Responsive source forms reuse existing dark/light tokens, 44px targets and 16px text fields.
+
+New server tests cover API authentication/origin/no-store, secret omission, bounded input, file permissions, token/cache
+paths, cache retention, replacement/removal, symlink rejection, corrupt-state recovery, locking/cancel and real pipeline
+cleanup. DOM tests cover scoped preferences, secret-field clearing, source status, failed writes and stale-read removal.
+Compiled native smoke covers account setup, cache persistence, busy-account rejection and removal. Installed gallery-dl
+is checked offline for application CLI/config loading and rotating cache reuse across fresh processes with a simulated
+token endpoint. No real account, external provider download, physical Pi or ARM64 Docker build is claimed verified.
+
+## Version 2.15 changes
+
+- New single/batch DeviantArt jobs pin whitelisted collection choices in history, independently of private credentials.
+- Duplicate identity includes the canonical scope; retries/resumes retain it and workers use it despite changed
+  defaults.
+- Legacy unbound partials are preserved and held paused on real queue startup, with explicit Restart guidance.
+- Individual/all resume cannot append to ambiguous old staging; Restart binds current choices and discards that staging.
+- Empty legacy jobs bind and persist choices before engine startup; completed/published payloads remain accessible.
+- Library exposes saved collection choices and a lazy, searchable, type-filtered and naturally sorted file browser.
+- Rendering is capped at 25 file rows per page; canonical manifest indexes remain stable across every view operation.
+- Page/filter transitions cancel pending preview preflight; full-collection ZIP behavior is labeled explicitly.
+
+New tests check history validation, credential omission, independent batch snapshots, scope-aware duplicate review, real
+startup recovery, retained partial bytes, explicit restart, empty legacy worker recovery and pinned engine vectors. DOM
+checks exercise 2,000-file lazy rendering, no automatic file fetches, original download indexes, document/type filters,
+natural/size sorting, page clamping, empty states, preview cancellation and legacy transfer controls. Existing file-link
+rendering expectations now explicitly open the lazy collection first. Native compiled smoke verifies API pinning,
+duplicate review and restart persistence. DOM tests do not measure rendered geometry or physical touch input. No live
+provider/peer swarm, physical Pi, ARM64 Docker execution or fresh real OAuth authorization is claimed verified.
+
+## Version 2.16 changes
+
+- Pornhub and six additional yt-dlp video families join automatic routing and the searchable source catalogue.
+- Known Pornhub/Premium domains, XVideos/XNXX aliases and RedTube's Brazil domain use exact/subdomain matching.
+- Existing video quality, MP3 conversion, cookie handling, proxying and managed yt-dlp updates are reused.
+- The package.json pnpm pin is restored to 12.14.0, matching Dockerfile and the documented toolchain.
+
+Focused API tests verify Pornhub Auto detection, retained video quality and MP3 bitrate, separate duplicate identities,
+saved history and private-cookie argument construction. Hostname-lookalike rejection and explicit Direct mode are
+checked. Existing catalogue tests now exercise every added domain; UI tests find each source by name/domain. Native
+production smoke checks compiled Pornhub video/MP3 queueing and argument vectors without fetching a source page. Offline
+installed-extractor checks use synthetic watch/embed URLs only and do not fetch media or account data. The upstream
+yt-dlp supported-sites catalogue was checked. No live provider download or fresh Pi/Docker run is claimed.
+
+## Version 2.17 changes
+
+- Library video jobs expose requested output and can explicitly queue another quality/MP3 version from the original URL.
+- The new authenticated owner action preserves original records/files and reuses standard duplicate/history/defaults.
+- Fixed bounded engine error hints replace undifferentiated media failures with safe persisted categories and guidance.
+- Known format, account, verification, access, rate, region, unavailable, DRM, network and utility failures get
+  guidance.
+- URL text is removed before hint matching; raw diagnostics are not retained by the new error or saved queue fields.
+- Cancellation remains authoritative, unknown failures retain a generic fallback and retries clear stale categories.
+- Browser CAPTCHA assistance is hidden for classified cases where it would mislead the owner.
+
+New checks exercise category priority/fallback, URL/query exclusion, real subprocess errors, safe error objects and
+cancellation. Integration tests verify persistence in the real queue and private dashboard, optional/invalid history
+fields, origin/auth protection, duplicate/quality/source rejection, use of the original URL, completion defaults,
+retained original partial bytes and rollback on failed history writes. DOM tests cover quality/MP3 copies, rejected
+choices, source scoping, recovery links, no automatic requests and category-specific browser assistance. Native smoke
+executes a real compiled subprocess failure and queues a new version through the compiled API while retaining originals.
+No live provider failure, media download, fresh OAuth session or physical Pi/ARM64 Docker run is claimed verified.
+
 ## Executed checks
 
 | Check                                 | Result                                                             |
@@ -272,7 +376,7 @@ use jsdom, not rendered browser screenshots; physical mobile/Docker/Pi acceptanc
 | `pnpm lint`                           | Passed; zero errors and zero warnings                              |
 | `pnpm format:check`                   | Passed                                                             |
 | `pnpm typecheck`                      | Passed for browser, tests and server                               |
-| `pnpm test:run`                       | Passed; 390 tests across 53 files                                  |
+| `pnpm test:run`                       | Passed; 475 tests across 64 files                                  |
 | `pnpm build`                          | Passed; frontend and compiled server produced                      |
 | `pnpm test:production`                | Passed; compiled MP3, utilities, CLI, moves and private delivery   |
 | Component-size and source-line checks | Passed; at most 100 lines and 120 columns                          |

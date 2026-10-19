@@ -18,6 +18,8 @@ export const JOB_OPTIONS = {
   torrent: '/torrent-selection',
   destination: '/destination',
   retryMove: '/retry-move',
+  browserLink: '/browser-link',
+  mediaCopy: '/media-copy',
   maximumFiles: 2_000,
   maximumPathCharacters: 1_024,
   maximumDirectoryCharacters: 240,

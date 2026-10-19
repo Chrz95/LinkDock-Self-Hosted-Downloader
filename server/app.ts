@@ -17,6 +17,10 @@ import { UTILITY } from '../shared/utilities.js';
 import { createUtilityRoutes } from './utilities/routes.js';
 import { CONTROL } from '../shared/control.js';
 import { createControlRoutes } from './control/routes.js';
+import { DEVIANTART } from '../shared/deviantart.js';
+import { createDeviantartRoutes } from './deviantart/routes.js';
+import { BROWSER_ACCESS } from '../shared/browserAccess.js';
+import { createBrowserAccessRoutes } from './browserAccess/routes.js';
 
 /**
  * Composes a same-origin application with private API responses and CSRF origin checks.
@@ -91,6 +95,8 @@ export function createApplication(
   application.use(UTILITY.path, session.requireSession, createUtilityRoutes(queue.utilities));
   application.use(CONTROL.path, session.requireSession, createControlRoutes(queue));
   application.use(API_PATH.settings, session.requireSession, createPolicyRoutes(queue));
+  application.use(BROWSER_ACCESS.path, session.requireSession, createBrowserAccessRoutes(configuration.dataDirectory));
+  application.use(DEVIANTART.path, session.requireSession, createDeviantartRoutes(configuration.dataDirectory));
   application.use(API_PATH.notifications, session.requireSession, createNotificationRoutes(notifications));
   application.use(API_PATH.station, session.requireSession, createHealthRoutes(configuration, queue));
   application.use(API_PATH.prefix, (_request, response) =>

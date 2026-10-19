@@ -4,6 +4,7 @@ export const SOURCE_OPTIONS = [
   { value: SOURCE_TYPE.auto, label: 'Auto detect', icon: 'sparkle' },
   { value: SOURCE_TYPE.video, label: 'Video', icon: 'video' },
   { value: SOURCE_TYPE.instagram, label: 'Instagram', icon: 'camera' },
+  { value: SOURCE_TYPE.deviantart, label: 'DeviantArt', icon: 'camera' },
   { value: SOURCE_TYPE.torrent, label: 'Torrent', icon: 'torrent' },
   { value: SOURCE_TYPE.magnet, label: 'Magnet', icon: 'link' },
   { value: SOURCE_TYPE.direct, label: 'File', icon: 'file' },

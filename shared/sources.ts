@@ -4,11 +4,19 @@ export const SOURCE_TYPE = {
   direct: 'direct',
   video: 'video',
   instagram: 'instagram',
+  deviantart: 'deviantart',
   torrent: 'torrent',
   magnet: 'magnet',
 } as const;
 /** Source type explicitly requested by a user or resolved by automatic detection. */
 export type SourceType = (typeof SOURCE_TYPE)[keyof typeof SOURCE_TYPE];
+/** Checks whether gallery-dl handles the source rather than video-only extraction.
+ * @param {unknown} source - Selected or persisted engine identifier.
+ * @returns {boolean} Whether the source collects original mixed media.
+ */
+export function isGallerySource(source: unknown): boolean {
+  return source === SOURCE_TYPE.instagram || source === SOURCE_TYPE.deviantart;
+}
 /** Quality selection keeps Raspberry Pi defaults practical without transcoding. */
 export const VIDEO_QUALITY = {
   balanced: '1080',
@@ -55,6 +63,7 @@ export const SOURCE_LABEL = {
   direct: 'Direct file',
   video: 'Video',
   instagram: 'Instagram',
+  deviantart: 'DeviantArt',
   torrent: 'Torrent',
   magnet: 'Magnet',
 } as const;
@@ -65,3 +74,15 @@ export const SOURCE_URL = {
   magnetProtocol: 'magnet:',
   infoHashTopic: 'urn:btih:',
 } as const;
+
+/**
+ * Describes a retained representation as a source-stream ceiling or real MP3 conversion target.
+ * @param {DownloadQuality} [quality] - Saved job policy, with the legacy default when omitted.
+ * @returns {string} Human-readable requested output; does not claim an observed source resolution.
+ */
+export function mediaQualityLabel(quality: DownloadQuality = VIDEO_QUALITY.balanced): string {
+  if (isAudioQuality(quality)) {
+    return `MP3 · ${quality.split('-')[1]} kbps`;
+  }
+  return quality === VIDEO_QUALITY.original ? 'Best available video' : `Video · up to ${quality}p`;
+}

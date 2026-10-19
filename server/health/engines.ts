@@ -8,7 +8,7 @@ export const ENGINE_CHECKS = [
   { id: 'video', label: 'Site videos', command: ENGINE_COMMAND.video, arguments: ['--ignore-config', '--version'] },
   {
     id: 'instagram',
-    label: 'Instagram',
+    label: 'Instagram & DeviantArt galleries',
     command: ENGINE_COMMAND.instagram,
     arguments: ['--config-ignore', '--version'],
   },

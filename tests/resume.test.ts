@@ -83,10 +83,16 @@ it('appends only a matching strong entity and derives the offset from actual dis
   );
   await transferToDisk(job, store, new AbortController().signal, FILE_LIMIT);
   expect(readFileSync(store.getFilePath(job.id), 'utf8')).toBe('hello');
-  expect(openSource).toHaveBeenCalledWith(expect.any(URL), expect.any(AbortSignal), 0, {
-    Range: 'bytes=3-',
-    'If-Range': '"stable"',
-  });
+  expect(openSource).toHaveBeenCalledWith(
+    expect.any(URL),
+    expect.any(AbortSignal),
+    0,
+    {
+      Range: 'bytes=3-',
+      'If-Range': '"stable"',
+    },
+    expect.objectContaining({ cookies: [], onWait: expect.any(Function) }),
+  );
 });
 
 it('truncates previous bytes when a server ignores Range or the entity has changed', async () => {
@@ -144,9 +150,27 @@ it('starts over without a strong validator and rejects premature EOF before publ
   job.resumeValidator = undefined;
   vi.mocked(openSource).mockResolvedValue(response('short', { 'content-length': String(FILE_LIMIT) }));
   await expect(transferToDisk(job, store, new AbortController().signal, FILE_LIMIT)).rejects.toThrow('declared');
-  expect(openSource).toHaveBeenCalledWith(expect.any(URL), expect.any(AbortSignal), 0, {});
+  expect(openSource).toHaveBeenCalledWith(
+    expect.any(URL),
+    expect.any(AbortSignal),
+    0,
+    {},
+    expect.objectContaining({ cookies: [], onWait: expect.any(Function) }),
+  );
   expect(existsSync(store.getFilePath(job.id))).toBe(false);
   expect(existsSync(store.getFilePath(job.id, true))).toBe(false);
+});
+
+it('rejects a browser challenge webpage before publishing it as a downloaded file', async () => {
+  const { store, job } = partialTransfer();
+  job.resumeValidator = undefined;
+  vi.mocked(openSource).mockResolvedValue(
+    response('<html>Verify you are human</html>', { 'content-type': 'text/html' }),
+  );
+  await expect(transferToDisk(job, store, new AbortController().signal, FILE_LIMIT)).rejects.toThrow(
+    'Browser assistance',
+  );
+  expect(existsSync(store.getFilePath(job.id))).toBe(false);
 });
 
 it('enforces rate pacing and aborts promptly while waiting for bandwidth', async () => {

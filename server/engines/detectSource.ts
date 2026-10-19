@@ -10,22 +10,10 @@ import {
 import { parseTargetUrl } from '../security/target.js';
 import { getSafeFilename } from '../downloads/filename.js';
 import { LIMIT } from '../constants.js';
+import { VIDEO_SITES } from '../../shared/videoSites.js';
 
 /** Recognized platforms automatically routed to a site extractor; Video mode covers other supported sites. */
-const VIDEO_HOSTS = [
-  'youtube.com',
-  'youtu.be',
-  'vimeo.com',
-  'tiktok.com',
-  'dailymotion.com',
-  'twitch.tv',
-  'facebook.com',
-  'fb.watch',
-  'twitter.com',
-  'x.com',
-  'reddit.com',
-  'bilibili.com',
-];
+const VIDEO_HOSTS = VIDEO_SITES.flatMap((site) => [...site.domains]);
 /** Magnet IDs supported by aria2's BitTorrent v1 engine. */
 const INFO_HASH_PATTERN = /^(?:[a-f\d]{40}|[a-z2-7]{32})$/i;
 
@@ -82,6 +70,16 @@ export function resolveDownloadRequest(sourceUrl: unknown, requestedType: unknow
   const validatedTarget = parseTargetUrl(target.href);
   const { hostname } = validatedTarget;
   const isInstagram = matchesDomain(hostname, 'instagram.com');
+  const isDeviantArt = matchesDomain(hostname, 'deviantart.com') || hostname === 'fav.me';
+  if (sourceType === SOURCE_TYPE.deviantart && !isDeviantArt) {
+    throw new Error('DeviantArt mode requires a deviantart.com artwork, literature, profile or gallery link.');
+  }
+  if (
+    (hostname === 'deviantart.com' || hostname === 'www.deviantart.com') &&
+    !validatedTarget.pathname.split('/').filter(Boolean).length
+  ) {
+    throw new Error('Paste a DeviantArt artwork, artist profile, journal or gallery URL, not the homepage.');
+  }
   if (sourceType === SOURCE_TYPE.instagram && !isInstagram) {
     throw new Error('Instagram mode requires an instagram.com post or reel link.');
   }
@@ -95,16 +93,23 @@ export function resolveDownloadRequest(sourceUrl: unknown, requestedType: unknow
   if (sourceType === SOURCE_TYPE.auto) {
     resolvedType = isInstagram
       ? SOURCE_TYPE.instagram
-      : validatedTarget.pathname.toLowerCase().endsWith('.torrent')
-        ? SOURCE_TYPE.torrent
-        : VIDEO_HOSTS.some((domain) => matchesDomain(hostname, domain))
-          ? SOURCE_TYPE.video
-          : SOURCE_TYPE.direct;
+      : isDeviantArt
+        ? SOURCE_TYPE.deviantart
+        : validatedTarget.pathname.toLowerCase().endsWith('.torrent')
+          ? SOURCE_TYPE.torrent
+          : VIDEO_HOSTS.some((domain) => matchesDomain(hostname, domain))
+            ? SOURCE_TYPE.video
+            : SOURCE_TYPE.direct;
   }
   if (isAudioQuality(quality) && resolvedType === SOURCE_TYPE.direct && sourceType === SOURCE_TYPE.auto) {
     resolvedType = SOURCE_TYPE.video;
   }
   if (isAudioQuality(quality) && resolvedType !== SOURCE_TYPE.video) {
+    if (resolvedType === SOURCE_TYPE.deviantart) {
+      throw new Error(
+        'DeviantArt collects original photos, videos and stories. MP3 conversion is not a gallery option.',
+      );
+    }
     throw new Error('Choose Video or Auto detect for MP3. For an Instagram video, choose Video explicitly.');
   }
   return {

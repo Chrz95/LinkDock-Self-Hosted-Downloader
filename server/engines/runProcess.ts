@@ -1,7 +1,10 @@
+import { MEDIA_FAILURE } from '../../shared/mediaFailures.js';
+import { EngineProcessError, classifyMediaFailure } from './failures.js';
 import { spawn } from 'node:child_process';
 import { ENGINE_LIMIT } from './constants.js';
 
 export interface EngineProcessOptions {
+  authenticationMessage?: string;
   onFailure?: (diagnostic: string) => void;
   cwd?: string;
   env?: NodeJS.ProcessEnv;
@@ -67,7 +70,7 @@ export function runEngineProcess(
     child.stderr.on('data', (chunk: Buffer) => {
       errorOutput = `${errorOutput}${chunk.toString()}`.slice(-ENGINE_LIMIT.maximumErrorCharacters);
     });
-    child.once('error', () => reject(new Error('This download engine is unavailable. Rebuild the Docker image.')));
+    child.once('error', () => reject(new EngineProcessError(MEDIA_FAILURE.utility)));
     child.once('close', (code) => {
       clearTimeout(killTimeout);
       if (signal.aborted && child.pid) {
@@ -87,13 +90,9 @@ export function runEngineProcess(
         resolve();
       } else {
         options.onFailure?.(errorOutput);
-        const needsLogin = /login|log in|sign in|cookies|authentication|private|age.restrict|bot/i.test(errorOutput);
+        const reason = classifyMediaFailure(errorOutput);
         reject(
-          new Error(
-            needsLogin
-              ? 'This source needs a valid login cookie file. See the connection guide.'
-              : 'The source could not be downloaded. Check the link, source availability and engine updates.',
-          ),
+          new EngineProcessError(reason, reason === MEDIA_FAILURE.login ? options.authenticationMessage : undefined),
         );
       }
     });

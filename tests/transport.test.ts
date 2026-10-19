@@ -4,6 +4,7 @@ import { Readable } from 'node:stream';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { openSource } from '../server/downloads/openSource';
 import { resolvePublicTarget } from '../server/security/target';
+import { parseCookieJar } from '../server/browserAccess/cookieJar';
 
 /**
  * Verifies: ../server/security/target.
@@ -52,6 +53,56 @@ afterEach(
  * Groups behavior checks: real streaming HTTP transport.
  */
 describe('real streaming HTTP transport', () => {
+  it('sends only matching imported cookies and browser identity over the pinned transport', async () => {
+    const target = await createUpstream((request, response) => {
+      expect(request.headers.cookie).toBe('verified=owned');
+      expect(request.headers['user-agent']).toBe('Browser/1');
+      response.end('file');
+    });
+    const { cookies } = parseCookieJar(
+      '# Netscape HTTP Cookie File\n' +
+        'unresolvable-upstream.invalid\tFALSE\t/\tFALSE\t0\tverified\towned\n' +
+        'other.example\tFALSE\t/\tFALSE\t0\tother\tnever-send\n',
+    );
+    const response = await openSource(target, new AbortController().signal, 0, {}, { cookies, userAgent: 'Browser/1' });
+    expect(Buffer.concat(await Readable.from(response).toArray()).toString()).toBe('file');
+  });
+
+  it('honors Retry-After and retries a real upstream without saving its error body', async () => {
+    const throttled = 429;
+    const attempts = 2;
+    let requests = 0;
+    const target = await createUpstream((_request, response) => {
+      requests += 1;
+      if (requests === 1) {
+        response.writeHead(throttled, { 'Retry-After': '0' });
+        response.end('wait-page');
+      } else {
+        response.end('final-file');
+      }
+    });
+    const response = await openSource(target, new AbortController().signal);
+    expect(Buffer.concat(await Readable.from(response).toArray()).toString()).toBe('final-file');
+    expect(requests).toBe(attempts);
+  });
+
+  it('bounds repeated source cooldowns and rejects oversized waits without shortening them', async () => {
+    const unavailable = 503;
+    const expectedAttempts = 3;
+    let requests = 0;
+    const target = await createUpstream((_request, response) => {
+      requests += 1;
+      response.writeHead(unavailable, { 'Retry-After': '0' });
+      response.end('wait');
+    });
+    await expect(openSource(target, new AbortController().signal)).rejects.toThrow('Browser assistance');
+    expect(requests).toBe(expectedAttempts);
+    const long = await createUpstream((_request, response) => {
+      response.writeHead(unavailable, { 'Retry-After': '999999' });
+      response.end('wait');
+    });
+    await expect(openSource(long, new AbortController().signal)).rejects.toThrow('Browser assistance');
+  });
   /**
    * Verifies range headers survive the pinned transport and final resource metadata is recorded internally.
    * @returns {Promise<void>} Actual HTTP range response.

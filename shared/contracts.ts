@@ -22,8 +22,10 @@ export interface DownloadJob {
   createdAt: string;
   finishedAt: string | null;
   errorMessage: string | null;
+  mediaFailure?: import('./mediaFailures.js').MediaFailure;
   sourceType?: SourceType;
   quality?: DownloadQuality;
+  deviantart?: import('./deviantart.js').DeviantartPreferences;
   files?: DownloadArtifact[];
   stage?: string;
   peers?: number;

@@ -1,4 +1,4 @@
-import { SOURCE_LABEL, SOURCE_TYPE, SOURCE_URL } from '../../../../shared/sources';
+import { SOURCE_LABEL, SOURCE_TYPE, SOURCE_URL, isGallerySource } from '../../../../shared/sources';
 import { CompletedFiles } from './files/CompletedFiles';
 import { DOWNLOAD_STATUS } from '../../../../shared/contracts';
 import { Icon } from '../../../components/ui/Icon';
@@ -37,7 +37,7 @@ export function DownloadRow({ job, isBusy, onAction }: DownloadRowProps) {
           name={
             source === SOURCE_TYPE.video
               ? 'video'
-              : source === SOURCE_TYPE.instagram
+              : isGallerySource(source)
                 ? 'camera'
                 : source === SOURCE_TYPE.torrent || source === SOURCE_TYPE.magnet
                   ? 'torrent'

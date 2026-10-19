@@ -19,7 +19,10 @@ export class DownloadStore {
    * @param {string} dataDirectory - Writable state volume.
    * @param {string} [completedDirectory] - Optional writable completion mount root.
    */
-  constructor(dataDirectory: string, completedDirectory?: string) {
+  constructor(
+    readonly dataDirectory: string,
+    completedDirectory?: string,
+  ) {
     this.completedDirectory = path.resolve(completedDirectory ?? path.join(dataDirectory, 'completed'));
     this.filesDirectory = path.join(dataDirectory, TRANSFER.downloadsDirectory);
     mkdirSync(this.filesDirectory, { recursive: true });
@@ -30,6 +33,7 @@ export class DownloadStore {
         job.status = DOWNLOAD_STATUS.queued;
         job.bytesPerSecond = 0;
         job.errorMessage = null;
+        job.mediaFailure = undefined;
         job.finishedAt = null;
         job.stage = 'Recovering after a station restart';
       }

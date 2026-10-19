@@ -37,7 +37,8 @@ describe('appearance and source controls', () => {
     await user.click(screen.getByRole('button', { name: 'Add download' }));
     expect(onAdd).toHaveBeenCalledWith(url, 'magnet', '1080');
   });
-  it('shows a separate authenticated link for every completed carousel or torrent file', () => {
+  it('shows authenticated collection file links after opening the manifest', async () => {
+    const user = userEvent.setup();
     render(
       <JobFiles
         job={{
@@ -58,7 +59,8 @@ describe('appearance and source controls', () => {
         }}
       />,
     );
-    expect(screen.getByText('View 2 files')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Save video.mp4 to this device')).not.toBeInTheDocument();
+    await user.click(screen.getByText('View 2 files'));
     expect(screen.getByLabelText('Save video.mp4 to this device')).toHaveAttribute(
       'href',
       '/api/downloads/job-id/files/1',

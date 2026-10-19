@@ -1,4 +1,5 @@
 import { DOWNLOAD_STATUS, type DownloadJob } from '../../shared/contracts.js';
+import { MEDIA_FAILURE } from '../../shared/mediaFailures.js';
 import { LIMIT } from '../constants.js';
 import { resolveDownloadRequest } from '../engines/detectSource.js';
 import { ENGINE_LIMIT } from '../engines/constants.js';
@@ -7,6 +8,7 @@ import { STRONG_ETAG, MAXIMUM_ETAG_LENGTH } from './resume.js';
 import { parseTargetUrl } from '../security/target.js';
 import { JOB_PRIORITY } from '../../shared/batch.js';
 import { validateLibraryMetadata, type LibraryMetadata } from '../../shared/library.js';
+import { validateDeviantartPreferences } from '../deviantart/validation.js';
 import { validateJobOptions } from './validateJobOptions.js';
 
 /** Storage IDs are generated UUIDs and may never contain filesystem separators. */
@@ -43,6 +45,8 @@ function isDownloadJob(value: unknown): value is DownloadJob {
     typeof record.createdAt !== 'string' ||
     (record.finishedAt !== null && typeof record.finishedAt !== 'string') ||
     (record.errorMessage !== null && typeof record.errorMessage !== 'string') ||
+    (record.mediaFailure !== undefined &&
+      !Object.values(MEDIA_FAILURE).some((value) => value === record.mediaFailure)) ||
     (record.resumeValidator !== undefined &&
       (typeof record.resumeValidator !== 'string' ||
         record.resumeValidator.length > MAXIMUM_ETAG_LENGTH ||
@@ -52,6 +56,19 @@ function isDownloadJob(value: unknown): value is DownloadJob {
   }
   try {
     validateJobOptions(record);
+    if (record.deviantart !== undefined) {
+      if (!record.deviantart || typeof record.deviantart !== 'object') {
+        return false;
+      }
+      const scope = validateDeviantartPreferences(record.deviantart);
+      if (
+        record.sourceType !== SOURCE_TYPE.deviantart ||
+        Object.keys(record.deviantart).some((key) => !Object.hasOwn(scope, key)) ||
+        JSON.stringify(scope.include) !== JSON.stringify((record.deviantart as typeof scope).include)
+      ) {
+        return false;
+      }
+    }
     if (record.library !== undefined) {
       const normalized = validateLibraryMetadata(record.library);
       const metadata = record.library as LibraryMetadata;

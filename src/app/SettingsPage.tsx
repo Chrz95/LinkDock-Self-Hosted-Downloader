@@ -6,6 +6,8 @@ import { UtilityUpdates } from '../features/utilities/UtilityUpdates';
 import { WORKSPACE_PAGE } from './navigation';
 import { WorkspaceHeading } from './WorkspaceHeading';
 import { ConnectedSources } from '../features/settings/ConnectedSources';
+import { DeviantartSettings } from '../features/settings/DeviantartSettings';
+import { BrowserAccess } from '../features/settings/BrowserAccess';
 
 interface SettingsPageProps {
   policy: PolicySnapshot | undefined;
@@ -23,6 +25,8 @@ export function SettingsPage({ policy }: SettingsPageProps) {
       <div className="settings-stack">
         <StationSettings policy={policy} />
         <DeviceTools />
+        <BrowserAccess />
+        <DeviantartSettings />
         <section className="settings-card utility-settings">
           <h2>Download utilities</h2>
           <p>Keep your download engines current, review update status or restore a previous toolset.</p>

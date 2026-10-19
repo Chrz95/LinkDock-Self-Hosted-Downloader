@@ -79,7 +79,7 @@ it('separates the overview, library and consolidated settings through phone navi
   expect(screen.getByRole('checkbox', { name: 'Automatically move completed downloads' })).toBeVisible();
   await user.click(screen.getByText('On this device'));
   expect(screen.getByRole('button', { name: 'Switch to light mode' })).toBeVisible();
-  expect(screen.queryByRole('searchbox')).not.toBeInTheDocument();
+  expect(screen.queryByRole('searchbox', { name: 'Search downloads' })).not.toBeInTheDocument();
   await user.click(navigation.getByRole('link', { name: 'Overview' }));
   expect(await screen.findByRole('textbox', { name: 'File URL' })).toBeVisible();
   expect(screen.queryByRole('button', { name: 'Save preferences' })).not.toBeInTheDocument();

@@ -2,11 +2,13 @@ import { randomUUID } from 'node:crypto';
 import { MAXIMUM_BATCH_LINKS, JOB_PRIORITY } from '../../shared/batch.js';
 import { DOWNLOAD_STATUS, type DownloadJob } from '../../shared/contracts.js';
 import { SOURCE_TYPE, VIDEO_QUALITY } from '../../shared/sources.js';
+import { defaultDeviantartPreferences, type DeviantartPreferences } from '../../shared/deviantart.js';
+import { validateDeviantartPreferences } from '../deviantart/validation.js';
 import { LIMIT } from '../constants.js';
 import { resolveDownloadRequest } from '../engines/detectSource.js';
 
 /** Resolved request shared by single and batch queue creation. */
-type ResolvedRequest = ReturnType<typeof resolveDownloadRequest>;
+type ResolvedRequest = ReturnType<typeof resolveDownloadRequest> & { deviantart?: DeviantartPreferences };
 /** Units for converting equivalent base32 magnet hashes into canonical hexadecimal. */
 const HASH_UNIT = { bitsPerCharacter: 5, bitsPerByte: 8, byteMask: 255 } as const;
 /** BitTorrent's base32 alphabet. */
@@ -28,6 +30,7 @@ function identity(request: DownloadJob | ResolvedRequest): string {
     source,
     url,
     source === SOURCE_TYPE.video ? (request.quality ?? VIDEO_QUALITY.balanced) : null,
+    source === SOURCE_TYPE.deviantart && request.deviantart ? validateDeviantartPreferences(request.deviantart) : null,
   ]);
 }
 
@@ -62,15 +65,28 @@ function canonicalHash(hash: string): string {
  * @param {unknown} sourceType - Optional shared engine selection.
  * @param {unknown} quality - Optional shared video resolution.
  * @param {DownloadJob[]} history - Existing station records.
+ * @param {() => DeviantartPreferences} [collectionPreferences] - Lazy station choices for new gallery requests.
  * @returns {object} Resolved unique requests and owner-visible skipped links.
  */
-export function reviewBatch(urls: unknown, sourceType: unknown, quality: unknown, history: DownloadJob[]) {
+export function reviewBatch(
+  urls: unknown,
+  sourceType: unknown,
+  quality: unknown,
+  history: DownloadJob[],
+  collectionPreferences: () => DeviantartPreferences = defaultDeviantartPreferences,
+) {
   if (!Array.isArray(urls) || !urls.length || urls.length > MAXIMUM_BATCH_LINKS) {
     throw new Error(`Submit between 1 and ${MAXIMUM_BATCH_LINKS} links per batch.`);
   }
+  let preferences: DeviantartPreferences | undefined;
   const requests = urls.map((url: unknown, index) => {
     try {
-      return resolveDownloadRequest(url, sourceType, quality);
+      const request: ResolvedRequest = resolveDownloadRequest(url, sourceType, quality);
+      if (request.sourceType === SOURCE_TYPE.deviantart) {
+        preferences ??= validateDeviantartPreferences(collectionPreferences());
+        request.deviantart = validateDeviantartPreferences(preferences);
+      }
+      return request;
     } catch (error) {
       throw new Error(`Link ${index + 1}: ${error instanceof Error ? error.message : 'Invalid source.'}`);
     }
@@ -109,6 +125,7 @@ export function createQueuedJob(request: ResolvedRequest): DownloadJob {
     filename: request.filename,
     sourceType: request.sourceType,
     quality: request.quality,
+    ...(request.deviantart ? { deviantart: validateDeviantartPreferences(request.deviantart) } : {}),
     priority: JOB_PRIORITY.normal,
     status: DOWNLOAD_STATUS.queued,
     receivedBytes: 0,

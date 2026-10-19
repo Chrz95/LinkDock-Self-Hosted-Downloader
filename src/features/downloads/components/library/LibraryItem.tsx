@@ -6,6 +6,10 @@ import type { BulkLibraryState } from '../../hooks/useBulkLibrary';
 import { BulkSelection } from './BulkSelection';
 import { TorrentSelection } from './TorrentSelection';
 import { CompletionDestination } from './CompletionDestination';
+import { MediaRecovery } from './MediaRecovery';
+import { MediaVersion } from './MediaVersion';
+import { CollectionScope } from './CollectionScope';
+import { BrowserAssistance } from './BrowserAssistance';
 
 /** A semantic collection item contains its transfer controls and independently saved labels. */
 interface LibraryItemProps extends DownloadRowProps {
@@ -64,6 +68,10 @@ export function LibraryItem({ job, isBusy, onAction, onOrganize, selection }: Li
           job={job}
         />
         <CompletionDestination job={job} />
+        <CollectionScope job={job} />
+        <MediaRecovery job={job} />
+        <MediaVersion job={job} />
+        <BrowserAssistance job={job} />
       </fieldset>
     </li>
   );

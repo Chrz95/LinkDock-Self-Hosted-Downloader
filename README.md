@@ -1,4 +1,4 @@
-# LinkDock 2.12
+# LinkDock 2.17
 
 A private download studio for your Raspberry Pi: videos, Instagram moments, torrents and files, collected in one place.
 The dark-first React + TypeScript workspace has a saved light/dark preference, source selection, real progress,
@@ -406,6 +406,255 @@ media/ZIP delivery in 2.5. Any retention policy should show what it will remove 
 configuration. Bundled engine versions stay pinned; runtime utility updates can be disabled for a frozen installation.
 
 [share-target]: https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps/Manifest/Reference/share_target
+
+## New in version 2.17: media recovery and additional versions
+
+Video-source jobs now have **Library → Download another version**. Review the saved requested quality, select another
+video height/Best available or MP3 bitrate and choose **Queue this version**. A new job downloads again from the
+original source URL; this is not a local conversion of an already-saved file. The original job, private partial bytes,
+published files and labels remain intact. The new job uses current station defaults, including the global completion
+folder, queue limits and source credentials. Original per-job destination overrides and labels are not copied. The
+standard queue poll shows the new item after acceptance.
+
+The same representation is blocked while it is queued, paused, downloading or saved; failed/canceled originals can queue
+another attempt. Existing duplicate checks also block a matching representation saved or queued elsewhere in history.
+Only video-source jobs offer this control. Gallery, torrent and direct-file jobs keep their existing controls. The
+endpoint accepts a whitelisted quality and an existing server-owned job ID; its URL comes from that job, and caller
+URL/engine fields are ignored. Existing authentication, origin checks, atomic queue creation and history bounds apply.
+
+The quality label describes the retained request: a video height ceiling or requested MP3 bitrate. It does not inspect
+the source or claim a downloaded file's observed resolution/bitrate. Available streams remain source-dependent.
+
+### Recovery guidance without private engine output
+
+Media subprocess failures now persist a small category alongside the safe owner-facing error message. Library offers
+specific suggestions for unavailable formats, account sessions, explicit browser challenges, access denial, request
+limits, regional restrictions, removed media, protected media, connection problems and missing utilities/runtimes.
+Format failures suggest another version with Best available or a different quality. Request limits suggest waiting and
+adjusting concurrency/request delay. Login and explicit verification errors point to source settings. Utility errors
+point to health/updates; bundled ffmpeg/runtime repairs still require an image rebuild.
+
+These are hints inferred from bounded diagnostic text, not a provider API or a guarantee of recovery. Unknown errors
+keep a generic fallback. Raw stderr, source URLs found inside it, token values and filesystem paths are not copied into
+the new error object, history or recovery card. Existing private utility-command diagnostics remain internal to the
+updater. Queue cancellation keeps its own semantics instead of being reclassified as a media failure.
+
+Browser assistance remains available for login/verification/access or unclassified failures. It is hidden for categories
+where its CAPTCHA instructions would be misleading, such as unavailable formats or DRM. DRM guidance reports that the
+tools cannot save that stream. No retry, new variant, login or remote inspection is triggered merely by opening Library.
+Old records without a category remain readable and keep their existing generic assistance. Retry and a fresh worker
+clear stale categories; recovery hints are shown only for a currently failed record.
+
+No new dependency, Docker mount or environment variable is required. Keep the same Pi state and download/completion
+mounts. Rebuild/recreate and reload the browser using the existing deployment commands.
+
+## New in version 2.16: Pornhub and additional video sources
+
+Auto detect now routes Pornhub video pages and supported embeds to yt-dlp instead of attempting to save the HTML page as
+a direct file. The searchable list under **Settings → Connected sources** also adds XVideos, XNXX, xHamster, YouPorn,
+RedTube and SpankBang. The catalogue now contains 36 video/audio platform families. Domain matching supports known
+aliases and regional subdomains without accepting lookalike hostnames.
+
+Pornhub routing includes its `.com`, `.net`, `.org` and matching `pornhubpremium` domains. XVideos includes
+`xvideos.com`, `xvideos2.com` and `xvideos.es`; XNXX includes `xnxx.com` and `xnxx3.com`; RedTube also includes
+`redtube.com.br`. Other extractor-supported URLs can still use explicit **Video** mode. Listing a hostname indicates
+routing, not a live test of every URL or a guarantee of site availability.
+
+Paste an individual watch-page or supported embed URL in Overview with **Auto detect** or **Video**. Choose a video
+quality ceiling, Best available, or MP3 at 128/192/320 kbps. Existing batch review, pause/resume, browser-session
+import, utility updates and completed-folder preferences apply. Account/premium URLs still need valid access. If a
+source requires a signed-in or verified browser session, use **Settings → Browser verification & waits** to import a
+site cookie export and optional matching User-Agent, then restart the failed job. Source regions, expired sessions and
+site changes may still prevent extraction. See the
+[upstream extractor catalogue](https://github.com/yt-dlp/yt-dlp/blob/master/supportedsites.md) for current coverage.
+
+No new executable, dependency or Docker mount is required. The existing yt-dlp utility updater supplies extractor fixes.
+This release also restores the documented pnpm 12.14.0 pin in package.json to match the Docker build toolchain.
+Rebuild/recreate the image and reload the browser to get the new routing and Settings list.
+
+## New in version 2.15: reliable collection resumes and a file browser
+
+New DeviantArt downloads save their profile choices, original-file preference and story format with the job at queue
+creation. Single links and batches use the same canonical snapshot. Changing Settings affects newly queued jobs;
+pause/resume, Restart and container recovery keep the existing job's choices. Account credentials remain private and are
+resolved when the worker starts, allowing an expired token to be replaced without changing collection scope. Open
+**Library → Collection choices** on a DeviantArt item to review what it will collect. Specific gallery, folder and post
+links still define their own URL scope. For a different collection or story format, save Settings and add a new job.
+Duplicate review now distinguishes the same URL with different collection options, while still skipping repeats with
+identical choices. This does not create a cross-job download archive or skip files across separate jobs.
+
+### Existing partial collections when upgrading
+
+Older histories remain readable. Completed files and already-published payloads continue to work. A legacy DeviantArt
+job without a saved scope and without retained partial files records the current Settings before its first worker runs.
+A legacy job with retained partial files is held paused with a visible Restart instruction: LinkDock cannot infer which
+settings created those files. Its existing partial bytes remain untouched during startup. Individual Resume rejects that
+job; Resume all and scheduled resume skip it. Choose **Restart from the beginning** to explicitly discard that partial
+staging and queue a clean collection using current Settings. Cancel/Delete remain available. Alternatively, create a new
+job and keep the old paused record. Normal pinned partials resume with their original scope.
+
+### Browse large completed collections
+
+Open **View N files** in Library to browse any completed multi-file job, including galleries and torrents:
+
+- Search file or folder names, case-insensitively.
+- Filter images, videos, audio, documents/stories or other files.
+- Sort naturally by name in either direction, or by size.
+- Browse 25 files per page. Only an open collection mounts the file browser; changing page or filter removes previews
+  from rows no longer visible and cancels pending preflight requests. Closing the collection resets its browser filters.
+
+Save and preview actions keep their original manifest index after sorting/filtering. No private file content is fetched
+just to open, search or page a collection. Preview eligibility still uses the separate conservative media checks;
+filtering an SVG/HTML file into a category does not authorize it as an inline preview. **Save all as ZIP** always
+includes the complete saved collection, with an explicit note beside the filters. File names, previews and controls stay
+inside the authenticated dashboard. The file manifest still travels with normal queue polling; pagination limits
+rendered rows rather than adding a new paginated backend API. Existing file-count and size limits remain unchanged.
+
+No dependency, extra Docker mount or environment variable is added. Keep your existing Pi state and external download
+paths. Stop the old container before starting the new one; use only one LinkDock service per data directory.
+
+## New in version 2.14: DeviantArt collections and account access
+
+Open **Settings → DeviantArt collections & account** to save station-wide defaults:
+
+- Include artwork/videos, journals/stories, scraps, favorites or status posts when you queue an artist-profile URL.
+  Choose at least one. A specific gallery, folder, artwork or journal URL retains its own scope.
+- Prefer originals when available, or use the extractor's regular media selection.
+- Save literature, journals and status text as plain TXT, formatted HTML, or skip textual content. HTML is delivered as
+  an attachment and never rendered inside the dashboard. The default remains galleries, journals, originals and TXT.
+
+As of version 2.15, each new download snapshots these settings when it is queued. Pauses, restarts and station recovery
+keep the saved choices. Updating station defaults applies to new jobs. See the collection recovery notes above for
+partial jobs created by older releases. Per-job size, 2,000-file and directory-depth limits still apply. Other sources
+and video/MP3 quality settings are independent.
+
+### Optional account authorization
+
+Public downloads need no account setup. For account-authorized DeviantArt API requests:
+
+1. On a trusted computer with a browser and current gallery-dl, run `gallery-dl oauth:deviantart` and follow its
+   authorization flow. See the [upstream OAuth guide](https://github.com/mikf/gallery-dl#oauth). No DeviantArt password
+   is entered into LinkDock.
+2. Paste the freshly issued **refresh token** into the Settings account form. If you authorized a custom OAuth app,
+   supply its matching numeric client ID and client secret too; otherwise leave both blank. Tokens from a custom app
+   must use that same app. LinkDock accepts these fixed fields, not arbitrary gallery-dl configuration.
+3. Save, then retry a DeviantArt download from Library. Saving validates/stores the fields; it does not contact
+   DeviantArt or claim the account has been verified. The worker uses the account token for API requests.
+
+Account fields are password inputs where appropriate and clear on submission or leaving the settings page. The API
+returns setup flags and collection preferences only. Credentials are saved in private mode-0600 JSON beneath
+`/data/credentials/deviantart`; token-bearing worker configs use disposable private session files. Process arguments
+contain only file paths, never the token/client secret. Gallery-dl's rotating OAuth cache persists in a private
+account-specific directory across restarts and utility updates. Back up the entire credentials directory privately,
+including the cache: an old original token alone can stop working after rotation. Do not use the same authorization
+grant in another downloader after handing it to LinkDock. Reauthorize and replace the token if access expires or the
+cache is lost. See
+[upstream token behavior](https://gdl-org.github.io/docs/configuration.html#extractor-deviantart-refresh-token).
+
+DeviantArt workers run one at a time per station, including public requests. A waiting worker can still be paused or
+canceled. These workers occupy normal queue slots; other source types can use remaining slots. Pause all DeviantArt jobs
+before replacing/removing account credentials. The API rejects account changes while a source worker owns or awaits the
+account, preventing concurrent refreshes and stale credential writes. Preferences can be saved independently. Removing
+the account deletes its saved token and caches, retaining valid collection preferences. Explicit removal can also reset
+damaged source state. It does not revoke the upstream OAuth grant; use DeviantArt to revoke access there.
+
+No new Docker mount, environment variable, root privilege or JavaScript dependency is required. Existing bind-mounted
+state and external completion/download directories remain supported. Cookies can still be supplied separately. A token
+only permits access available to its authorization; private, paid, region-limited or removed content can remain
+unavailable. Live OAuth/provider acceptance and physical Pi/ARM64 execution require testing on your installation.
+
+## New in version 2.13: browser assistance, source waits and more sites
+
+### DeviantArt artwork, stories, videos and complete galleries
+
+Choose **DeviantArt** or **Auto detect**. Supported entry points include:
+
+- Artwork/photo/video/literature: `https://www.deviantart.com/ARTIST/art/TITLE-123456`.
+- A single journal/story: `https://www.deviantart.com/ARTIST/journal/TITLE-123456`.
+- Entire accessible gallery: `https://www.deviantart.com/ARTIST/gallery/`.
+- Gallery folder: `https://www.deviantart.com/ARTIST/gallery/12345/FOLDER`.
+- Journals: `https://www.deviantart.com/ARTIST/posts/journals/`.
+- Artist profile: `https://www.deviantart.com/ARTIST` collects the gallery plus journals.
+
+Legacy artist subdomains and `fav.me` artwork links are recognized. Gallery-dl paginates galleries and traverses
+available folders/subfolders. Artwork/photos use original files where the source permits, available video variants are
+collected, and literature/journals save as `.txt` rather than active HTML. Here “stories” means published literature and
+journals, not ephemeral social-media stories. Collection mode keeps original media independently of the Video/MP3
+selectors; MP3 conversion is rejected for gallery jobs. Images/video retain existing previews and ordinary file saves;
+stories are downloadable text attachments. Multi-file collections support ZIP delivery and the global completed folder.
+
+Files remain isolated under gallery-dl's artist/folder paths inside the job directory, with stable ID-based filenames.
+The gallery shares the configured per-job total-size ceiling, sampled staging-space checks, 2,000-file cap and directory
+depth limit. A gallery exceeding these limits fails instead of claiming to save everything. Pause/resume retains private
+working files; restart can re-fetch metadata and skips files already present where the collector supports it. Galleries
+are published only after the worker exits successfully and the resulting manifest passes validation.
+
+The bundled/managed gallery-dl engine is reused, so utility updates cover DeviantArt too. Browser-session imports or the
+mounted media jar are supplied privately. Cookies alone do not authorize every DeviantArt API request: account-only,
+subscriber-only or locked content can need OAuth or remain unavailable. The extractor's public client and owner-supplied
+cookies remain the defaults. Version 2.14 adds private OAuth token setup under Settings; access restrictions still
+apply. Live source acceptance still needs a test on the Pi. Old servers cannot read `deviantart` history records; retain
+a matching backup for downgrades. No new executable, image privilege or JavaScript dependency is required.
+
+Automatic video detection expands to 29 platform families. New families include Streamable, Rumble, SoundCloud,
+Bandcamp, Mixcloud, TED, Internet Archive, VK, OK, Rutube, Odysee, Loom, Wistia, Brightcove, Coub, Pinterest, Tumblr,
+LinkedIn, Snapchat and Kick. Subdomains and common short-link domains are recognized without matching lookalike hosts.
+Use **Settings → Connected sources** to search recognized sites. Select **Video** for other yt-dlp extractors and
+compatible embedded players; choose MP3 for audio-only providers. The existing utility updater supplies later extractor
+fixes. Listed support is not a live success check: account access, regions, DRM and site changes can still prevent work.
+
+### Verification in your own browser
+
+Open **Settings → Browser verification & waits**. Complete the site's CAPTCHA/login and countdown in your own browser,
+then export only the required site's cookies in Netscape `cookies.txt` format. Import that file into your trusted
+station. Optionally enter the matching browser User-Agent as a single printable line. Retry the failed job using its
+existing Restart control. This does not solve CAPTCHAs automatically, execute arbitrary page JavaScript or unlock DRM.
+Some sites bind verification to an IP, TLS fingerprint or browser session and will still reject the Pi. Use the same
+public IP where possible; avoid claiming that a cookie export guarantees success.
+
+Imports replace the previous jar and persist privately as `/data/credentials/browser-access.json`, with mode 0600.
+Cookies grant account access; use HTTPS for uploading them and protect backups of private state. Never upload a
+whole-browser export when a site-only export is available. The API returns counts and timestamps only, not cookie
+contents or the User-Agent value. Exports are bounded to 256 KiB/4,000 cookies and must have valid Netscape rows. No
+browser passwords or automatic access to your computer's browser profile are involved.
+
+Media engines receive a disposable private cookie copy outside downloadable output. Imported cookies take precedence
+over `MEDIA_COOKIES_FILE`; removing the import restores that mounted media fallback. Direct HTTP file downloads use
+imported cookies only. Direct headers are rebuilt for each redirect, respecting domain, path, HTTPS and expiry, with an
+independent public-IP/DNS check for every request. Session changes affect new worker attempts, not requests already
+running. Remove an expired or corrupt import using **Remove imported session**; removal preserves valid pacing settings.
+
+### Countdown/file-link handoff
+
+On a failed or canceled file/media job, expand **Browser assistance** in Library. **Open source in browser** uses a
+separate tab with no opener or referrer. Complete the site's CAPTCHA and countdown there. If it exposes a final file
+link, paste that HTTP/HTTPS URL into **Final file URL** and choose **Queue final file link**. This explicitly creates a
+new Direct file job using current global completion preferences. The original failed record remains for review; partial
+bytes and source-specific metadata are not copied to the new job. Blob URLs and links requiring unavailable browser-only
+state do not work. Signed links can expire before the station starts the job.
+
+Direct responses advertised as HTML/XHTML pages, without attachment disposition, now fail with assistance guidance
+rather than being published as a completed media/file download. Deliberately attached HTML files remain downloadable.
+This change also rejects ordinary non-attachment webpage URLs in Direct mode: choose Video for extractable media.
+
+### Respectful waits and pacing
+
+Direct HTTP downloads honor explicit `Retry-After` on 429/503 responses, including supported HTTP dates, for up to two
+retries and 120 seconds per wait. Longer or malformed waits fail with actionable guidance; they are not shortened into
+aggressive retry loops. Wait progress appears in the job stage and Pause/Cancel/shutdown interrupts the countdown. Each
+attempt/redirect rechecks public egress. Active waiting occupies a queue slot and follows the normal policy holds.
+
+Video mode retains yt-dlp's extractor-managed site countdowns and adds bounded extractor retries. The settings panel can
+add a 0–60 second delay between extraction requests and before each video download. Zero keeps the previous pacing. This
+control applies to yt-dlp video/audio extraction, not the dedicated Instagram collector or arbitrary JavaScript pages.
+Supported extractor wait output uses a safe generic stage; raw tool errors and URLs are not displayed.
+
+Private API: `GET /api/browser-access` returns non-secret metadata. JSON `POST` accepts `import` with `cookies` and an
+optional `userAgent`, `settings` with integer `delaySeconds`, or `clear`. JSON `POST /api/downloads/:id/browser-link`
+accepts `url` only for failed/canceled non-torrent jobs without a saved payload. All operations retain existing session,
+origin, JSON and no-store boundaries. No new JavaScript dependencies, environment variables or Docker privileges are
+required. Keep `/data`, including its private credentials directory. Live protected-site acceptance still requires
+testing the specific sites on the Pi.
 
 ## New in version 2.12: separate workspace pages
 
@@ -864,19 +1113,21 @@ temporary cookie sessions. Complete files stay until explicitly deleted.
 
 ## Storage, USB drives and backups
 
-Compose creates a named volume mounted at `/data`. It contains:
+The default Compose file creates a named volume mounted at `/data`. Your bind-mount deployment uses
+`/home/pi/configs/linkDock` for the same state; downloads can use a separate host directory. It contains:
 
-| Path                            | Responsibility                                          |
-| ------------------------------- | ------------------------------------------------------- |
-| `/data/settings.json`           | Owner completion, speed, schedule and space preferences |
-| `/data/history.json`            | Queue, original links, states and completed manifests   |
-| `/data/downloads/<uuid>`        | Complete direct-file bytes, including v1 downloads      |
-| `/data/downloads/<uuid>.part`   | In-progress direct file                                 |
-| `/data/downloads/<uuid>.work/`  | Isolated media or torrent staging                       |
-| `/data/downloads/<uuid>.files/` | Complete media, carousel or torrent file set            |
-| `/data/torrents/<uuid>.torrent` | Uploaded or pinned remote torrent metadata              |
-| `/data/aria2/`                  | DHT routing state                                       |
-| `/data/credentials/session-*/`  | Private temporary cookie copies, never served           |
+| Path                            | Responsibility                                                            |
+| ------------------------------- | ------------------------------------------------------------------------- |
+| `/data/settings.json`           | Owner completion, speed, schedule and space preferences                   |
+| `/data/history.json`            | Queue, original links, states and completed manifests                     |
+| `/data/downloads/<uuid>`        | Complete direct-file bytes, including v1 downloads                        |
+| `/data/downloads/<uuid>.part`   | In-progress direct file                                                   |
+| `/data/downloads/<uuid>.work/`  | Isolated media or torrent staging                                         |
+| `/data/downloads/<uuid>.files/` | Complete media, carousel or torrent file set                              |
+| `/data/torrents/<uuid>.torrent` | Uploaded or pinned remote torrent metadata                                |
+| `/data/aria2/`                  | DHT routing state                                                         |
+| `/data/credentials/deviantart/` | Private source preferences, account credentials and rotating token caches |
+| `/data/credentials/session-*/`  | Private temporary cookie/OAuth config copies, never served                |
 
 History is atomically replaced on lifecycle changes. Progress remains in memory while streaming, avoiding continuous
 SD-card writes. Partial downloads are retained for recoverable jobs. Atomic rename protects against torn JSON writes,

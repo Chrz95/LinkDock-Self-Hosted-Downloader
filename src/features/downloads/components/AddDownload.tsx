@@ -6,6 +6,7 @@ import { useDownloadComposer } from './composer/useDownloadComposer';
 import type { AddDownloadProps } from './composer/composer.types';
 import { LinkInput } from './composer/LinkInput';
 import { BatchReview } from './composer/BatchReview';
+import { PAGE_INFO } from '../../../app/navigation';
 
 /**
  * Composes a multi-source download request with explicit quality and metadata-upload controls.
@@ -42,6 +43,12 @@ export function AddDownload({ onAdd, onUpload, onBatch }: AddDownloadProps) {
           selectedSource={composer.sourceType}
           onSourceChange={composer.setSourceType}
         />
+        {composer.sourceType === SOURCE_TYPE.deviantart && (
+          <p className="composer-note">
+            Paste artwork, a story/journal, a gallery or an artist URL. Stories save as text; media uses available
+            originals.
+          </p>
+        )}
         <form onSubmit={(event) => void composer.handleSubmit(event)}>
           <LinkInput
             draft={composer.draft}
@@ -75,7 +82,9 @@ export function AddDownload({ onAdd, onUpload, onBatch }: AddDownloadProps) {
             className="composer-note"
             id="download-help"
           >
-            YouTube &amp; video sites · Instagram posts &amp; reels · Torrents &amp; magnets · Direct files
+            Videos &amp; audio · Instagram · DeviantArt galleries &amp; stories · Torrents &amp; magnets · Direct files
+            {' · '}
+            <a href={PAGE_INFO.settings.href}>More sites &amp; browser verification</a>
           </p>
         </form>
       </fieldset>

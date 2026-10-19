@@ -3,6 +3,7 @@ import type { IncomingMessage } from 'node:http';
 import type { DownloadJob } from '../../shared/contracts.js';
 import { openSource } from './openSource.js';
 import { parseTargetUrl } from '../security/target.js';
+import type { SourceAccess } from '../browserAccess/headers.js';
 
 /** Only strong, bounded ASCII entity tags are used as HTTP resume validators. */
 export const STRONG_ETAG = /^"[\x21\x23-\x7e]*"$/;
@@ -16,17 +17,21 @@ const RANGE_STATUS = { partial: 206, complete: 200 } as const;
  * @param {DownloadJob} job - Transfer and previously persisted entity validator.
  * @param {string} partialPath - Internal UUID-addressed partial file.
  * @param {AbortSignal} signal - Worker cancellation.
+ * @param {SourceAccess} [access] - Optional verified browser session and cooldown feedback.
  * @returns {Promise<object>} Stream, append offset and complete representation length.
  */
 export async function openResumableSource(
   job: DownloadJob,
   partialPath: string,
   signal: AbortSignal,
+  access?: SourceAccess,
 ): Promise<{ response: IncomingMessage; offset: number; totalBytes: number | null }> {
   const partialBytes = existsSync(partialPath) ? statSync(partialPath).size : 0;
   let offset = job.resumeValidator && job.resumeSourceUrl ? partialBytes : 0;
   const headers: Record<string, string> = offset ? { Range: `bytes=${offset}-`, 'If-Range': job.resumeValidator! } : {};
-  let response = await openSource(parseTargetUrl(job.url), signal, 0, headers);
+  let response = access
+    ? await openSource(parseTargetUrl(job.url), signal, 0, headers, access)
+    : await openSource(parseTargetUrl(job.url), signal, 0, headers);
   const range = /^bytes (\d+)-(\d+)\/(\d+)$/.exec(String(response.headers['content-range']));
   const total = range ? Number(range[3]) : null;
   const canAppend = Boolean(
@@ -43,7 +48,9 @@ export async function openResumableSource(
   );
   if (offset && !canAppend && response.statusCode !== RANGE_STATUS.complete) {
     response.destroy();
-    response = await openSource(parseTargetUrl(job.url), signal);
+    response = access
+      ? await openSource(parseTargetUrl(job.url), signal, 0, {}, access)
+      : await openSource(parseTargetUrl(job.url), signal);
   }
   if (!canAppend) {
     offset = 0;
@@ -55,6 +62,13 @@ export async function openResumableSource(
   if (response.headers['content-encoding'] && response.headers['content-encoding'] !== 'identity') {
     response.destroy();
     throw new Error('Encoded source responses cannot be safely stored or resumed.');
+  }
+  if (
+    /^(?:text\/html|application\/xhtml\+xml)\b/iu.test(String(response.headers['content-type'])) &&
+    !/^attachment\b/iu.test(String(response.headers['content-disposition']))
+  ) {
+    response.destroy();
+    throw new Error('This link returned a webpage, not a file. Choose Video mode or use Browser assistance.');
   }
   const length = Number(response.headers['content-length']);
   const totalBytes = canAppend ? total : Number.isSafeInteger(length) && length >= 0 ? length : null;

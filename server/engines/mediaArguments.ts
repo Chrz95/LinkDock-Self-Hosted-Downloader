@@ -1,8 +1,11 @@
 import path from 'node:path';
+import { deviantartArguments } from '../deviantart/arguments.js';
+import type { DeviantartExecution } from '../deviantart/session.js';
 import { ENGINE_LIMIT, MEDIA_LINE } from './constants.js';
-import { SOURCE_TYPE } from '../../shared/sources.js';
+import { SOURCE_TYPE, isGallerySource } from '../../shared/sources.js';
 import { mediaFormatArguments } from './mediaFormat.js';
 import type { DownloadJob } from '../../shared/contracts.js';
+import type { BrowserAccessState } from '../browserAccess/store.js';
 
 /**
  * Constructs fixed executable arguments; submitted URLs always follow the option terminator.
@@ -12,6 +15,8 @@ import type { DownloadJob } from '../../shared/contracts.js';
  * @param {number} maximumBytes - Configured per-job byte limit.
  * @param {string} [cookiesFile] - Optional owner-mounted Netscape cookie jar.
  * @param {number} [bytesPerSecond] - Assigned download speed, zero for unlimited.
+ * @param {BrowserAccessState} [browser] - Validated owner browser identity and pacing settings.
+ * @param {DeviantartExecution} [deviantartSession] - Source preferences and private execution paths.
  * @returns {string[]} Safe argument vector for the selected media engine.
  */
 export function buildMediaArguments(
@@ -21,30 +26,38 @@ export function buildMediaArguments(
   maximumBytes: number,
   cookiesFile?: string,
   bytesPerSecond = 0,
+  browser?: BrowserAccessState,
+  deviantartSession?: DeviantartExecution,
 ): string[] {
   const progressFields = 'downloaded_bytes,total_bytes,total_bytes_estimate,speed,status';
   const cookiesArguments = cookiesFile ? ['--cookies', cookiesFile] : [];
-  if (job.sourceType === SOURCE_TYPE.instagram) {
+  if (isGallerySource(job.sourceType)) {
+    const deviantart = job.sourceType === SOURCE_TYPE.deviantart;
     return [
       '--config-ignore',
       '--no-input',
       '--no-colors',
       '--proxy',
       proxyUrl,
-      '--directory',
+      deviantart ? '--destination' : '--directory',
       outputDirectory,
       '--cache-file',
-      ':memory:',
-      '-o',
-      'filename={category}_{post_id}_{num}.{extension}',
-      '-o',
-      'extractor.instagram.videos=merged',
-      '-o',
-      'extractor.instagram.user-cache=memory',
+      deviantart ? (deviantartSession?.cacheFile ?? ':memory:') : ':memory:',
+      ...(deviantart
+        ? deviantartArguments(deviantartSession, job.deviantart)
+        : [
+            '-o',
+            'filename={category}_{post_id}_{num}.{extension}',
+            '-o',
+            'extractor.instagram.videos=merged',
+            '-o',
+            'extractor.instagram.user-cache=memory',
+          ]),
       '-o',
       'extractor.cookies-update=false',
       ...(bytesPerSecond ? ['--limit-rate', String(bytesPerSecond)] : []),
       ...cookiesArguments,
+      ...(browser?.userAgent ? ['--user-agent', browser.userAgent] : []),
       '--',
       job.url,
     ];
@@ -69,6 +82,12 @@ export function buildMediaArguments(
     String(ENGINE_LIMIT.mediaRetryCount),
     '--fragment-retries',
     String(ENGINE_LIMIT.mediaRetryCount),
+    '--extractor-retries',
+    String(ENGINE_LIMIT.mediaRetryCount),
+    ...(browser?.userAgent ? ['--user-agent', browser.userAgent] : []),
+    ...(browser?.delaySeconds
+      ? ['--sleep-requests', String(browser.delaySeconds), '--sleep-interval', String(browser.delaySeconds)]
+      : []),
     ...mediaFormatArguments(job.quality),
     '--max-filesize',
     String(maximumBytes),

@@ -8,6 +8,8 @@ import { openResumableSource } from './resume.js';
 import type { DownloadStore } from './store.js';
 import { ensureStorage } from '../policy/storage.js';
 import { shouldRetainProgress, waitForBandwidth, type TransferOptions } from './transferPolicy.js';
+import { BrowserAccessStore } from '../browserAccess/store.js';
+import { sourceAccess } from '../browserAccess/headers.js';
 
 /**
  * Streams to disk with backpressure, a size ceiling and end-to-end cancellation.
@@ -26,7 +28,11 @@ export async function transferToDisk(
   options: TransferOptions = {},
 ): Promise<void> {
   const partialPath = store.getFilePath(job.id, true);
-  const { response, offset, totalBytes } = await openResumableSource(job, partialPath, signal);
+  const access = sourceAccess(new BrowserAccessStore(store.dataDirectory).read(), (seconds) => {
+    job.stage = `Waiting for source · ${seconds} seconds`;
+    job.bytesPerSecond = 0;
+  });
+  const { response, offset, totalBytes } = await openResumableSource(job, partialPath, signal, access);
   job.totalBytes = totalBytes;
   job.receivedBytes = offset;
   options.onCheckpoint?.();

@@ -1,3 +1,6 @@
+import { EngineProcessError } from '../engines/failures.js';
+import { DEVIANTART } from '../../shared/deviantart.js';
+import { holdLegacyCollections, needsCollectionRestart, readCollectionPreferences } from '../deviantart/jobScope.js';
 import { randomUUID } from 'node:crypto';
 import { readdirSync, unlinkSync, rmSync, statfsSync, existsSync } from 'node:fs';
 import { DOWNLOAD_STATUS, type DownloadJob, type DashboardSnapshot } from '../../shared/contracts.js';
@@ -56,6 +59,7 @@ export class DownloadQueue {
   constructor(private readonly configuration: ServerConfig) {
     this.torrentEngine = new TorrentRpc(configuration.dataDirectory, configuration.runtimeEnvironment);
     this.store = new DownloadStore(configuration.dataDirectory, configuration.completedDirectory);
+    holdLegacyCollections(this.store);
     this.policy = new PolicyStore(configuration.dataDirectory);
     this.controls = new QueueControls(configuration.dataDirectory, this);
     this.utilities = new UtilityService(configuration, (work) => this.maintainUtilities(work));
@@ -117,7 +121,9 @@ export class DownloadQueue {
    * @returns {BatchPreview} Accepted count and skipped duplicate links.
    */
   previewBatch(urls: unknown, sourceType?: unknown, quality?: unknown): BatchPreview {
-    const review = reviewBatch(urls, sourceType, quality, this.store.jobs);
+    const review = reviewBatch(urls, sourceType, quality, this.store.jobs, () =>
+      readCollectionPreferences(this.configuration.dataDirectory),
+    );
     return { newCount: review.unique.length, duplicates: review.duplicates };
   }
 
@@ -129,7 +135,9 @@ export class DownloadQueue {
    * @returns {BatchResult} Persisted new records and skipped duplicates.
    */
   addBatch(urls: unknown, sourceType?: unknown, quality?: unknown): BatchResult {
-    const review = reviewBatch(urls, sourceType, quality, this.store.jobs);
+    const review = reviewBatch(urls, sourceType, quality, this.store.jobs, () =>
+      readCollectionPreferences(this.configuration.dataDirectory),
+    );
     const added = review.unique.map(createQueuedJob);
     for (const job of added) {
       job.destination = this.defaultDestination();
@@ -291,6 +299,9 @@ export class DownloadQueue {
     if (job.status !== DOWNLOAD_STATUS.paused || this.controllers.has(job.id)) {
       throw new Error('Wait for the transfer to pause before resuming it.');
     }
+    if (needsCollectionRestart(job, this.store)) {
+      throw new Error(DEVIANTART.legacyStage);
+    }
     const previous = { status: job.status, errorMessage: job.errorMessage, stage: job.stage };
     job.status = DOWNLOAD_STATUS.queued;
     job.errorMessage = null;
@@ -342,7 +353,8 @@ export class DownloadQueue {
       (job) =>
         job.status === DOWNLOAD_STATUS.paused &&
         !this.controllers.has(job.id) &&
-        (!job.torrentSelection?.files || job.torrentSelection.selected),
+        (!job.torrentSelection?.files || job.torrentSelection.selected) &&
+        !needsCollectionRestart(job, this.store),
     );
     const previous = jobs.map((job) => ({ job, stage: job.stage, error: job.errorMessage }));
     for (const job of jobs) {
@@ -381,18 +393,25 @@ export class DownloadQueue {
       job.status = DOWNLOAD_STATUS.queued;
       job.finishedAt = null;
       job.errorMessage = null;
+      job.mediaFailure = undefined;
       job.stage = 'Recovering saved files';
       this.store.save();
       this.schedule();
       return;
     }
+    const scope =
+      job.sourceType === SOURCE_TYPE.deviantart
+        ? (job.deviantart ?? readCollectionPreferences(this.configuration.dataDirectory))
+        : undefined;
     Object.assign(job, {
+      ...(scope ? { deviantart: scope } : {}),
       status: DOWNLOAD_STATUS.queued,
       receivedBytes: 0,
       totalBytes: null,
       bytesPerSecond: 0,
       finishedAt: null,
       errorMessage: null,
+      mediaFailure: undefined,
       files: undefined,
       stage: undefined,
       peers: undefined,
@@ -614,7 +633,16 @@ export class DownloadQueue {
    */
   private async run(job: DownloadJob, controller: AbortController): Promise<void> {
     try {
+      if (needsCollectionRestart(job, this.store)) {
+        job.status = DOWNLOAD_STATUS.paused;
+        job.stage = DEVIANTART.legacyStage;
+        return;
+      }
       job.status = DOWNLOAD_STATUS.downloading;
+      job.mediaFailure = undefined;
+      if (job.sourceType === SOURCE_TYPE.deviantart && !job.deviantart && !job.payloadReady) {
+        job.deviantart = readCollectionPreferences(this.configuration.dataDirectory);
+      }
       job.stage = undefined;
       this.store.save();
       const { settings } = this.policy;
@@ -665,6 +693,7 @@ export class DownloadQueue {
       } else if (job.status === DOWNLOAD_STATUS.downloading) {
         job.status = DOWNLOAD_STATUS.failed;
         job.errorMessage = error instanceof Error ? error.message : 'The download failed.';
+        job.mediaFailure = error instanceof EngineProcessError ? error.reason : undefined;
       }
     } finally {
       job.bytesPerSecond = 0;

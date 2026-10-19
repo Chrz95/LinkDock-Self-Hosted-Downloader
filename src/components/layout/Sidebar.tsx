@@ -41,7 +41,7 @@ export function Sidebar({ page }: WorkspaceNavigationProps) {
         </span>
         <span>
           <Icon name="camera" />
-          Instagram
+          Instagram &amp; DeviantArt
         </span>
         <span>
           <Icon name="torrent" />
@@ -71,7 +71,7 @@ export function Sidebar({ page }: WorkspaceNavigationProps) {
         </p>
         <div className="device-label">
           <Icon name="drive" />
-          SELF-HOSTED · V2.12
+          SELF-HOSTED · V2.17
         </div>
       </div>
     </aside>

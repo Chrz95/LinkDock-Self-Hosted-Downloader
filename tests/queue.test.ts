@@ -182,10 +182,16 @@ describe('persistent streaming queue', () => {
     const recoveredQueue = createTestQueue(configuration);
     await vi.waitFor(() => expect(recoveredQueue.store.jobs[0]?.status).toBe(DOWNLOAD_STATUS.completed));
     expect(readFileSync(recoveredQueue.store.getFilePath(job.id), 'utf8')).toBe('hello');
-    expect(openSource).toHaveBeenCalledWith(expect.any(URL), expect.any(AbortSignal), 0, {
-      Range: 'bytes=3-',
-      'If-Range': '"original"',
-    });
+    expect(openSource).toHaveBeenCalledWith(
+      expect.any(URL),
+      expect.any(AbortSignal),
+      0,
+      {
+        Range: 'bytes=3-',
+        'If-Range': '"original"',
+      },
+      expect.objectContaining({ cookies: [], onWait: expect.any(Function) }),
+    );
     expect(existsSync(orphanPath)).toBe(false);
   });
 

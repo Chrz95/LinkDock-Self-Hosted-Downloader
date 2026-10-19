@@ -12,6 +12,10 @@ import { smokeBulkLibrary } from './smokeBulkLibrary.mjs';
 import { smokeOutbox } from './smokeOutbox.mjs';
 import { smokeWorkflows } from './smokeWorkflows.mjs';
 import { smokeUtilities } from './smokeUtilities.mjs';
+import { smokeMediaRecovery } from './smokeMediaRecovery.mjs';
+import { smokeCollectionScope } from './smokeCollectionScope.mjs';
+import { smokeDeviantart } from './smokeDeviantart.mjs';
+import { smokeBrowserAccess } from './smokeBrowserAccess.mjs';
 
 /** Native Node execution catches production module interop that the test transformer can mask. */
 const SMOKE = { port: 8_080, fileLimit: 1_024, origin: 'https://station.example' };
@@ -91,6 +95,10 @@ async function smokeProduction() {
     await smokeOutbox(configuration, queue);
     await smokeWorkflows(configuration);
     await smokeUtilities(configuration);
+    await smokeBrowserAccess(configuration, client);
+    await smokeDeviantart(configuration, client);
+    await smokeCollectionScope(configuration, client);
+    await smokeMediaRecovery(queue, client);
     process.stdout.write('Compiled production imports, mobile assets, organization and private diagnostics: passed.\n');
   } finally {
     await queue.stop();

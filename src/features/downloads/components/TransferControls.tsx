@@ -1,3 +1,4 @@
+import { DEVIANTART } from '../../../../shared/deviantart';
 import { DOWNLOAD_STATUS, JOB_ACTION } from '../../../../shared/contracts';
 import { Icon } from '../../../components/ui/Icon';
 import { ACTION_LABEL } from '../constants';
@@ -15,16 +16,23 @@ export function TransferControls({ job, isBusy, onAction }: DownloadRowProps) {
   const isActive = job.status === DOWNLOAD_STATUS.downloading || job.status === DOWNLOAD_STATUS.queued;
   const isPaused = job.status === DOWNLOAD_STATUS.paused;
   const needsSelection = isPaused && job.torrentSelection?.files && !job.torrentSelection.selected;
+  const needsRestart = isPaused && job.stage === DEVIANTART.legacyStage;
   const action = isActive ? JOB_ACTION.pause : isPaused ? JOB_ACTION.resume : JOB_ACTION.retry;
   return (
     <div className="row-actions">
       <button
         type="button"
         className="icon-button"
-        disabled={isBusy || Boolean(needsSelection)}
+        disabled={isBusy || Boolean(needsSelection) || needsRestart}
         onClick={() => void onAction(job.id, action)}
         aria-label={`${ACTION_LABEL[action]} ${job.filename}`}
-        title={needsSelection ? 'Choose torrent files below to continue' : `${ACTION_LABEL[action]} download`}
+        title={
+          needsRestart
+            ? DEVIANTART.legacyStage
+            : needsSelection
+              ? 'Choose torrent files below to continue'
+              : `${ACTION_LABEL[action]} download`
+        }
       >
         <Icon name={isActive ? 'pause' : isPaused ? 'play' : 'retry'} />
       </button>
