@@ -1,3 +1,4 @@
+import { CookieFailurePrompt } from '../features/downloads/components/library/CookieFailurePrompt';
 import { Sidebar } from '../components/layout/Sidebar';
 import { Header } from '../components/layout/Header';
 import { useDownloads } from '../features/downloads/hooks/useDownloads';
@@ -27,6 +28,7 @@ export function App() {
       >
         Skip to content
       </a>
+      {station.snapshot && <CookieFailurePrompt jobs={station.snapshot.jobs} />}
       <Sidebar page={page} />
       <div className="workspace">
         <Header

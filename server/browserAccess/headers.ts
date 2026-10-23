@@ -1,8 +1,10 @@
+import { sessionUserAgent } from './sessions.js';
 import type { BrowserAccessState } from './store.js';
 import { cookieHeader, parseCookieJar, type BrowserCookie } from './cookieJar.js';
 
 export interface SourceAccess {
   cookies: BrowserCookie[];
+  state?: BrowserAccessState;
   userAgent: string;
   onWait?: (seconds: number) => void;
 }
@@ -13,7 +15,12 @@ export interface SourceAccess {
  * @returns {SourceAccess} Parsed session and optional countdown progress.
  */
 export function sourceAccess(state: BrowserAccessState, onWait: (seconds: number) => void): SourceAccess {
-  return { cookies: state.cookies ? parseCookieJar(state.cookies).cookies : [], userAgent: state.userAgent, onWait };
+  return {
+    state,
+    cookies: state.cookies ? parseCookieJar(state.cookies).cookies : [],
+    userAgent: state.userAgent,
+    onWait,
+  };
 }
 /**
  * Rebuilds credential headers for each redirect; the old origin's cookies are never blindly forwarded.
@@ -32,8 +39,9 @@ export function browserHeaders(access: SourceAccess | undefined, target: URL): R
     if (cookie) {
       headers.Cookie = cookie;
     }
-    if (access.userAgent) {
-      headers['User-Agent'] = access.userAgent;
+    const userAgent = access.state ? sessionUserAgent(access.state, target.href) : access.userAgent;
+    if (userAgent) {
+      headers['User-Agent'] = userAgent;
     }
   }
   return headers;

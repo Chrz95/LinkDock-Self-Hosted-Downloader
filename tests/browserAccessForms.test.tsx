@@ -37,7 +37,9 @@ it('imports a selected cookie export privately and removes it without rendering 
   });
   render(<BrowserAccess />);
   expect(requestApi).not.toHaveBeenCalled();
-  await user.click(screen.getByText('Browser verification & waits'));
+  await user.click(screen.getByText('Browser sessions'));
+  expect(screen.getByLabelText('Import site cookies.txt')).not.toBeVisible();
+  await user.click(screen.getByText('Manual import & advanced options'));
   await user.type(screen.getByLabelText('Browser User-Agent · optional'), 'Browser/1');
   const file = new File([COOKIE], 'cookies.txt', { type: 'text/plain' });
   Object.defineProperty(file, 'text', { value: async () => COOKIE });
@@ -57,7 +59,8 @@ it('saves bounded video pacing without requesting browser cookies', async () => 
   const user = userEvent.setup();
   vi.mocked(requestApi).mockResolvedValue(snapshot);
   render(<BrowserAccess />);
-  await user.click(screen.getByText('Browser verification & waits'));
+  await user.click(screen.getByText('Browser sessions'));
+  await user.click(screen.getByText('Manual import & advanced options'));
   const delay = screen.getByRole('spinbutton', { name: 'Video request delay · seconds' });
   await user.clear(delay);
   await user.type(delay, '5');
@@ -82,7 +85,8 @@ it('does not restore cookies from a late file read after the owner removes the s
       }),
   });
   render(<BrowserAccess />);
-  await user.click(screen.getByText('Browser verification & waits'));
+  await user.click(screen.getByText('Browser sessions'));
+  await user.click(screen.getByText('Manual import & advanced options'));
   await user.upload(screen.getByLabelText('Import site cookies.txt'), file);
   await user.click(screen.getByRole('button', { name: 'Remove imported session' }));
   await act(async () => finish?.(COOKIE));
@@ -161,4 +165,30 @@ it('finds the additional video sources by name and domain in Settings', async ()
     await user.type(screen.getByRole('searchbox'), query!);
     expect(screen.getByText(name!, { selector: 'li' })).toBeVisible();
   }
+});
+
+it('lists independent site sessions and removes only the selected site without exposing cookies', async () => {
+  const user = userEvent.setup();
+  vi.mocked(requestApi).mockResolvedValue({
+    ...snapshot,
+    sessions: [
+      { domain: 'instagram.com', cookieCount: 1 },
+      { domain: 'deviantart.com', cookieCount: 1 },
+    ],
+  });
+  render(<BrowserAccess />);
+  await user.click(screen.getByText('Browser sessions'));
+  await user.click(screen.getByText('Manual import & advanced options'));
+  expect(await screen.findByText('instagram.com · 1 cookies')).toBeVisible();
+  expect(screen.getByText('deviantart.com · 1 cookies')).toBeVisible();
+  await user.click(screen.getByRole('button', { name: 'Remove instagram.com' }));
+  expect(requestApi).toHaveBeenCalledWith(BROWSER_ACCESS.path, {
+    method: 'POST',
+    body: JSON.stringify({ action: BROWSER_ACTION.remove, domain: 'instagram.com' }),
+  });
+  await user.click(screen.getByText('Connect directly from your browser'));
+  expect(screen.getByRole('link', { name: 'Download browser companion' })).toHaveAttribute(
+    'href',
+    '/linkdock-browser-connector.zip',
+  );
 });

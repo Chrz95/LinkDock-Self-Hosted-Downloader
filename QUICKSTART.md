@@ -1,4 +1,4 @@
-# Run LinkDock 2.22 on your Raspberry Pi
+# Run LinkDock 2.25 on your Raspberry Pi
 
 1. Use 64-bit Raspberry Pi OS and install Docker Engine with the Compose plugin.
 2. Extract this project and open a terminal in its `linkdock` directory.
@@ -53,7 +53,7 @@ If upgrading from the previous version, retain `.env` and the existing volume, r
 
 - Pause keeps partial data; Resume requeues it. Restart and Cancel discard partial progress.
 - Active jobs requeue after a service restart; manually paused jobs stay paused.
-- Open **Station controls** for download/upload limits, a daily window and a free-space buffer.
+- Open **Download defaults** for download/upload limits, a daily window and a free-space buffer.
 - The initial buffer is **1 GiB**. If the queue is waiting for space, free space or reduce this value.
 - The default schedule timezone is **Europe/Athens**; change it if you want a different timezone.
 
@@ -259,7 +259,7 @@ access, signed-repository update downloads and mobile rendering remain deploymen
 
 ## New in version 2.11: set the completed folder once
 
-1. Open **Settings → Station controls → Completed downloads**.
+1. Open **Settings → Download defaults → Completed downloads**.
 2. Enable **Automatically move completed downloads**.
 3. Leave **Default completed folder** as `.` for the mounted completed folder, or enter `Movies` for a subfolder.
 4. Click **Save preferences**. New downloads now inherit the destination, including batch links, magnets and torrents.
@@ -283,7 +283,7 @@ Use the sidebar or phone navigation to switch between **Overview**, **Library** 
 
 - Add links and review live totals on **Overview**.
 - Track downloads, choose torrent files, search saved files and use previews/save actions on **Library**.
-- Open **Settings → Station controls** for the global completed folder, speed limits, free space and daily window.
+- Open **Settings → Download defaults** for the global completed folder, speed limits, free space and daily window.
 - Open **Settings → On this device** for dark/light appearance, installation and optional browser alerts.
 - Open **Settings → Download utilities** for automatic checks, manual updates, rollback and restore.
 - Open **Settings → Station health** for system/storage/engine diagnostics.
@@ -299,9 +299,8 @@ mounts. No new environment variables or data migration are needed. Drafts last f
 
 - Auto detect now recognizes 29 video/audio platform families. Search **Settings → Connected sources** for the list. Use
   **Video** for other yt-dlp-supported pages; audio sources can use **MP3 audio**.
-- Open **Settings → Browser verification & waits** to import a site-only Netscape `cookies.txt` export after you
-  complete verification/login in your own browser. Enter the matching User-Agent if the site requires it, then Restart
-  the job.
+- Open **Settings → Browser sessions** to import a site-only Netscape `cookies.txt` export after you complete
+  verification/login in your own browser. Enter the matching User-Agent if the site requires it, then Restart the job.
 - For countdown pages that expose a final file URL, open **Browser assistance** on the failed item in Library. Complete
   the CAPTCHA/countdown in your browser, paste the final URL and choose **Queue final file link**. A new direct-file job
   is created; the original record remains. Blob URLs and browser-only verification may not work.
@@ -312,7 +311,8 @@ mounts. No new environment variables or data migration are needed. Drafts last f
 CAPTCHAs remain user-assisted. There is no automatic solver, universal JavaScript browser or DRM unlock. Verification
 may be tied to the browser, TLS fingerprint or public IP. Use the same public IP as the Pi where possible. Cookie
 imports grant account access: send site-only exports to your trusted station over HTTPS and protect private backups.
-Imported cookies override the mounted media jar; removing them restores that fallback. Direct files use imports only.
+Matching imported sessions override the mounted media jar; other sources retain that fallback. Direct files use imports
+only.
 
 Rebuild/recreate the image and reload your browser as above. No new mounts, environment variables or dependencies are
 needed. Keep the private credentials directory under `/data`. Test the actual protected sites on your Pi; source support
@@ -335,11 +335,11 @@ DeviantArt source support.
 
 ## New in version 2.14: saved DeviantArt controls
 
-Go to **Settings → DeviantArt collections & account**. Select which profile collections to include: artwork/videos,
-journals/stories, scraps, favorites and status posts. Save your original-file preference and TXT/HTML/skip story format
-once for the station. A specific gallery or post URL retains its own scope. Defaults preserve gallery + journals,
-original files and plain TXT. Version 2.15 pins these choices when a new job is queued. Existing jobs keep their
-snapshot when paused, resumed or restarted; changed Settings apply to newly queued jobs.
+Go to **Settings → DeviantArt account**. Select which profile collections to include: artwork/videos, journals/stories,
+scraps, favorites and status posts. Save your original-file preference and TXT/HTML/skip story format once for the
+station. A specific gallery or post URL retains its own scope. Defaults preserve gallery + journals, original files and
+plain TXT. Version 2.15 pins these choices when a new job is queued. Existing jobs keep their snapshot when paused,
+resumed or restarted; changed Settings apply to newly queued jobs.
 
 For account access, version 2.18 adds **Continue to DeviantArt** directly in Settings. Complete the one-time application
 setup below, then sign in on DeviantArt. LinkDock retrieves and saves the refresh token automatically. The advanced
@@ -415,7 +415,7 @@ work. No additional environment variables or dependencies are required.
 
 ## Connect DeviantArt in the app · HTTP supported in version 2.19
 
-1. Pause active DeviantArt downloads. Open **Settings → DeviantArt collections & account → One-time app setup**.
+1. Pause active DeviantArt downloads. Open **Settings → DeviantArt account → One-time app setup**.
 2. Copy the displayed **OAuth callback URL**. At
    [DeviantArt Applications & Keys](https://www.deviantart.com/developers/apps), register a **confidential** application
    and add that exact URL to its **OAuth2 Redirect URI Whitelist**, not its **Website URL** field. Save the application
@@ -475,21 +475,62 @@ rebuilt app and check the sidebar shows **V2.20**. Keep the existing HTTP config
 
 ## Finding the DeviantArt response field · version 2.21
 
-Open **Settings → DeviantArt collections & account**. HTTP stations show **Authorization response URL** immediately,
-above **One-time app setup**. It is disabled until you save your app setup and select **Continue to DeviantArt**. After
-authorization, copy the complete resulting address containing `code` and `state` from the provider tab and paste it
-here. If the station says its HTTPS return is automatic but you use HTTP only, remove an HTTPS `PUBLIC_ORIGIN` override,
-recreate the container and reload. Use `SECURE_COOKIE=false` on HTTP.
+Open **Settings → DeviantArt account**. HTTP stations show **Authorization response URL** immediately, above **One-time
+app setup**. It is disabled until you save your app setup and select **Continue to DeviantArt**. After authorization,
+copy the complete resulting address containing `code` and `state` from the provider tab and paste it here. If the
+station says its HTTPS return is automatic but you use HTTP only, remove an HTTPS `PUBLIC_ORIGIN` override, recreate the
+container and reload. Use `SECURE_COOKIE=false` on HTTP.
 
 ## DeviantArt connection after reload and browser verification · version 2.22
 
-In **Settings → DeviantArt collections & account**, check **DeviantArt account saved on this station**. The secret
-fields intentionally stay blank. **Reconnect DeviantArt** is optional; a reload does not remove a completed connection.
-If no account is saved, finish the HTTP response-URL step. If status cannot be loaded, reopen the panel and check the
-station connection before changing credentials.
+In **Settings → DeviantArt account**, check **DeviantArt account saved on this station**. The secret fields
+intentionally stay blank. **Reconnect DeviantArt** is optional; a reload does not remove a completed connection. If no
+account is saved, finish the HTTP response-URL step. If status cannot be loaded, reopen the panel and check the station
+connection before changing credentials.
 
 For browser verification failures, open the original source in your browser, complete any verification and export only
-DeviantArt's cookies in Netscape cookies.txt format. Import them in **Settings → Browser verification & waits**,
-optionally supply the same browser's User-Agent, then **Restart** the failed download. Use the Pi's public network where
-possible. Imports replace the previous cookie jar; browser-bound or network blocks may still prevent access. OAuth
-authorization and browser verification are separate, and reconnecting OAuth alone is not a verification fix.
+DeviantArt's cookies in Netscape cookies.txt format. Import them in **Settings → Browser sessions**, optionally supply
+the same browser's User-Agent, then **Restart** the failed download. Use the Pi's public network where possible. Imports
+refresh only the included sites; browser-bound or network blocks may still prevent access. OAuth authorization and
+browser verification are separate, and reconnecting OAuth alone is not a verification fix.
+
+## Connect browser sessions without cookie files · version 2.23
+
+1. Open **Settings → Browser sessions → Connect directly from your browser**.
+2. Download and unzip the browser companion. In desktop Chrome, Edge or Brave, open Extensions, enable Developer mode,
+   choose **Load unpacked** and select the unzipped folder. This setup is needed only once.
+3. Sign in to Instagram or DeviantArt normally in the same browser profile.
+4. Open your signed-in LinkDock tab. Click the companion icon and choose the source. Verify your station's address,
+   confirm that you trust it, and click **Send session to LinkDock**. Allow access to the selected source.
+5. Reopen LinkDock's settings panel to see saved sessions. Restart the failed download.
+
+No cookie file or station token needs to be copied. Each site keeps its own session and browser identity. Refreshing
+Instagram preserves DeviantArt and vice versa. Remove individual sites in settings, or remove all imported sessions.
+Existing saved sessions remain usable after upgrade. Source-specific imports take priority over a mounted cookie file.
+Send again after a browser session expires. This does not bypass CAPTCHA or browser/IP-bound challenges.
+
+The companion is for desktop Chromium browsers; mobile browsers without extensions can use sessions sent from a desktop
+browser. Prefer HTTPS: HTTP carries account sessions unencrypted across your LAN. DeviantArt's OAuth account connection
+remains separate and is not removed or replaced by cookie synchronization.
+
+## Account-session failure popup · version 2.24
+
+When a download reports an account-session failure, LinkDock opens a setup guide automatically. For Instagram and
+DeviantArt, use its companion download link and follow the installation and session-transfer steps. If already
+installed, skip to signing in and sending the session. After the companion confirms success, choose **Go to Download
+library** and **Restart** the failed item. For other sites, follow the manual cookie-import instructions instead.
+
+Close or press Escape to dismiss the guide. Polling will not reopen the same failure during this workspace session. Use
+**Cookie connection instructions** on the failed Library item to reopen it. A newly failed retry can trigger it again.
+
+## DeviantArt troubleshooting and simpler Settings · version 2.25
+
+Settings now has four groups: **Downloads**, **Accounts & browser sessions**, **This device** and **Maintenance**. For
+DeviantArt, keep your saved account and browser session. Collection choices are under **What to download**; manual
+tokens are under **Advanced account options**. Browser file import and User-Agent are under **Manual import & advanced
+options**. Utility updates are in Maintenance → Download utility updates.
+
+After upgrading, **Restart** the failed item in Download library. Old errors are not retroactively changed. The new
+message may identify an API HTTP status (`DA-HTTP-…`), restricted content (`DA-ACCESS`), a parsing problem
+(`DA-PARSE…`), incompatible engine (`DA-ENGINE`) or local write problem (`DA-STORAGE`). Share that message and source
+link if the problem persists. Do not share cookies or tokens. A successful sign-in does not guarantee source acceptance.

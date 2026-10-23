@@ -56,7 +56,7 @@ it('clears app setup secrets and enables browser sign-in without a manual token'
   const user = userEvent.setup();
   mockStation();
   render(<DeviantartSettings />);
-  await user.click(screen.getByText('DeviantArt collections & account'));
+  await user.click(screen.getByText('DeviantArt account'));
   await waitFor(() => expect(screen.getByRole('button', { name: 'Continue to DeviantArt' })).toBeDisabled());
   await user.click(screen.getByText(/One-time app setup/));
   await waitFor(() => expect(screen.getByLabelText('OAuth callback URL')).toHaveValue(setup.callbackUrl));
@@ -115,7 +115,7 @@ it('shows a busy-account error from sign-in and keeps the current settings form 
     return implementation(endpoint, options);
   });
   render(<DeviantartSettings />);
-  await user.click(screen.getByText('DeviantArt collections & account'));
+  await user.click(screen.getByText('DeviantArt account'));
   await waitFor(() => expect(screen.getByRole('button', { name: 'Continue to DeviantArt' })).toBeEnabled());
   await user.click(screen.getByRole('button', { name: 'Continue to DeviantArt' }));
   expect(await screen.findByRole('alert')).toHaveTextContent('Pause DeviantArt downloads');
@@ -135,7 +135,7 @@ it('does not let a late setup GET undo a successful owner submission', async () 
     return endpoint === DEVIANTART.path ? snapshot : { ...setup, configured: true };
   });
   render(<DeviantartSettings />);
-  await user.click(screen.getByText('DeviantArt collections & account'));
+  await user.click(screen.getByText('DeviantArt account'));
   await user.click(screen.getByText(/One-time app setup/));
   await user.type(screen.getByLabelText('App client ID'), APP.clientId);
   await user.type(screen.getByLabelText('App client secret'), APP.clientSecret);
@@ -162,7 +162,7 @@ it('keeps HTTP sign-in in the original tab and exchanges a cleared response fiel
     return implementation(endpoint, options);
   });
   render(<DeviantartSettings />);
-  await user.click(screen.getByText('DeviantArt collections & account'));
+  await user.click(screen.getByText('DeviantArt account'));
   await waitFor(() => expect(screen.getByRole('button', { name: 'Continue to DeviantArt' })).toBeEnabled());
   expect(screen.getByLabelText('OAuth callback URL')).toHaveValue(DEVIANTART_OAUTH.landing);
   expect(screen.getByLabelText('Authorization response URL')).toBeVisible();
@@ -192,7 +192,7 @@ it('keeps HTTP sign-in in the original tab and exchanges a cleared response fiel
   );
   expect(input).toHaveValue('');
   expect(await screen.findByText('DeviantArt connected. Refresh tokens are managed automatically.')).toBeVisible();
-  expect(await screen.findByText('Account credentials saved · custom OAuth app')).toBeVisible();
+  expect(await screen.findByText('DeviantArt account saved on this station')).toBeVisible();
   expect(screen.getByLabelText('Authorization response URL')).toBeDisabled();
   expect(document.body.textContent).not.toContain('private-code');
   expect(localStorage.length).toBe(0);
@@ -210,7 +210,7 @@ it('clears a rejected HTTP return input and retains the form for correction', as
     return implementation(endpoint, options);
   });
   render(<DeviantartSettings />);
-  await user.click(screen.getByText('DeviantArt collections & account'));
+  await user.click(screen.getByText('DeviantArt account'));
   await waitFor(() => expect(screen.getByRole('button', { name: 'Continue to DeviantArt' })).toBeEnabled());
   await user.click(screen.getByRole('button', { name: 'Continue to DeviantArt' }));
   const input = await screen.findByLabelText('Authorization response URL');
@@ -230,7 +230,7 @@ it('requires a new start after an expired or canceled HTTP connection', async ()
     endpoint.endsWith('/complete') ? { result: 'expired' } : implementation(endpoint, options),
   );
   render(<DeviantartSettings />);
-  await user.click(screen.getByText('DeviantArt collections & account'));
+  await user.click(screen.getByText('DeviantArt account'));
   await waitFor(() => expect(screen.getByRole('button', { name: 'Continue to DeviantArt' })).toBeEnabled());
   await user.click(screen.getByRole('button', { name: 'Continue to DeviantArt' }));
   await user.type(
@@ -261,7 +261,7 @@ it('keeps a homepage recovery hint visible and replaces the complete link on a n
     return implementation(endpoint, options);
   });
   render(<DeviantartSettings />);
-  await user.click(screen.getByText('DeviantArt collections & account'));
+  await user.click(screen.getByText('DeviantArt account'));
   expect(screen.getByRole('link', { name: 'Sign in to DeviantArt first' })).toHaveAttribute(
     'href',
     'https://www.deviantart.com/users/login',
@@ -291,7 +291,7 @@ it('rejects incomplete sign-in links instead of rendering a provider homepage bu
       : implementation(endpoint, options),
   );
   render(<DeviantartSettings />);
-  await user.click(screen.getByText('DeviantArt collections & account'));
+  await user.click(screen.getByText('DeviantArt account'));
   await waitFor(() => expect(screen.getByRole('button', { name: 'Continue to DeviantArt' })).toBeEnabled());
   await user.click(screen.getByRole('button', { name: 'Continue to DeviantArt' }));
   expect(await screen.findByRole('alert')).toHaveTextContent('The authorization link is incomplete or invalid.');
@@ -302,7 +302,7 @@ it('shows the HTTP response step before app setup and enables it only after a va
   const user = userEvent.setup();
   mockStation(false, 'copy');
   render(<DeviantartSettings />);
-  await user.click(screen.getByText('DeviantArt collections & account'));
+  await user.click(screen.getByText('DeviantArt account'));
   const input = await screen.findByLabelText('Authorization response URL');
   expect(input).toBeVisible();
   expect(input).toBeDisabled();
@@ -327,7 +327,7 @@ it('keeps the response step visible and disabled when a fresh HTTP sign-in fails
     return implementation(endpoint, options);
   });
   render(<DeviantartSettings />);
-  await user.click(screen.getByText('DeviantArt collections & account'));
+  await user.click(screen.getByText('DeviantArt account'));
   await waitFor(() => expect(screen.getByRole('button', { name: 'Continue to DeviantArt' })).toBeEnabled());
   await user.click(screen.getByRole('button', { name: 'Continue to DeviantArt' }));
   const input = screen.getByLabelText('Authorization response URL');
@@ -351,16 +351,17 @@ it('restores saved connection status after a page remount without starting OAuth
       : implementation(endpoint, options),
   );
   const first = render(<DeviantartSettings />);
-  await user.click(screen.getByText('DeviantArt collections & account'));
+  await user.click(screen.getByText('DeviantArt account'));
   expect(await screen.findByText('DeviantArt account saved on this station')).toBeVisible();
   first.unmount();
   render(<DeviantartSettings />);
-  await user.click(screen.getByText('DeviantArt collections & account'));
+  await user.click(screen.getByText('DeviantArt account'));
   expect(await screen.findByText('DeviantArt account saved on this station')).toBeVisible();
   expect(screen.getByRole('button', { name: 'Reconnect DeviantArt' })).toBeEnabled();
   expect(screen.getByLabelText('DeviantArt refresh token')).toHaveValue('');
   expect(screen.getByText(/Saved credentials survive page reloads/)).toBeVisible();
-  expect(screen.getByText(/Browser verification is separate from OAuth/)).toBeVisible();
+  await user.click(screen.getByText('Account saved, but downloads fail?'));
+  expect(screen.getByText(/OAuth and browser cookies provide different kinds of access/)).toBeVisible();
   expect(vi.mocked(requestApi).mock.calls.some(([endpoint]) => endpoint.endsWith('/start'))).toBe(false);
 });
 
@@ -379,12 +380,12 @@ it('distinguishes a failed account read from disconnection and recovers without 
     return implementation(endpoint, options);
   });
   render(<DeviantartSettings />);
-  await user.click(screen.getByText('DeviantArt collections & account'));
+  await user.click(screen.getByText('DeviantArt account'));
   expect(await screen.findByText(/Account status could not be confirmed/)).toBeVisible();
   expect(screen.queryByText('No DeviantArt account saved on this station')).not.toBeInTheDocument();
-  await user.click(screen.getByText('DeviantArt collections & account'));
+  await user.click(screen.getByText('DeviantArt account'));
   offline = false;
-  await user.click(screen.getByText('DeviantArt collections & account'));
+  await user.click(screen.getByText('DeviantArt account'));
   expect(await screen.findByText('DeviantArt account saved on this station')).toBeVisible();
   expect(screen.queryByText(/Account status could not be confirmed/)).not.toBeInTheDocument();
   expect(vi.mocked(requestApi).mock.calls.every(([_endpoint, options]) => options?.method !== 'POST')).toBe(true);

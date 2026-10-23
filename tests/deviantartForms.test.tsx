@@ -19,7 +19,9 @@ it('loads lazily and saves profile scope, originals and story format independent
   vi.mocked(requestApi).mockResolvedValue(snapshot);
   render(<DeviantartSettings />);
   expect(requestApi).not.toHaveBeenCalled();
-  await user.click(screen.getByText('DeviantArt collections & account'));
+  await user.click(screen.getByText('DeviantArt account'));
+  expect(screen.getByLabelText('DeviantArt refresh token')).not.toBeVisible();
+  await user.click(screen.getByText('What to download'));
   expect(await screen.findByLabelText('Artwork & videos')).toBeChecked();
   expect(screen.getByLabelText('Journals & stories')).toBeChecked();
   await user.click(screen.getByLabelText('Scraps'));
@@ -46,7 +48,8 @@ it('clears token/app fields immediately after submission and exposes metadata on
     options?.body ? { ...snapshot, hasAccount: true, customClient: true } : snapshot,
   );
   render(<DeviantartSettings />);
-  await user.click(screen.getByText('DeviantArt collections & account'));
+  await user.click(screen.getByText('DeviantArt account'));
+  await user.click(screen.getByText('Advanced account options'));
   await screen.findByText('Using public access');
   await user.type(screen.getByLabelText('DeviantArt refresh token'), 'fresh-token');
   await user.type(screen.getByLabelText('OAuth client ID · optional'), '12345');
@@ -82,7 +85,8 @@ it('keeps a late metadata request from restoring account status after explicit r
         }),
   );
   render(<DeviantartSettings />);
-  await user.click(screen.getByText('DeviantArt collections & account'));
+  await user.click(screen.getByText('DeviantArt account'));
+  await user.click(screen.getByText('Advanced account options'));
   await user.click(screen.getByRole('button', { name: 'Remove DeviantArt account' }));
   expect(await screen.findByText('DeviantArt account removed. Collection preferences retained.')).toBeVisible();
   await act(async () => resolveGet?.({ ...snapshot, hasAccount: true }));
@@ -99,15 +103,16 @@ it('shows an account lock conflict without retaining a submitted secret and clea
     return snapshot;
   });
   render(<DeviantartSettings />);
-  await user.click(screen.getByText('DeviantArt collections & account'));
+  await user.click(screen.getByText('DeviantArt account'));
+  await user.click(screen.getByText('Advanced account options'));
   const input = screen.getByLabelText('DeviantArt refresh token');
   await user.type(input, 'fresh-token');
   await user.click(screen.getByRole('button', { name: 'Save account credentials' }));
   expect(await screen.findByRole('alert')).toHaveTextContent('Pause DeviantArt downloads');
   expect(input).toHaveValue('');
   await user.type(input, 'unsaved-secret');
-  await user.click(screen.getByText('DeviantArt collections & account'));
+  await user.click(screen.getByText('DeviantArt account'));
   await waitFor(() => expect(screen.queryByLabelText('DeviantArt refresh token')).not.toBeInTheDocument());
-  await user.click(screen.getByText('DeviantArt collections & account'));
+  await user.click(screen.getByText('DeviantArt account'));
   expect(screen.getByLabelText('DeviantArt refresh token')).toHaveValue('');
 });

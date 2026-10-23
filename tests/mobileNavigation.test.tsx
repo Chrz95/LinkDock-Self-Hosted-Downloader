@@ -71,11 +71,11 @@ it('separates the overview, library and consolidated settings through phone navi
   expect(screen.queryByRole('button', { name: 'Save preferences' })).not.toBeInTheDocument();
   await user.click(navigation.getByRole('link', { name: 'Settings' }));
   expect(await screen.findByRole('heading', { level: 1, name: /^Settings/ })).toBeVisible();
-  expect(screen.getByText('Station controls')).toBeVisible();
+  expect(screen.getByText('Download defaults')).toBeVisible();
   expect(screen.getByText('On this device')).toBeVisible();
   expect(screen.getByText('Station health')).toBeVisible();
   expect(screen.getByText('Download utility updates')).toBeVisible();
-  await user.click(screen.getByText('Station controls'));
+  await user.click(screen.getByText('Download defaults'));
   expect(screen.getByRole('checkbox', { name: 'Automatically move completed downloads' })).toBeVisible();
   await user.click(screen.getByText('On this device'));
   expect(screen.getByRole('button', { name: 'Switch to light mode' })).toBeVisible();
@@ -96,7 +96,7 @@ it('retains composer, library filters and unsaved global preferences when switch
   await user.click(navigation.getByRole('link', { name: 'Download library' }));
   await user.type(await screen.findByRole('searchbox'), 'saved');
   await user.click(navigation.getByRole('link', { name: 'Settings' }));
-  await user.click(await screen.findByText('Station controls'));
+  await user.click(await screen.findByText('Download defaults'));
   await user.click(screen.getByRole('checkbox', { name: 'Automatically move completed downloads' }));
   const folder = screen.getByRole('textbox', { name: 'Default completed folder' });
   await user.clear(folder);

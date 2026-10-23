@@ -59,7 +59,9 @@ export function useBrowserAccess() {
         }),
       );
       setMessage(
-        action === BROWSER_ACTION.clear ? 'Imported session removed.' : 'Saved. Retry the source from Library.',
+        action === BROWSER_ACTION.clear || action === BROWSER_ACTION.remove
+          ? 'Imported session removed.'
+          : 'Saved. Retry the source from Library.',
       );
     } catch (failure) {
       setError(failure instanceof Error ? failure.message : 'Browser session could not be saved.');

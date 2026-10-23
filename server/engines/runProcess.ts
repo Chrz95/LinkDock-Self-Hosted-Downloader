@@ -5,6 +5,7 @@ import { ENGINE_LIMIT } from './constants.js';
 
 export interface EngineProcessOptions {
   authenticationMessage?: string;
+  failure?: (diagnostic: string, exitCode: number | null) => EngineProcessError;
   onFailure?: (diagnostic: string) => void;
   onDiagnostic?: (line: string) => void;
   cwd?: string;
@@ -101,6 +102,10 @@ export function runEngineProcess(
         resolve();
       } else {
         options.onFailure?.(errorOutput);
+        if (options.failure) {
+          reject(options.failure(errorOutput, code));
+          return;
+        }
         const reason = classifyMediaFailure(errorOutput);
         reject(
           new EngineProcessError(reason, reason === MEDIA_FAILURE.login ? options.authenticationMessage : undefined),

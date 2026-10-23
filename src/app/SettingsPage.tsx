@@ -23,17 +23,39 @@ export function SettingsPage({ policy }: SettingsPageProps) {
     <div className="settings-page">
       <WorkspaceHeading page={WORKSPACE_PAGE.settings} />
       <div className="settings-stack">
-        <StationSettings policy={policy} />
-        <DeviceTools />
-        <BrowserAccess />
-        <DeviantartSettings />
-        <section className="settings-card utility-settings">
-          <h2>Download utilities</h2>
-          <p>Keep your download engines current, review update status or restore a previous toolset.</p>
-          <UtilityUpdates />
+        <section
+          className="settings-group"
+          aria-label="Downloads"
+        >
+          <h2>Downloads</h2>
+          <p>Choose where files go, speed limits and download times.</p>
+          <StationSettings policy={policy} />
         </section>
-        <StationHealth />
-        <ConnectedSources />
+        <section
+          className="settings-group"
+          aria-label="Accounts and browser sessions"
+        >
+          <h2>Accounts &amp; browser sessions</h2>
+          <p>Connect the sites you use. Saved access does not guarantee every item is downloadable.</p>
+          <BrowserAccess />
+          <DeviantartSettings />
+        </section>
+        <section
+          className="settings-group"
+          aria-label="This device"
+        >
+          <h2>This device</h2>
+          <DeviceTools />
+        </section>
+        <section
+          className="settings-group"
+          aria-label="Maintenance"
+        >
+          <h2>Maintenance</h2>
+          <UtilityUpdates />
+          <StationHealth />
+          <ConnectedSources />
+        </section>
       </div>
     </div>
   );

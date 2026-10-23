@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>LinkDock · Browser session</title>
+    <link
+      rel="stylesheet"
+      href="popup.css"
+    />
+  </head>
+  <body>
+    <p class="eyebrow">LINKDOCK / BROWSER COMPANION</p>
+    <h1>Connect your account</h1>
+    <p>Sign in to the source in this browser first. Then open your trusted LinkDock tab and send its session.</p>
+    <label
+      >Source<select id="source">
+        <option value="instagram.com">Instagram</option>
+        <option value="deviantart.com">DeviantArt</option>
+      </select></label
+    >
+    <p>
+      <a
+        id="login"
+        href="https://www.instagram.com/"
+        target="_blank"
+        rel="noopener noreferrer"
+        >Open source to sign in</a
+      >
+    </p>
+    <p>Destination station <strong id="destination">Checking active tab…</strong></p>
+    <label class="check"
+      ><input
+        id="confirm"
+        type="checkbox"
+      />I trust this address with my selected site's login session.</label
+    >
+    <button
+      id="send"
+      disabled
+    >
+      Send session to LinkDock
+    </button>
+    <p
+      id="status"
+      role="status"
+      aria-live="polite"
+    ></p>
+    <p class="note">
+      Only the selected site is read, when you click Send. No passwords, cookie files or background tracking. HTTP sends
+      the session unencrypted over your network; prefer HTTPS.
+    </p>
+    <script src="transfer.js"></script>
+    <script src="popup.js"></script>
+  </body>
+</html>

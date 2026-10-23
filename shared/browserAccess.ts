@@ -9,8 +9,10 @@ export const BROWSER_ACCESS = {
   maximumRetries: 2,
   millisecondsPerSecond: 1_000,
 } as const;
-export const BROWSER_ACTION = { import: 'import', clear: 'clear', settings: 'settings' } as const;
+export const BROWSER_ACTION = { import: 'import', clear: 'clear', remove: 'remove', settings: 'settings' } as const;
 export interface BrowserAccessSnapshot {
+  connector?: 'linkdock-browser-access-v1';
+  sessions?: { domain: string; cookieCount: number }[];
   hasCookies: boolean;
   cookieCount: number;
   domainCount: number;

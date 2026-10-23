@@ -3,10 +3,12 @@ import path from 'node:path';
 import { BROWSER_ACCESS, type BrowserAccessSnapshot } from '../../shared/browserAccess.js';
 import { safeDirectory } from '../downloads/completion/paths.js';
 import { savePrivateJson } from '../notifications/store.js';
+import { sessionDomain } from './sessions.js';
 import { parseCookieJar } from './cookieJar.js';
 
 export interface BrowserAccessState {
   cookies: string | null;
+  userAgents?: Record<string, string>;
   userAgent: string;
   delaySeconds: number;
   updatedAt: string | null;
@@ -58,7 +60,23 @@ export class BrowserAccessStore {
     ) {
       throw new Error('Saved browser session is invalid.');
     }
+    if (
+      state.userAgents !== undefined &&
+      (!state.userAgents ||
+        typeof state.userAgents !== 'object' ||
+        Array.isArray(state.userAgents) ||
+        Object.entries(state.userAgents).some(
+          ([domain, agent]) =>
+            !/^[a-z\d][a-z\d.-]*$/u.test(domain) ||
+            typeof agent !== 'string' ||
+            agent.length > BROWSER_ACCESS.maximumUserAgent ||
+            /[^\x20-\x7e]/u.test(agent),
+        ))
+    ) {
+      throw new Error('Saved browser identities are invalid.');
+    }
     return {
+      userAgents: state.userAgents,
       cookies: state.cookies,
       userAgent: state.userAgent,
       delaySeconds: state.delaySeconds,
@@ -72,10 +90,15 @@ export class BrowserAccessStore {
     const state = this.read();
     const cookies = state.cookies ? parseCookieJar(state.cookies).cookies : [];
     return {
+      connector: 'linkdock-browser-access-v1',
+      sessions: [...new Set(cookies.map((cookie) => sessionDomain(cookie.domain)))].sort().map((domain) => ({
+        domain,
+        cookieCount: cookies.filter((cookie) => sessionDomain(cookie.domain) === domain).length,
+      })),
       hasCookies: Boolean(state.cookies),
       cookieCount: cookies.length,
       domainCount: new Set(cookies.map((cookie) => cookie.domain)).size,
-      hasUserAgent: Boolean(state.userAgent),
+      hasUserAgent: Boolean(state.userAgent || Object.values(state.userAgents ?? {}).some(Boolean)),
       delaySeconds: state.delaySeconds,
       updatedAt: state.updatedAt,
     };

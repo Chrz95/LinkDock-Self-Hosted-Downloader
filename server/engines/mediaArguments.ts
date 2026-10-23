@@ -1,4 +1,5 @@
 import path from 'node:path';
+import { sessionUserAgent } from '../browserAccess/sessions.js';
 import { deviantartArguments } from '../deviantart/arguments.js';
 import type { DeviantartExecution } from '../deviantart/session.js';
 import { ENGINE_LIMIT, MEDIA_LINE } from './constants.js';
@@ -29,6 +30,7 @@ export function buildMediaArguments(
   browser?: BrowserAccessState,
   deviantartSession?: DeviantartExecution,
 ): string[] {
+  const userAgent = browser ? sessionUserAgent(browser, job.url) : '';
   const progressFields = 'downloaded_bytes,total_bytes,total_bytes_estimate,speed,status';
   const cookiesArguments = cookiesFile ? ['--cookies', cookiesFile] : [];
   if (isGallerySource(job.sourceType)) {
@@ -57,7 +59,7 @@ export function buildMediaArguments(
       'extractor.cookies-update=false',
       ...(bytesPerSecond ? ['--limit-rate', String(bytesPerSecond)] : []),
       ...cookiesArguments,
-      ...(browser?.userAgent ? ['--user-agent', browser.userAgent] : []),
+      ...(userAgent ? ['--user-agent', userAgent] : []),
       '--',
       job.url,
     ];
@@ -84,7 +86,7 @@ export function buildMediaArguments(
     String(ENGINE_LIMIT.mediaRetryCount),
     '--extractor-retries',
     String(ENGINE_LIMIT.mediaRetryCount),
-    ...(browser?.userAgent ? ['--user-agent', browser.userAgent] : []),
+    ...(userAgent ? ['--user-agent', userAgent] : []),
     ...(browser?.delaySeconds
       ? ['--sleep-requests', String(browser.delaySeconds), '--sleep-interval', String(browser.delaySeconds)]
       : []),

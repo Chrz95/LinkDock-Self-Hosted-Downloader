@@ -21,7 +21,7 @@ export function StationSettings({ policy }: StationSettingsProps) {
       <summary>
         <Icon name="clock" />
         <span>
-          Station controls<small>{policy.holdReason ?? 'Completed folder, bandwidth & download window'}</small>
+          Download defaults<small>{policy.holdReason ?? 'Completed folder, bandwidth & download window'}</small>
         </span>
         <Icon name="plus" />
       </summary>

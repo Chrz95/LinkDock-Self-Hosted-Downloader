@@ -1,0 +1,75 @@
+:root {
+  color-scheme: dark;
+  font:
+    14px/1.55 system-ui,
+    sans-serif;
+  background: #10151f;
+  color: #e6edf8;
+}
+body {
+  width: 340px;
+  padding: 20px;
+  margin: 0;
+}
+h1 {
+  font-size: 24px;
+  margin: 8px 0;
+  letter-spacing: -0.5px;
+}
+p {
+  color: #abb8ce;
+}
+.eyebrow {
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: #83e6cb;
+}
+label,
+strong {
+  display: block;
+}
+strong {
+  overflow-wrap: anywhere;
+  color: #fff;
+  margin-top: 6px;
+}
+select,
+button {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 12px;
+  border-radius: 10px;
+  margin-top: 8px;
+}
+select {
+  background: #1c2636;
+  color: #fff;
+  border: 1px solid #43516a;
+}
+button {
+  background: #83e6cb;
+  color: #132720;
+  border: 0;
+  font: inherit;
+  font-weight: 650;
+  cursor: pointer;
+}
+button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+a {
+  color: #83e6cb;
+}
+.check {
+  margin: 18px 0;
+}
+.check input {
+  margin-right: 8px;
+}
+.note {
+  font-size: 11px;
+}
+#status {
+  color: #e6edf8;
+}

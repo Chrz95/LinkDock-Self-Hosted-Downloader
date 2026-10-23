@@ -20,7 +20,7 @@ it('edits and saves station-wide limits without losing the draft to polling upda
   const saved = { ...DEFAULT_POLICY, downloadKibPerSecond: 512 };
   vi.mocked(requestApi).mockResolvedValue(saved);
   const view = render(<StationSettings policy={{ settings: DEFAULT_POLICY, holdReason: null }} />);
-  await user.click(screen.getByText('Station controls'));
+  await user.click(screen.getByText('Download defaults'));
   const downloadRate = screen.getByRole('spinbutton', { name: /Download limit/ });
   await user.clear(downloadRate);
   await user.type(downloadRate, '512');
@@ -38,8 +38,8 @@ it('shows policy errors and exposes the current hold even before the controls ar
   const user = userEvent.setup();
   vi.mocked(requestApi).mockRejectedValue(new Error('The timezone is invalid.'));
   render(<StationSettings policy={{ settings: DEFAULT_POLICY, holdReason: 'Waiting for free disk space' }} />);
-  expect(screen.getByText('Station controls').closest('summary')).toHaveTextContent('Waiting for free disk space');
-  await user.click(screen.getByText('Station controls'));
+  expect(screen.getByText('Download defaults').closest('summary')).toHaveTextContent('Waiting for free disk space');
+  await user.click(screen.getByText('Download defaults'));
   await user.click(screen.getByRole('button', { name: 'Save preferences' }));
   expect(screen.getByRole('alert')).toHaveTextContent('timezone');
 });
@@ -48,7 +48,7 @@ it('saves a global completion folder and can disable it for future downloads', a
   const user = userEvent.setup();
   vi.mocked(requestApi).mockImplementation(async (_url, options) => JSON.parse(String(options?.body)));
   render(<StationSettings policy={{ settings: DEFAULT_POLICY, holdReason: null }} />);
-  await user.click(screen.getByText('Station controls'));
+  await user.click(screen.getByText('Download defaults'));
   const toggle = screen.getByRole('checkbox', { name: 'Automatically move completed downloads' });
   expect(toggle).not.toBeChecked();
   await user.click(toggle);
@@ -70,7 +70,7 @@ it('keeps the saved default when resetting a completion-folder draft', async () 
   const user = userEvent.setup();
   const settings = { ...DEFAULT_POLICY, completionDirectory: 'Saved' };
   render(<StationSettings policy={{ settings, holdReason: null }} />);
-  await user.click(screen.getByText('Station controls'));
+  await user.click(screen.getByText('Download defaults'));
   const folder = screen.getByRole('textbox', { name: 'Default completed folder' });
   await user.clear(folder);
   await user.type(folder, 'Changed');

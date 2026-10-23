@@ -24,16 +24,17 @@ export function DeviantartConnectionStatus({ snapshot, error }: DeviantartConnec
       </output>
       <p className="policy-footnote">
         {snapshot?.hasAccount
-          ? 'Saved credentials survive page reloads. Blank secret fields are intentional. '
-          : 'On HTTP, approve access and finish the response-URL step here to save the account. '}
-        An unfinished sign-in must be restarted after reloading. Saved credentials do not prove current site access.
+          ? 'Saved credentials survive page reloads. Blank secret fields are intentional.'
+          : 'Finish the authorization steps below to save your account.'}
       </p>
-      <p className="policy-footnote">
-        Browser verification is separate from OAuth sign-in. If a download is blocked, open its source in your browser,
-        complete any verification and import that site’s Netscape cookies.txt under Browser verification &amp; waits in
-        Settings, then restart the download. Use the Pi’s public network where possible. Cookies may not resolve
-        browser-bound or network blocks; this error alone does not mean your saved account was removed.
-      </p>
+      <details>
+        <summary>Account saved, but downloads fail?</summary>
+        <p className="policy-footnote">
+          OAuth and browser cookies provide different kinds of access. Check the error on the failed Library item. For
+          browser verification, send a session with the companion. For a rejected OAuth grant, reconnect here. Parser,
+          network and permission errors need different fixes; reconnecting is not a universal solution.
+        </p>
+      </details>
     </div>
   );
 }

@@ -1,10 +1,51 @@
-# LinkDock 2.22 delivery and validation
+# LinkDock 2.25 delivery and validation
 
-Validated on 19 October 2026 using Node 24.19.0 and the committed dependency lockfile. The project pins pnpm 12.14.0;
+Validated on 23 October 2026 using Node 24.19.0 and the committed dependency lockfile. The project pins pnpm 12.14.0;
 this session's provided command wrapper reports 11.25.0. A fresh Docker/Pi toolchain build remains unverified. Version
 2.3 adds `web-push` 3.6.7 and development types 3.6.4 for maintained encryption and VAPID signing; the application uses
 its own bounded, public-DNS-pinned HTTPS transport rather than the package's buffered delivery transport. Existing
 frontend and media-engine versions remain pinned by the committed manifests and lockfile.
+
+## Version 2.25 changes
+
+Validation: 593 tests across 72 files passed, plus lint, formatting, TypeScript/production build and native production
+smoke checks.
+
+- Grouped Settings and collapsed advanced browser/account inputs; existing API, stored credentials and preferences
+  retained.
+- Specific DeviantArt failure factory at the child-process boundary, with fixed safe codes and bounded HTTP/exception
+  classifications. No provider prose, URLs, private paths, cookie values or tokens enter the new messages.
+- Regression tests cover parser/HTTP/content/utility/storage errors, unknown exits, URL-only false positives and real
+  subprocess error conversion. Form tests exercise the new expandable controls.
+- No live reproduction from the user's Raspberry Pi was available. Root cause and live site acceptance remain
+  unverified; this release improves error diagnosis and Settings usability, not a confirmed fix for the reported source.
+
+## Version 2.24 changes
+
+Validation: 571 tests across 71 files, lint, formatting, TypeScript/production build and native production smoke checks
+passed.
+
+- Global account-session failure popup with companion installation/transfer instructions for supported sites.
+- Unsupported sources use manual cookie-import guidance; unrelated failure categories do not open the popup.
+- Per-attempt dismissal, sequential failures and manual reopening from Library.
+- Native modal dialog, Escape/Close controls, focus restoration and responsive scrolling layout.
+- DOM regressions exercise failure transitions, polling, repeated attempts, simultaneous failures, dismissal,
+  unsupported/lookalike domains and manual reopening. Native dialog APIs use test doubles in DOM tests.
+- Live account acceptance, real-browser modal rendering and Raspberry Pi/Docker remain unverified.
+
+## Version 2.23 changes
+
+Validation: 566 tests across 70 files passed, plus lint, formatting, TypeScript/production build and native production
+smoke checks. The companion ZIP is regenerated during every build.
+
+- Independent saved site sessions with per-site browser identities, scoped refresh/removal and legacy migration.
+- Source-specific media selection preserves the mounted-cookie fallback for unrelated sites.
+- Packaged Chromium companion sends Instagram or DeviantArt cookies directly through a signed-in station tab.
+- Optional per-site host permission, explicit destination confirmation, no background collection or cookie storage.
+- Regression coverage: legacy migration, independent removal, replacement, metadata secrecy, source selection, companion
+  domain isolation/HttpOnly handling, destination validation and same-origin JSON handoff.
+- Companion browser APIs are tested with controlled doubles. Live extension installation, account acceptance, Raspberry
+  Pi/ARM and Docker builds remain unverified.
 
 ## Version 2.22 changes
 

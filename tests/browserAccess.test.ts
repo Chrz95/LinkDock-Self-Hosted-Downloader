@@ -117,7 +117,7 @@ it('uses private media cookies, mounted fallback and fixed engine arguments', as
   const session = await prepareMediaCookies(directory, mounted, state.cookies);
   expect(readFileSync(session.filename!, 'utf8')).toBe(COOKIE);
   expect(session.filename).not.toContain(queue.store.filesDirectory);
-  const job = queue.add('https://streamable.com/example', SOURCE_TYPE.video);
+  const job = queue.add('https://example.com/private', SOURCE_TYPE.video);
   const args = buildMediaArguments(job, '/output', 'http://proxy', SIZE, session.filename, 0, state);
   expect(args[args.indexOf('--user-agent') + 1]).toBe('Browser/1');
   expect(args[args.indexOf('--sleep-requests') + 1]).toBe(String(DELAY));

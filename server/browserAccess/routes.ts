@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { BROWSER_ACCESS, BROWSER_ACTION } from '../../shared/browserAccess.js';
 import { HTTP_STATUS } from '../../shared/contracts.js';
 import { BrowserAccessStore, type BrowserAccessState } from './store.js';
-import { parseCookieJar } from './cookieJar.js';
+import { importSessions, removeSession } from './sessions.js';
 
 /**
  * Accepts only owner-imported session exports and bounded pacing settings behind existing session/CSRF checks.
@@ -39,11 +39,13 @@ export function createBrowserAccessRoutes(dataDirectory: string): Router {
         ) {
           throw new Error('The optional browser User-Agent must be a single printable line up to 512 characters.');
         }
-        state.cookies = parseCookieJar(request.body.cookies).text;
-        state.userAgent = userAgent.trim();
+        importSessions(state, request.body.cookies, userAgent.trim());
+      } else if (request.body?.action === BROWSER_ACTION.remove) {
+        removeSession(state, request.body.domain);
       } else if (request.body?.action === BROWSER_ACTION.clear) {
         state.cookies = null;
         state.userAgent = '';
+        state.userAgents = {};
       } else if (request.body?.action === BROWSER_ACTION.settings) {
         const value: unknown = request.body.delaySeconds;
         if (

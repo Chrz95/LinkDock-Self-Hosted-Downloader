@@ -6,10 +6,12 @@ import type { ServerConfig } from '../config.js';
 import { ENGINE_LIMIT, MEDIA_LINE } from './constants.js';
 import { buildMediaArguments } from './mediaArguments.js';
 import { createPublicProxy } from './publicProxy.js';
+import { deviantartFailure } from '../deviantart/failure.js';
 import { runEngineProcess } from './runProcess.js';
 import { prepareMediaCookies } from './cookies.js';
 import { resolveUtility } from '../utilities/resolve.js';
 import { ensureStorage } from '../policy/storage.js';
+import { cookiesForSource } from '../browserAccess/sessions.js';
 import { BrowserAccessStore } from '../browserAccess/store.js';
 import { acquireDeviantartLock } from '../deviantart/lock.js';
 import { prepareDeviantartSession, type DeviantartExecution } from '../deviantart/session.js';
@@ -150,7 +152,7 @@ async function runMediaDownload(
   const cookies = await prepareMediaCookies(
     configuration.dataDirectory,
     configuration.mediaCookiesFile,
-    browser.cookies,
+    cookiesForSource(browser, job.url),
   );
   const proxy = await createPublicProxy().catch(async (error: unknown) => {
     await cookies.cleanup();
@@ -218,6 +220,7 @@ async function runMediaDownload(
       {
         env: execution.environment,
         onDiagnostic: deviantartProgress?.diagnostic,
+        failure: job.sourceType === SOURCE_TYPE.deviantart ? deviantartFailure : undefined,
         authenticationMessage:
           job.sourceType === SOURCE_TYPE.deviantart
             ? 'DeviantArt needs account access. Reconnect or replace the refresh token in Settings, then restart.'
