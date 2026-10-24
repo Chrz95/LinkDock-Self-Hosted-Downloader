@@ -1,4 +1,5 @@
 import path from 'node:path';
+import { MEDIA_DNS_MODE, type MediaDnsMode } from '../shared/mediaDns.js';
 import { LIMIT } from './constants.js';
 import { PUSH_LIMIT } from '../shared/notifications.js';
 
@@ -13,6 +14,7 @@ export interface ServerConfig {
   publicOrigin: string | undefined;
   isProduction: boolean;
   mediaCookiesFile?: string;
+  mediaDnsMode?: MediaDnsMode;
   downloadBytesPerSecond?: number;
   uploadBytesPerSecond?: number;
   reservedFreeBytes?: number;
@@ -69,7 +71,12 @@ export function loadServerConfig(): ServerConfig {
       throw new Error('Web Push requires a mailto/HTTPS contact, an HTTPS PUBLIC_ORIGIN and SECURE_COOKIE=true.');
     }
   }
+  const mediaDnsMode = process.env.MEDIA_DNS_MODE?.trim() || MEDIA_DNS_MODE.system;
+  if (!Object.values(MEDIA_DNS_MODE).includes(mediaDnsMode as MediaDnsMode)) {
+    throw new Error('MEDIA_DNS_MODE must be system or cloudflare.');
+  }
   return {
+    mediaDnsMode: mediaDnsMode as MediaDnsMode,
     port: parsePositiveInteger(process.env.PORT, LIMIT.defaultPort, LIMIT.maximumPort),
     dataDirectory: path.resolve(process.env.DATA_DIRECTORY ?? './data'),
     completedDirectory: process.env.COMPLETED_DIRECTORY ? path.resolve(process.env.COMPLETED_DIRECTORY) : undefined,

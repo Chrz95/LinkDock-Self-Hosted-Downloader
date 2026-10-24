@@ -1,4 +1,4 @@
-# Run LinkDock 2.25 on your Raspberry Pi
+# Run LinkDock 2.26 on your Raspberry Pi
 
 1. Use 64-bit Raspberry Pi OS and install Docker Engine with the Compose plugin.
 2. Extract this project and open a terminal in its `linkdock` directory.
@@ -534,3 +534,28 @@ After upgrading, **Restart** the failed item in Download library. Old errors are
 message may identify an API HTTP status (`DA-HTTP-…`), restricted content (`DA-ACCESS`), a parsing problem
 (`DA-PARSE…`), incompatible engine (`DA-ENGINE`) or local write problem (`DA-STORAGE`). Share that message and source
 link if the problem persists. Do not share cookies or tokens. A successful sign-in does not guarantee source acceptance.
+
+## DNS rejection with otherwise working browser access · version 2.26
+
+If diagnostics show `all_addresses_public: false` and no proxy connections, LinkDock rejected the system resolver's
+private/reserved answer. Cookies or OAuth reconnects do not correct that DNS answer.
+
+With the updated image, add this to the existing `link_dock` service:
+
+```yaml
+environment:
+  MEDIA_DNS_MODE: cloudflare
+```
+
+Keep your other environment entries and bind mounts. If using the bundled `compose.rpi.yaml`, put
+`MEDIA_DNS_MODE=cloudflare` in `.env` instead; the updated Compose file passes it through.
+
+```bash
+docker build -t localhost:5000/link_dock:latest .
+docker compose up -d --force-recreate --pull never link_dock
+```
+
+Use the same Compose filename/options as your normal deployment. Restart the failed download in Library after the
+container is running. This sends media DNS hostname queries to Cloudflare over HTTPS while still blocking private
+addresses. It does not modify saved cookies or authorization. HTTPS access to the resolver is required. Set
+`MEDIA_DNS_MODE=system` to use OS DNS again. This is media-only; other download types retain their current DNS behavior.

@@ -2,6 +2,15 @@ import { lookup } from 'node:dns/promises';
 import ipaddr from 'ipaddr.js';
 import { LIMIT, TRANSFER } from '../constants.js';
 
+/** Safe error type distinguishes a DNS policy rejection from a source-site response. */
+export class NonPublicTargetError extends Error {
+  /** Builds a non-secret explanation without including hostnames or DNS addresses. */
+  constructor() {
+    super('Download blocked: DNS returned a private or reserved address. Check VPN, fake-IP or DNS settings.');
+    this.name = 'NonPublicTargetError';
+  }
+}
+
 /**
  * Rejects local, multicast, reserved and mapped-private addresses.
  * @param {string} address - DNS result or IP literal.
@@ -46,7 +55,7 @@ export async function resolvePublicTarget(target: URL): Promise<{ address: strin
   const hostname = target.hostname.replace(/^\[|\]$/g, '');
   const addresses = await lookup(hostname, { all: true, verbatim: true });
   if (!addresses.length || addresses.some((entry) => !isPublicAddress(entry.address))) {
-    throw new Error('Private, local and reserved network destinations are blocked.');
+    throw new NonPublicTargetError();
   }
   const [firstAddress] = addresses;
   if (!firstAddress) {

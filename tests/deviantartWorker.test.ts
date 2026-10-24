@@ -5,7 +5,7 @@ import { DownloadQueue } from '../server/downloads/queue';
 import { DOWNLOAD_STATUS } from '../shared/contracts';
 import { downloadMedia } from '../server/engines/media';
 import { runEngineProcess } from '../server/engines/runProcess';
-import { createPublicProxy } from '../server/engines/publicProxy';
+import { createPublicProxy, type PublicProxyOptions } from '../server/engines/publicProxy';
 import { DeviantartStore } from '../server/deviantart/store';
 import { BrowserAccessStore } from '../server/browserAccess/store';
 import { tryDeviantartLock } from '../server/deviantart/lock';
@@ -203,4 +203,22 @@ it('retains OAuth, imported cookies and rotation cache after a browser verificat
   const release = tryDeviantartLock(directory);
   expect(release).not.toBeNull();
   release?.();
+});
+
+it('keeps a known DNS rejection as the worker failure instead of misreporting a missing DeviantArt item', async () => {
+  const { configuration, queue } = await createDeliveryFixture();
+  let proxyOptions: PublicProxyOptions | undefined;
+  vi.mocked(createPublicProxy).mockImplementation(async (options) => {
+    proxyOptions = options;
+    return { url: 'http://proxy.example', close };
+  });
+  vi.mocked(runEngineProcess).mockImplementation(async (_command, _arguments, signal) => {
+    proxyOptions?.onRejection?.('non-public-dns');
+    signal.throwIfAborted();
+  });
+  const job = queue.add('https://www.deviantart.com/artist/art/Example-123456');
+  await expect(
+    downloadMedia(job, queue.store.filesDirectory, new AbortController().signal, configuration),
+  ).rejects.toMatchObject({ reason: MEDIA_FAILURE.network, message: expect.stringContaining('MEDIA-DNS-NONPUBLIC') });
+  expect(close).toHaveBeenCalledOnce();
 });

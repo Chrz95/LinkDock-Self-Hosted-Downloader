@@ -1,10 +1,25 @@
-# LinkDock 2.25 delivery and validation
+# LinkDock 2.26 delivery and validation
 
-Validated on 23 October 2026 using Node 24.19.0 and the committed dependency lockfile. The project pins pnpm 12.14.0;
+Validated on 24 October 2026 using Node 24.19.0 and the committed dependency lockfile. The project pins pnpm 12.14.0;
 this session's provided command wrapper reports 11.25.0. A fresh Docker/Pi toolchain build remains unverified. Version
 2.3 adds `web-push` 3.6.7 and development types 3.6.4 for maintained encryption and VAPID signing; the application uses
 its own bounded, public-DNS-pinned HTTPS transport rather than the package's buffered delivery transport. Existing
 frontend and media-engine versions remain pinned by the committed manifests and lockfile.
+
+## Version 2.26 changes
+
+Validation: 611 tests across 74 files, lint, formatting, TypeScript/production build and native production smoke checks
+passed.
+
+- Typed non-public-DNS rejection preserves the real media failure instead of allowing misleading extraction errors.
+- Opt-in media-only Cloudflare HTTPS DNS with a pinned public resolver IP, verified TLS, bounded JSON/timeouts, matching
+  questions/CNAME chains, A/AAAA validation, all-address public checks and connection address pinning.
+- Default OS DNS remains in effect unless explicitly configured; no system-DNS fallback on DoH failure.
+- No private destination access is enabled. Invalid questions, truncated responses, redirects, excessive bodies,
+  malformed data, NXDOMAIN and private/mixed addresses fail closed.
+- Tests cover actual loopback proxy rejection, zero outbound connects on fake-IP answers, safe worker failure
+  propagation, DoH transport options, both address families and hostile resolver responses.
+- Docker/Pi and live resolver acceptance on the user's VPN/DNS network remain unverified.
 
 ## Version 2.25 changes
 

@@ -6,6 +6,8 @@ import type { ServerConfig } from '../config.js';
 import { ENGINE_LIMIT, MEDIA_LINE } from './constants.js';
 import { buildMediaArguments } from './mediaArguments.js';
 import { createPublicProxy } from './publicProxy.js';
+import { EngineProcessError } from './failures.js';
+import { MEDIA_FAILURE } from '../../shared/mediaFailures.js';
 import { deviantartFailure } from '../deviantart/failure.js';
 import { runEngineProcess } from './runProcess.js';
 import { prepareMediaCookies } from './cookies.js';
@@ -154,11 +156,23 @@ async function runMediaDownload(
     configuration.mediaCookiesFile,
     cookiesForSource(browser, job.url),
   );
-  const proxy = await createPublicProxy().catch(async (error: unknown) => {
+  const controller = new AbortController();
+  const proxy = await createPublicProxy({
+    dnsMode: configuration.mediaDnsMode,
+    onRejection: (reason) =>
+      controller.abort(
+        new EngineProcessError(
+          MEDIA_FAILURE.network,
+          reason === 'non-public-dns'
+            ? 'Download blocked: DNS returned a private or reserved address. Check VPN/fake-IP DNS or use ' +
+                'MEDIA_DNS_MODE=cloudflare. (MEDIA-DNS-NONPUBLIC)'
+            : 'Media DNS resolution failed. Check network access and MEDIA_DNS_MODE. (MEDIA-DNS-UNAVAILABLE)',
+        ),
+      ),
+  }).catch(async (error: unknown) => {
     await cookies.cleanup();
     throw error;
   });
-  const controller = new AbortController();
   const combinedSignal = AbortSignal.any([signal, controller.signal]);
   const deviantartProgress =
     job.sourceType === SOURCE_TYPE.deviantart ? createDeviantartProgress(job, controller, initialBytes) : undefined;

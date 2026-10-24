@@ -1,20 +1,40 @@
 import http from 'node:http';
 import net from 'node:net';
 import { once } from 'node:events';
-import { parseTargetUrl, resolvePublicTarget } from '../security/target.js';
+import { parseTargetUrl, NonPublicTargetError } from '../security/target.js';
 import { TRANSFER } from '../constants.js';
+import { resolveMediaTarget, MediaDnsResolutionError } from '../security/mediaDns.js';
+import type { MediaDnsMode } from '../../shared/mediaDns.js';
 import { PROXY } from './constants.js';
 
+export interface PublicProxyOptions {
+  dnsMode?: MediaDnsMode;
+  onRejection?: (reason: 'non-public-dns' | 'dns-unavailable') => void;
+}
 /**
  * Provides media extractors with a loopback-only egress proxy that checks and pins every destination.
+ * @param {PublicProxyOptions} [options] - Explicit resolver choice and non-secret rejection feedback.
  * @returns {Promise<{url: string; close: () => void}>} Proxy endpoint and deterministic socket cleanup.
  */
-export async function createPublicProxy(): Promise<{ url: string; close: () => void }> {
+export async function createPublicProxy(options: PublicProxyOptions = {}): Promise<{ url: string; close: () => void }> {
+  /** Reports only recognized resolver failures; addresses and provider prose never reach the callback.
+   * @param {unknown} error - Private connection setup error.
+   */
+  function reportRejection(error: unknown): void {
+    if (error instanceof NonPublicTargetError) {
+      options.onRejection?.('non-public-dns');
+    } else if (error instanceof MediaDnsResolutionError) {
+      options.onRejection?.('dns-unavailable');
+    }
+  }
   const sockets = new Set<net.Socket>();
   const server = http.createServer(async (request, response) => {
     try {
       const target = parseTargetUrl(request.url);
-      const destination = await resolvePublicTarget(target);
+      const destination = await resolveMediaTarget(target, options.dnsMode);
+      if (response.destroyed) {
+        return;
+      }
       if (target.protocol !== TRANSFER.http) {
         throw new Error('Use CONNECT for encrypted destinations.');
       }
@@ -39,18 +59,22 @@ export async function createPublicProxy(): Promise<{ url: string; close: () => v
       request.on('aborted', () => upstream.destroy());
       response.on('close', () => upstream.destroy());
       request.pipe(upstream);
-    } catch {
-      response.writeHead(PROXY.failure).end('Destination rejected.');
+    } catch (error) {
+      reportRejection(error);
+      if (!response.destroyed) {
+        response.writeHead(PROXY.failure).end('Destination rejected.');
+      }
     }
   });
   server.on('connection', (socket) => {
     sockets.add(socket);
     socket.on('close', () => sockets.delete(socket));
+    socket.on('error', () => socket.destroy());
   });
   server.on('connect', async (request, client, head) => {
     try {
       const target = parseTargetUrl(`https://${request.url ?? ''}`);
-      const destination = await resolvePublicTarget(target);
+      const destination = await resolveMediaTarget(target, options.dnsMode);
       if (client.destroyed) {
         return;
       }
@@ -72,8 +96,11 @@ export async function createPublicProxy(): Promise<{ url: string; close: () => v
         upstream.pipe(client);
         client.pipe(upstream);
       });
-    } catch {
-      client.destroy();
+    } catch (error) {
+      reportRejection(error);
+      if (!client.destroyed) {
+        client.end('HTTP/1.1 502 Bad Gateway\r\nContent-Length: 0\r\nConnection: close\r\n\r\n');
+      }
     }
   });
   server.listen(0, '127.0.0.1');

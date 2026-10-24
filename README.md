@@ -1,9 +1,36 @@
-# LinkDock 2.25
+# LinkDock 2.26
 
 A private download studio for your Raspberry Pi: videos, Instagram moments, torrents and files, collected in one place.
 The dark-first React + TypeScript workspace has a saved light/dark preference, source selection, real progress,
 searchable history, batch review, queue priorities and individual access to every completed file. Downloads run on the
 Pi when your browser is closed.
+
+## New in version 2.26: media DNS for VPN/fake-IP networks
+
+LinkDock's guarded media proxy refuses private, local and reserved destination addresses. If a VPN, filtering resolver
+or fake-IP DNS setup returns such an address for a public source, direct browser access may work while the downloader
+fails. Media workers now retain a clear `MEDIA-DNS-NONPUBLIC` network error instead of an unrelated extraction error.
+CONNECT rejections return a fixed HTTP 502 response, with no private address or engine diagnostic text exposed.
+
+To resolve media source hostnames independently of the container's system resolver, opt in with:
+
+```yaml
+environment:
+  MEDIA_DNS_MODE: cloudflare
+```
+
+Rebuild/recreate the container and restart the failed item. The bundled Compose files pass through
+`MEDIA_DNS_MODE=${MEDIA_DNS_MODE:-system}`; when using them, set `MEDIA_DNS_MODE=cloudflare` in `.env`. The default
+`system` mode retains current OS DNS. Cloudflare mode sends media hostnames (not source paths, cookies or OAuth tokens)
+to Cloudflare's HTTPS DNS service, using a fixed public resolver IP and normal certificate verification. It queries
+A/AAAA records, validates the response and CNAME chain, rejects all private or mixed answers, then pins the validated
+address for each connection. It does not fall back to system DNS when HTTPS DNS fails. The resolver must be reachable
+from the Pi; this release's live compatibility with the user's network has not been verified.
+
+This option applies to yt-dlp/gallery-dl media downloads and their guarded HTTP/HTTPS traffic. Direct-file downloads,
+torrents, updater traffic and browser requests keep their existing resolution paths. No private-address allowlist or
+SSRF-protection bypass is added. An alternative is to correct the VPN/DNS configuration to return real public source
+addresses. Reference: https://developers.cloudflare.com/1.1.1.1/encryption/dns-over-https/make-api-requests/dns-json/
 
 ## New in version 2.25: clearer Settings and DeviantArt failures
 
