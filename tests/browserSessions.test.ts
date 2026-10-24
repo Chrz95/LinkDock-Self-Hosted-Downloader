@@ -142,29 +142,9 @@ it('companion requires station identity and unchanged origin, sends private JSON
   expect(fetch).toHaveBeenCalledTimes(1);
 });
 
-it('companion requests only the selected source and reads nothing until the owner confirms and sends', async () => {
-  const elements = Object.fromEntries(
-    ['source', 'send', 'confirm', 'status', 'login', 'destination'].map((id) => [
-      id,
-      {
-        value: 'deviantart.com',
-        checked: false,
-        disabled: true,
-        textContent: '',
-        href: '',
-        listeners: {} as Record<string, () => Promise<void> | void>,
-        /** Registers a simulated popup interaction.
-         * @param {string} event - Browser event name.
-         * @param {() => Promise<void> | void} callback - Popup handler.
-         */
-        addEventListener(event: string, callback: () => Promise<void> | void) {
-          this.listeners[event] = callback;
-        },
-      },
-    ]),
-  );
+it('companion reads only the selected session after permission and resolves the current station tab', async () => {
+  const destination = { id: 1, url: 'http://pi:7489/', incognito: false };
   const chrome = {
-    tabs: { query: vi.fn().mockResolvedValue([{ id: 1, url: 'http://pi:7489/settings' }]) },
     permissions: { request: vi.fn().mockResolvedValue(false) },
     cookies: {
       getAll: vi.fn().mockResolvedValue([]),
@@ -172,23 +152,24 @@ it('companion requests only the selected source and reads nothing until the owne
     },
     scripting: { executeScript: vi.fn().mockResolvedValue([{ result: { ok: true, message: 'Saved' } }]) },
   };
-  runInNewContext(readFileSync('browser-connector/popup.js', 'utf8'), {
-    URL,
-    chrome,
-    navigator: { userAgent: 'MatchingBrowser' },
-    document: { getElementById: (id: string) => elements[id] },
-    LinkDockCompanion: { sessionExport: () => DEVIANTART, sendToStation: () => undefined },
-  });
-  await vi.waitFor(() => expect(elements.destination!.textContent).toBe('http://pi:7489'));
-  await elements.send!.listeners.click!();
-  expect(chrome.permissions.request).not.toHaveBeenCalled();
+  const findStationTab = vi.fn().mockResolvedValue(destination);
+  const api = companion();
+  const { sendSelectedSession } = runInNewContext(
+    `${readFileSync('browser-connector/session.js', 'utf8')}; ({sendSelectedSession});`,
+    {
+      chrome,
+      navigator: { userAgent: 'MatchingBrowser' },
+      LinkDockCompanion: { ...api, findStationTab, sessionExport: () => DEVIANTART },
+    },
+  ) as { sendSelectedSession: (station: object, domain: string) => Promise<{ ok: boolean }> };
+  const station = { origin: 'http://pi:7489', tabId: 1 };
   expect(chrome.cookies.getAll).not.toHaveBeenCalled();
-  elements.confirm!.checked = true;
-  await elements.send!.listeners.click!();
-  expect(chrome.permissions.request).toHaveBeenCalledWith({ origins: ['https://*.deviantart.com/*'] });
+  await expect(sendSelectedSession(station, 'deviantart.com')).rejects.toThrow('Source permission');
+  expect(findStationTab).not.toHaveBeenCalled();
   expect(chrome.cookies.getAll).not.toHaveBeenCalled();
   chrome.permissions.request.mockResolvedValue(true);
-  await elements.send!.listeners.click!();
+  expect((await sendSelectedSession(station, 'deviantart.com')).ok).toBe(true);
+  expect(chrome.permissions.request).toHaveBeenCalledWith({ origins: ['https://*.deviantart.com/*'] });
   expect(chrome.cookies.getAll).toHaveBeenCalledWith({ domain: 'deviantart.com', storeId: 'profile' });
   expect(chrome.scripting.executeScript).toHaveBeenCalledWith(
     expect.objectContaining({
@@ -197,6 +178,8 @@ it('companion requests only the selected source and reads nothing until the owne
       args: ['http://pi:7489', DEVIANTART, 'MatchingBrowser'],
     }),
   );
-  expect(elements.status!.textContent).toBe('Saved');
-  expect(JSON.stringify(elements)).not.toContain('deviantart-secret');
+  findStationTab.mockResolvedValue(undefined);
+  chrome.cookies.getAll.mockClear();
+  await expect(sendSelectedSession(station, 'instagram.com')).rejects.toThrow('Open your station');
+  expect(chrome.cookies.getAll).not.toHaveBeenCalled();
 });

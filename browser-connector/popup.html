@@ -2,54 +2,196 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>LinkDock · Browser session</title>
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1"
+    />
+    <title>LinkDock · Browser companion</title>
     <link
       rel="stylesheet"
       href="popup.css"
     />
   </head>
   <body>
-    <p class="eyebrow">LINKDOCK / BROWSER COMPANION</p>
-    <h1>Connect your account</h1>
-    <p>Sign in to the source in this browser first. Then open your trusted LinkDock tab and send its session.</p>
-    <label
-      >Source<select id="source">
-        <option value="instagram.com">Instagram</option>
-        <option value="deviantart.com">DeviantArt</option>
-      </select></label
-    >
-    <p>
-      <a
-        id="login"
-        href="https://www.instagram.com/"
-        target="_blank"
-        rel="noopener noreferrer"
-        >Open source to sign in</a
+    <header class="brand">
+      <img
+        src="icons/icon-48.png"
+        width="44"
+        height="44"
+        alt=""
+      />
+      <div>
+        <h1>LinkDock<span>COMPANION</span></h1>
+        <p>Your next download, docked.</p>
+      </div>
+      <span class="version">1.1</span>
+    </header>
+    <main>
+      <section
+        class="station-card"
+        aria-label="Connected station"
       >
-    </p>
-    <p>Destination station <strong id="destination">Checking active tab…</strong></p>
-    <label class="check"
-      ><input
-        id="confirm"
-        type="checkbox"
-      />I trust this address with my selected site's login session.</label
-    >
-    <button
-      id="send"
-      disabled
-    >
-      Send session to LinkDock
-    </button>
-    <p
-      id="status"
-      role="status"
-      aria-live="polite"
-    ></p>
-    <p class="note">
-      Only the selected site is read, when you click Send. No passwords, cookie files or background tracking. HTTP sends
-      the session unencrypted over your network; prefer HTTPS.
-    </p>
+        <div class="station-heading">
+          <span id="mode">NO STATION</span
+          ><a
+            id="open-station"
+            href="#"
+            target="_blank"
+            rel="noopener noreferrer"
+            hidden
+            >Open library ↗</a
+          >
+        </div>
+        <strong id="destination">Connect your station to get started</strong>
+        <details
+          id="station-setup"
+          open
+        >
+          <summary>Station connection</summary>
+          <label for="station-address">Station address</label>
+          <input
+            id="station-address"
+            type="url"
+            autocomplete="off"
+            spellcheck="false"
+            placeholder="http://raspberrypi:7489"
+          />
+          <p class="hint">Keep your signed-in LinkDock tab open. Allow access only to your station when prompted.</p>
+          <div class="button-row">
+            <button
+              id="connect"
+              class="secondary"
+              disabled
+            >
+              Connect station</button
+            ><button
+              id="forget"
+              class="quiet"
+              disabled
+            >
+              Forget
+            </button>
+          </div>
+        </details>
+      </section>
+      <section
+        class="download-card"
+        aria-labelledby="download-heading"
+      >
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">SEND TO YOUR PI</p>
+            <h2 id="download-heading">Add a download</h2>
+          </div>
+          <span
+            class="plus"
+            aria-hidden="true"
+            >＋</span
+          >
+        </div>
+        <label for="download-url">Download link</label>
+        <textarea
+          id="download-url"
+          rows="3"
+          maxlength="8192"
+          autocomplete="off"
+          spellcheck="false"
+          placeholder="Paste a file, video or magnet link…"
+        ></textarea>
+        <button
+          id="use-page"
+          class="text-button"
+          disabled
+        >
+          Use current tab
+        </button>
+        <details class="download-options">
+          <summary>Download options</summary>
+          <div class="options-grid">
+            <label for="download-source"
+              >Source<select id="download-source">
+                <option value="auto">Auto detect</option>
+                <option value="direct">Direct file</option>
+                <option value="video">Video / audio</option>
+                <option value="instagram">Instagram</option>
+                <option value="deviantart">DeviantArt</option>
+                <option value="torrent">Torrent link</option>
+                <option value="magnet">Magnet link</option>
+              </select></label
+            >
+            <label for="quality"
+              >Video / audio<select id="quality">
+                <option value="1080">Video · 1080p</option>
+                <option value="best">Video · best available</option>
+                <option value="2160">Video · 4K</option>
+                <option value="1440">Video · 1440p</option>
+                <option value="720">Video · 720p</option>
+                <option value="480">Video · 480p</option>
+                <option value="360">Video · 360p</option>
+                <option value="mp3-128">MP3 · 128 kbps</option>
+                <option value="mp3-192">MP3 · 192 kbps</option>
+                <option value="mp3-320">MP3 · 320 kbps</option>
+              </select></label
+            >
+          </div>
+          <p class="hint">
+            Video/audio choices apply to the video engine. Other sources use their normal station settings.
+          </p>
+        </details>
+        <button
+          id="add-download"
+          class="primary"
+          disabled
+        >
+          Add to LinkDock <span aria-hidden="true">↗</span>
+        </button>
+        <p class="hint footer-hint">Downloads run on your Pi. You can close this popup after confirmation.</p>
+      </section>
+      <p
+        id="status"
+        role="status"
+        aria-live="polite"
+      ></p>
+      <details class="session-card">
+        <summary>Connect a site session <span class="optional">OPTIONAL</span></summary>
+        <p class="hint">For account-only downloads, sign in to the source in this browser first.</p>
+        <label for="source"
+          >Source<select id="source">
+            <option value="instagram.com">Instagram</option>
+            <option value="deviantart.com">DeviantArt</option>
+          </select></label
+        >
+        <a
+          id="login"
+          href="https://www.instagram.com/"
+          target="_blank"
+          rel="noopener noreferrer"
+          >Open source to sign in ↗</a
+        >
+        <label class="check"
+          ><input
+            id="confirm"
+            type="checkbox"
+          />I trust the station above with this site's login session.</label
+        >
+        <button
+          id="send"
+          class="secondary"
+          disabled
+        >
+          Send session to LinkDock
+        </button>
+        <p class="hint">
+          Only this site's cookies are read, when you click Send. HTTP sends sessions unencrypted over your network;
+          prefer HTTPS.
+        </p>
+      </details>
+    </main>
+    <footer>PRIVATE BY DESIGN <span>LINKDOCK / 1.1</span></footer>
     <script src="transfer.js"></script>
+    <script src="station.js"></script>
+    <script src="download.js"></script>
+    <script src="session.js"></script>
     <script src="popup.js"></script>
   </body>
 </html>

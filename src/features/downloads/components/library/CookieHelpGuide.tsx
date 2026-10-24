@@ -25,8 +25,9 @@ export function CookieHelpGuide({ job }: { job: DownloadJob }) {
             login or verification. If the companion is already installed, start here.
           </li>
           <li>
-            <strong>Send your session.</strong> Return to your signed-in LinkDock tab. Click the companion icon, choose
-            Instagram or DeviantArt, verify the station address, check the trust box and click
+            <strong>Send your session.</strong> Open the companion from your signed-in LinkDock tab and use Connect
+            station once. Expand Connect a site session, choose Instagram or DeviantArt, verify the station address,
+            check the trust box and click
             <strong> Send session to LinkDock</strong>. Allow access to the selected site.
           </li>
           <li>

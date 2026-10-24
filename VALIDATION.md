@@ -1,10 +1,38 @@
-# LinkDock 2.26 delivery and validation
+# LinkDock 2.28 delivery and validation
 
-Validated on 24 October 2026 using Node 24.19.0 and the committed dependency lockfile. The project pins pnpm 12.14.0;
+Validated on 24 October 2026 using Node 24.22.1 and the committed dependency lockfile. The project pins pnpm 12.14.0;
 this session's provided command wrapper reports 11.25.0. A fresh Docker/Pi toolchain build remains unverified. Version
 2.3 adds `web-push` 3.6.7 and development types 3.6.4 for maintained encryption and VAPID signing; the application uses
 its own bounded, public-DNS-pinned HTTPS transport rather than the package's buffered delivery transport. Existing
 frontend and media-engine versions remain pinned by the committed manifests and lockfile.
+
+## Version 2.28 changes: Browser Companion 1.1
+
+Validation: 649 tests across 77 files, lint, formatting, TypeScript/production build and native production smoke checks
+passed. Existing dependency pins and the lockfile are unchanged. The project still pins pnpm 12.14.0; the supplied
+workspace wrapper is 11.25.0. Local Node is 24.22.1; the Dockerfile retains Node 24.19.0.
+
+- Added the green/lime download mark as authored SVG and PNG icons at 16, 24, 32, 48, 64 and 128 pixels. The toolbar and
+  extension-list manifests reference shipped raster assets. The icon was visually inspected and dimensions checked.
+- Redesigned the popup around Add a download, an optional source/quality/MP3 section, a remembered station and a
+  separately confirmed site-session section. Current-page and pasted HTTP/HTTPS/magnet links use the existing station
+  API; no backend change is required for LinkDock 2.23+.
+- Station pairing requests permission only for the selected host, verifies the signed-in station marker, and stores only
+  origin, tab ID and browsing mode. Discovery filters exact origins/ports and normal/incognito mode; reopened station
+  tabs are found without a browsing-history permission. A station tab must remain open and signed in.
+- Download submission executes in the station's isolated world with same-origin credentials, JSON bodies, redirect
+  rejection and bounded requests. Serialized functions are tested independently of popup closures. No source-cookie
+  reads or source grants occur during download submission; no passwords or submitted link history are stored.
+- Tests cover real queue insertion through authenticated API routes, magnet/video/MP3 payloads, unsupported inputs,
+  destination navigation, revoked permission, wrong ports/modes, closed stations, ambiguous responses, fixed error
+  messages, duplicate-click prevention, station forgetting and explicit session-sharing confirmation.
+- Popup tests use the real HTML, DOM controls and shipped scripts with Chrome API fixtures. Actual installation,
+  permission dialogs and extension execution in native Chrome/Edge/Brave remain unverified in this workspace. No
+  Chromium binary or live Raspberry Pi was available; Docker/ARM builds and live source downloads remain unverified.
+- The app-served companion ZIP contains 16 files. Manifest icons and all popup scripts were checked against their
+  authored source bytes. Existing site-session serialization and private server persistence remain covered.
+- This release was rebuilt from the uploaded 2.26 archive. Backend/shared sources and network settings match that
+  archive byte for byte. The subsequent NordVPN relay changes are intentionally excluded.
 
 ## Version 2.26 changes
 

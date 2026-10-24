@@ -1,9 +1,29 @@
-# LinkDock 2.26
+# LinkDock 2.28
 
 A private download studio for your Raspberry Pi: videos, Instagram moments, torrents and files, collected in one place.
 The dark-first React + TypeScript workspace has a saved light/dark preference, source selection, real progress,
 searchable history, batch review, queue priorities and individual access to every completed file. Downloads run on the
 Pi when your browser is closed.
+
+## New in version 2.28: Browser Companion 1.1
+
+The companion now has a purpose-designed green/lime toolbar icon in six raster resolutions, a refreshed compact popup,
+and **Add a download**. Connect your trusted, signed-in station once, then send the current page or a pasted HTTP,
+HTTPS, torrent or magnet link from any tab. Download options include source selection, video quality and MP3 audio. The
+existing station API performs the actual queueing and validation; the extension also works with LinkDock 2.23+.
+
+The station tab may remain in the background. It must be open and signed in. The companion finds reopened tabs by exact
+origin and browser mode, asks for access only to the chosen station host, and retains normal same-origin API
+protections. It remembers only the station origin, preferred tab and normal/incognito mode locally. It does not store
+station passwords, submitted link history or source cookies. Download submission does not read source cookies; the
+existing session-sharing flow remains an explicit, separately confirmed action under **Connect a site session**.
+
+Replace the unpacked extension's existing files and click **Reload** on its browser Extensions card. For a fresh
+installation, download `/linkdock-browser-connector.zip`, unzip it and choose **Load unpacked**. Full instructions are
+in `browser-connector/README.md`. Browser permission prompts still need owner approval; this is not a store-published
+extension. The package builder includes all popup scripts and icon assets in the app-served ZIP.
+
+This update is based on the uploaded 2.26 source. It does not include the subsequent NordVPN relay changes.
 
 ## New in version 2.26: media DNS for VPN/fake-IP networks
 

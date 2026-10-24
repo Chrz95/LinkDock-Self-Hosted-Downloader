@@ -21,8 +21,9 @@ export function BrowserSessions({ access }: { access: ReturnType<typeof useBrows
           Download browser companion
         </a>
         <p className="policy-footnote">
-          Sign in to Instagram or DeviantArt in that browser. Open your trusted LinkDock tab and sign in here too. Click
-          the companion icon, choose the source, check the station address and send the session. No cookie file or
+          Open your trusted LinkDock tab, sign in and use Connect station in the companion once. You can then add a
+          download from any tab. For Instagram or DeviantArt sessions, sign in to that source and expand Connect a site
+          session in the companion. Choose the source, check the station address and send the session. No cookie file or
           access-token entry is needed. Reopen this panel to refresh the list. Mobile browsers without extension support
           can use sessions sent from a desktop browser.
         </p>
