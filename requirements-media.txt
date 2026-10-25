@@ -1,3 +1,4 @@
 # Pinned bundled fallbacks. The idle-time updater can install newer compatible tools into persistent app storage.
-yt-dlp[default]==2026.8.19
+yt-dlp[default,curl-cffi]==2026.10.21
+curl-cffi==0.14.0
 gallery-dl==1.32.17

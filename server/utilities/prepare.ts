@@ -10,6 +10,7 @@ import { UtilityResources } from './resources.js';
 import { runUtilityCommand } from './process.js';
 import { prepareNativeTools } from './native.js';
 import { utilityIdentity, type ToolRelease, type UtilityStore } from './storage.js';
+import { MEDIA_RUNTIME_CHECK, MEDIA_RUNTIME_READY } from './mediaRuntime.js';
 
 /**
  * Builds an isolated Python/native candidate at its final path so venv shebangs remain valid after activation.
@@ -59,7 +60,7 @@ export async function prepareUtilityRelease(
         '--only-binary=:all:',
         '--no-cache-dir',
         '--upgrade',
-        'yt-dlp[default]',
+        'yt-dlp[default,curl-cffi]',
         'gallery-dl',
       ],
       root,
@@ -67,6 +68,18 @@ export async function prepareUtilityRelease(
       installerEnvironment,
     );
     await runUtilityCommand(python, ['-m', 'pip', '--isolated', 'check'], root, signal, installerEnvironment);
+    progress('Verifying browser support for site videos.');
+    const mediaReady = await runUtilityCommand(
+      python,
+      [MEDIA_RUNTIME_CHECK],
+      root,
+      signal,
+      installerEnvironment,
+      UTILITY.versionTimeoutMilliseconds,
+    );
+    if (mediaReady !== MEDIA_RUNTIME_READY) {
+      throw new Error('Candidate browser support did not pass verification.');
+    }
     ensureStorage(store.directory, UTILITY.minimumFreeBytes);
     progress('Checking signed repository updates for aria2.');
     await prepareNativeTools(root, store.directory, signal, installerEnvironment);

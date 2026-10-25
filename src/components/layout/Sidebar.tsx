@@ -71,7 +71,7 @@ export function Sidebar({ page }: WorkspaceNavigationProps) {
         </p>
         <div className="device-label">
           <Icon name="drive" />
-          SELF-HOSTED · V2.28
+          SELF-HOSTED · V2.29
         </div>
       </div>
     </aside>

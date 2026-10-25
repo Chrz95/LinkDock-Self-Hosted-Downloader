@@ -36,17 +36,19 @@ export class UtilityService {
   /** Returns safe updater metadata only. @returns {UtilitySnapshot} Public owner-only status. */
   snapshot(): UtilitySnapshot {
     const { current: _current, previous: _previous, ...state } = this.store.state;
+    const usingManagedTools = Object.entries(TOOL_COMMAND).every(
+      ([id, command]) =>
+        resolveUtility(
+          id as keyof typeof TOOL_COMMAND,
+          this.configuration.dataDirectory,
+          this.configuration.runtimeEnvironment,
+        ).command !== command,
+    );
     return {
       ...state,
+      versions: usingManagedTools ? state.versions : {},
       canRollback: Boolean(this.store.state.previous),
-      usingManagedTools: Object.entries(TOOL_COMMAND).every(
-        ([id, command]) =>
-          resolveUtility(
-            id as keyof typeof TOOL_COMMAND,
-            this.configuration.dataDirectory,
-            this.configuration.runtimeEnvironment,
-          ).command !== command,
-      ),
+      usingManagedTools,
     };
   }
   /**

@@ -5,6 +5,7 @@ import { UTILITY, UTILITY_STATUS, type UtilitySnapshot, type ToolId } from '../.
 import { CONTROL_ID } from '../../shared/control.js';
 import { savePrivateJson } from '../notifications/store.js';
 import { safeDirectory } from '../downloads/completion/paths.js';
+import { MEDIA_RUNTIME_PROFILE } from './mediaRuntime.js';
 
 export interface UtilityState extends Omit<UtilitySnapshot, 'usingManagedTools' | 'canRollback'> {
   current: string | null;
@@ -24,7 +25,7 @@ export function utilityIdentity(dataDirectory: string): string {
   const python = '/opt/media/pyvenv.cfg';
   const base = existsSync(python) ? readFileSync(python, 'utf8') : 'non-docker';
   return createHash('sha256')
-    .update(`${path.resolve(dataDirectory)}:${process.platform}:${process.arch}:${base}`)
+    .update(`${path.resolve(dataDirectory)}:${process.platform}:${process.arch}:${base}:${MEDIA_RUNTIME_PROFILE}`)
     .digest('hex');
 }
 /**

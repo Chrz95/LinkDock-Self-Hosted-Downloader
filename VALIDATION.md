@@ -1,10 +1,41 @@
-# LinkDock 2.28 delivery and validation
+# LinkDock 2.29 delivery and validation
 
-Validated on 24 October 2026 using Node 24.22.1 and the committed dependency lockfile. The project pins pnpm 12.14.0;
+Validated on 25 October 2026 using Node 24.22.1 and the committed dependency lockfile. The project pins pnpm 12.14.0;
 this session's provided command wrapper reports 11.25.0. A fresh Docker/Pi toolchain build remains unverified. Version
 2.3 adds `web-push` 3.6.7 and development types 3.6.4 for maintained encryption and VAPID signing; the application uses
 its own bounded, public-DNS-pinned HTTPS transport rather than the package's buffered delivery transport. Existing
 frontend and media-engine versions remain pinned by the committed manifests and lockfile.
+
+## Version 2.29 changes: usable browser support for video engines
+
+Validation: 660 tests across 79 files, lint, formatting, TypeScript/production build and native production smoke checks
+passed. Node package pins and lockfile are unchanged. Local Node is 24.22.1; the Dockerfile retains Node 24.19.0. The
+provided pnpm wrapper is 11.25.0; the project pin remains 12.14.0.
+
+- The user's active yt-dlp 2026.10.21 reported all browser impersonation targets unavailable. Both bundled image and
+  managed candidate installation used only the default extra. They now request `yt-dlp[default,curl-cffi]`. Bundled
+  requirements pin yt-dlp 2026.10.21 and curl-cffi 0.14.0; gallery-dl remains 1.32.17.
+- The same Python runtime check is used in Docker builds and managed candidates. It requires a Chrome target actually
+  registered through curl_cffi, without fetching sources or reading account sessions. The asset is copied with compiled
+  modules. A real environment reports 33 available targets; the same yt-dlp without the dependency correctly fails.
+- A changed dependency-profile identity prevents older saved environments overriding the corrected image. The old
+  release data is retained. Regression coverage verifies bundled fallback, safe updater snapshots, rejected candidates,
+  unchanged activation pointers and candidate-directory cleanup. Existing rollback checks enforce the new identity.
+- Real yt-dlp 2026.10.21/curl-cffi 0.14.0 requests passed through a local HTTP fixture proxy. HTTP and HTTPS redirects
+  to private destinations stayed blocked by the actual compiled LinkDock guard, with zero private-origin requests.
+  Ambient proxy and NO_PROXY variants are removed from media worker environments; parent environments are unchanged.
+- Missing browser-support diagnostics and extraction failures produce fixed `VIDEO-BROWSER-MISSING`/`VIDEO-EXTRACT`
+  messages without raw provider output or private URLs. More specific region, rate and account restrictions retain
+  priority. Real subprocess and worker tests cover the new failure boundary and environment wiring.
+- The complete pinned requirements resolved to binary wheels for Linux ARM64 CPython 3.11, including curl-cffi's
+  manylinux ARM64 wheel. This verifies wheel availability, not execution on ARM64. The real local Python checks used
+  AMD64 CPython 3.12. No Docker daemon or live Raspberry Pi was available for an image/runtime test.
+- `scripts/checkVideoEngine.sh` was syntax-checked and run with sudo/Docker command fixtures against the real engine. It
+  resolved the active tool, reported usable targets, rejected option-like container names, exposed no station password
+  and created no application data. It uses only fixed metadata flags, not a source download or update.
+- The supplied live Pornhub URL and its accessibility from the user's network remain unverified. This fixes the
+  confirmed missing capability; it does not establish that all provider, account or network restrictions are resolved.
+  The existing Browser Companion 1.1 and its assets are retained. NordVPN relay changes remain excluded.
 
 ## Version 2.28 changes: Browser Companion 1.1
 

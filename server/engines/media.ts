@@ -18,6 +18,8 @@ import { BrowserAccessStore } from '../browserAccess/store.js';
 import { acquireDeviantartLock } from '../deviantart/lock.js';
 import { prepareDeviantartSession, type DeviantartExecution } from '../deviantart/session.js';
 import { createDeviantartProgress } from '../deviantart/progress.js';
+import { mediaEnvironment } from './environment.js';
+import { videoFailure } from './videoFailure.js';
 
 /**
  * Counts staging bytes, including temporary merge files, without following symlinks.
@@ -232,9 +234,14 @@ async function runMediaDownload(
         deviantartProgress?.output(line, outputDirectory);
       },
       {
-        env: execution.environment,
+        env: mediaEnvironment(execution.environment ?? configuration.runtimeEnvironment),
         onDiagnostic: deviantartProgress?.diagnostic,
-        failure: job.sourceType === SOURCE_TYPE.deviantart ? deviantartFailure : undefined,
+        failure:
+          job.sourceType === SOURCE_TYPE.deviantart
+            ? deviantartFailure
+            : isGallerySource(job.sourceType)
+              ? undefined
+              : videoFailure,
         authenticationMessage:
           job.sourceType === SOURCE_TYPE.deviantart
             ? 'DeviantArt needs account access. Reconnect or replace the refresh token in Settings, then restart.'

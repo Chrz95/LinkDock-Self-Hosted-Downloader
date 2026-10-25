@@ -15,7 +15,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     python3 python3-venv ffmpeg aria2 ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 COPY requirements-media.txt ./
-RUN python3 -m venv /opt/media && /opt/media/bin/python -m pip install --no-cache-dir -r requirements-media.txt
+COPY server/utilities/mediaRuntime.py /opt/check-media-runtime.py
+RUN python3 -m venv /opt/media \
+    && /opt/media/bin/python -m pip install --no-cache-dir --only-binary=:all: -r requirements-media.txt \
+    && /opt/media/bin/python -m pip check \
+    && /opt/media/bin/python /opt/check-media-runtime.py
 WORKDIR /app
 COPY --from=build --chown=node:node /app/package.json ./
 COPY --from=build --chown=node:node /app/node_modules ./node_modules

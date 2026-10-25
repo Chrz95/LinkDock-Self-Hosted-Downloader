@@ -1,4 +1,4 @@
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync, existsSync, readFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync, existsSync, readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import { afterEach, expect, it, vi } from 'vitest';
 import * as commands from '../server/utilities/process';
@@ -8,6 +8,7 @@ import { UtilityStore } from '../server/utilities/storage';
 import { prepareUtilityRelease } from '../server/utilities/prepare';
 import { LIBRARY_TRIPLE } from '../server/utilities/resolve';
 import { UTILITY } from '../shared/utilities';
+import { MEDIA_RUNTIME_CHECK, MEDIA_RUNTIME_READY } from '../server/utilities/mediaRuntime';
 
 const directories: string[] = [];
 const DOWNLOAD_ARGUMENT_COUNT = 3;
@@ -23,6 +24,9 @@ function directory(): string {
  */
 function installCommands() {
   return vi.spyOn(commands, 'runUtilityCommand').mockImplementation(async (command, args, cwd) => {
+    if (args[0] === MEDIA_RUNTIME_CHECK) {
+      return MEDIA_RUNTIME_READY;
+    }
     if (command === 'python3') {
       const root = args.at(-1)!;
       mkdirSync(path.join(root, 'bin'), { recursive: true });
@@ -114,6 +118,8 @@ it(
     expect(pipInstall?.[1]).toContain('https://pypi.org/simple');
     expect(pipInstall?.[1]).toContain('--isolated');
     expect(pipInstall?.[1]).toContain('--only-binary=:all:');
+    expect(pipInstall?.[1]).toContain('yt-dlp[default,curl-cffi]');
+    expect(run.mock.calls.some(([, args]) => args[0] === MEDIA_RUNTIME_CHECK)).toBe(true);
     expect(run.mock.calls.some(([, args]) => args.includes('--config-ignore'))).toBe(true);
     expect(Object.keys(release.versions)).toHaveLength(
       Object.keys({ video: true, instagram: true, torrent: true }).length,
@@ -127,4 +133,16 @@ it('deletes a failed candidate and keeps the active pointer unchanged', async ()
   await expect(prepareUtilityRelease(store, new AbortController().signal, () => undefined)).rejects.toThrow('Network');
   expect(store.state.current).toBeNull();
   expect(UTILITY.minimumFreeBytes).toBeGreaterThan(0);
+});
+it('rejects a candidate with no usable browser targets before checking native packages or activating it', async () => {
+  const store = new UtilityStore(directory(), false);
+  const run = installCommands();
+  const otherwise = run.getMockImplementation()!;
+  run.mockImplementation(async (...args) => (args[1][0] === MEDIA_RUNTIME_CHECK ? '' : otherwise(...args)));
+  await expect(prepareUtilityRelease(store, new AbortController().signal, () => undefined)).rejects.toThrow(
+    'browser support',
+  );
+  expect(store.state.current).toBeNull();
+  expect(readdirSync(path.join(store.directory, 'releases'))).toEqual([]);
+  expect(run.mock.calls.some(([command]) => command === 'apt-get')).toBe(false);
 });

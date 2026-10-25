@@ -1,4 +1,5 @@
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync, existsSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { afterEach, expect, it, vi } from 'vitest';
 import { UtilityService } from '../server/utilities/service';
@@ -219,6 +220,22 @@ it('captures a real child’s final stdout without requiring a newline', async (
       new AbortController().signal,
     ),
   ).toBe('version-no-newline');
+});
+
+it('falls back from a legacy managed environment that predates required browser dependencies', () => {
+  const config = configuration();
+  const store = new UtilityStore(config.dataDirectory, false);
+  const release = createUtilityRelease(config.dataDirectory, OLD, 'legacy-version');
+  const base = existsSync('/opt/media/pyvenv.cfg') ? readFileSync('/opt/media/pyvenv.cfg', 'utf8') : 'non-docker';
+  release.identity = createHash('sha256')
+    .update(`${path.resolve(config.dataDirectory)}:${process.platform}:${process.arch}:${base}`)
+    .digest('hex');
+  writeFileSync(path.join(store.directory, 'releases', OLD, 'release.json'), JSON.stringify(release));
+  store.save({ ...store.state, current: OLD, versions: release.versions });
+  expect(resolveUtility('video', config.dataDirectory).command).toBe('yt-dlp');
+  const value = service(config, async () => false, vi.fn<typeof prepareUtilityRelease>());
+  expect(value.snapshot()).toMatchObject({ usingManagedTools: false, versions: {} });
+  expect(existsSync(path.join(store.directory, 'releases', OLD, 'release.json'))).toBe(true);
 });
 
 it('verifies and restores the previous managed set and disables automatic forward updates', async () => {

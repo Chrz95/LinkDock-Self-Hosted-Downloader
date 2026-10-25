@@ -1,9 +1,55 @@
-# LinkDock 2.28
+# LinkDock 2.29
 
 A private download studio for your Raspberry Pi: videos, Instagram moments, torrents and files, collected in one place.
 The dark-first React + TypeScript workspace has a saved light/dark preference, source selection, real progress,
 searchable history, batch review, queue priorities and individual access to every completed file. Downloads run on the
 Pi when your browser is closed.
+
+## New in version 2.29: browser support for video sites
+
+The supplied diagnostic showed yt-dlp 2026.10.21 with every browser-impersonation target unavailable. The image and
+managed updater installed only `yt-dlp[default]`. Both now request the `curl-cffi` extra. Bundled fallbacks pin yt-dlp
+2026.10.21 and curl-cffi 0.14.0, with gallery-dl unchanged. Binary wheels are required, including on ARM64.
+
+Image builds and managed-update candidates run the same network-free verification: yt-dlp must actually register a
+Chrome target through curl_cffi. Merely installing a package or printing a version is insufficient. A candidate that
+fails this check is discarded before activation and the previous compatible tools remain selected. The verification
+asset is copied alongside compiled server modules during `pnpm build`.
+
+Saved tool environments from earlier dependency profiles cannot override the corrected image. They are retained on disk
+but treated as incompatible; the image's tools are used until a new managed set is verified. All tools in the managed
+release group share this compatibility identity. Older sets cannot be rolled back across that boundary. Station health
+shows active versions; utility status does not show incompatible saved versions as active.
+
+Media workers clear inherited proxy-override/bypass variables, including `NO_PROXY`, so curl-backed HTTP and HTTPS
+redirects continue through LinkDock's public-address guard. No global browser identity is forced: yt-dlp's source
+extractor chooses when to request impersonation. The NordVPN relay update remains excluded.
+
+Missing browser support now produces `VIDEO-BROWSER-MISSING`; recognized page extraction errors produce `VIDEO-EXTRACT`.
+These are fixed messages and do not expose raw extractor logs, cookies or source query parameters. This fixes the
+confirmed missing capability; provider acceptance, region/account restrictions and individual URLs still require a live
+retry on the Pi.
+
+### Apply this update
+
+From the extracted `linkdock` folder, rebuild the image and recreate the service using your existing Compose file,
+project name and overrides. For the bundled Raspberry Pi setup:
+
+```sh
+sudo docker build -t localhost:5000/link_dock:latest .
+sudo docker compose -f compose.rpi.yaml up -d --force-recreate --pull never link_dock
+sudo sh scripts/checkVideoEngine.sh
+```
+
+If you deploy another image tag, use that same tag in the build and Compose configuration. The read-only diagnostic uses
+`sudo docker` and resolves the actual active tool environment, rather than only the packaged binary. An optional first
+argument selects another container name. Expect `browser_support_available: true` and available Chrome targets, then
+restart the failed download once. No cookie/account reset or change to your download bind mounts is needed. Updating the
+browser extension alone does not apply this image/runtime fix.
+
+The checker does not fetch artwork/video pages or refresh credentials. Local integration additionally exercises real
+yt-dlp/curl_cffi requests through an HTTP proxy, with HTTP and HTTPS private-address redirects kept blocked. Docker/ARM
+execution and the supplied live Pornhub URL on the user's network remain unverified.
 
 ## New in version 2.28: Browser Companion 1.1
 
