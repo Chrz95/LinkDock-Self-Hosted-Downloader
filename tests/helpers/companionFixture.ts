@@ -13,13 +13,15 @@ export interface CompanionApi {
   stationPattern: (origin: string) => string;
   findStationTab: (station: object) => Promise<{ id: number; url: string } | undefined>;
   connectStation: (value: string, incognito: boolean) => Promise<{ ok: boolean; station?: object }>;
+  pairedRequest: (station: object, operation: string, request?: object) => Promise<{ ok: boolean; message: string }>;
+  forgetStation: (station: object) => Promise<{ ok: boolean; message: string }>;
 }
 /** Loads the actual shipped scripts, including serialized-injection functions without hidden closure dependencies.
  * @param {Record<string, unknown>} globals - Explicit browser fixtures only.
  * @returns {CompanionApi} Actual companion operations.
  */
 export function loadCompanion(globals: Record<string, unknown> = {}): CompanionApi {
-  const source = ['transfer.js', 'station.js', 'download.js', 'session.js']
+  const source = ['transfer.js', 'station.js', 'download.js', 'paired.js', 'session.js']
     .map((name) => readFileSync(`browser-connector/${name}`, 'utf8'))
     .join('\n');
   return runInNewContext(`${source}; ({...LinkDockCompanion, identifyStation});`, {

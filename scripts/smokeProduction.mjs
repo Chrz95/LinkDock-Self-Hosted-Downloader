@@ -1,4 +1,7 @@
 import assert from 'node:assert/strict';
+import { smokeDownloadDiagnostics } from './smokeDownloadDiagnostics.mjs';
+import { smokeCompanionPairing } from './smokeCompanionPairing.mjs';
+import { smokeAutomaticRetries } from './smokeAutomaticRetries.mjs';
 import { mkdtempSync, rmSync } from 'node:fs';
 import path from 'node:path';
 import request from 'supertest';
@@ -40,7 +43,8 @@ async function smokeProduction() {
   const queue = new DownloadQueue(configuration);
   try {
     await queue.stop();
-    const client = request.agent(createApplication(configuration, queue));
+    const application = createApplication(configuration, queue);
+    const client = request.agent(application);
     const page = await client.get('/').expect(HTTP_STATUS.ok);
     assert.match(page.text, /manifest.webmanifest/);
     const manifest = await client.get('/manifest.webmanifest').expect(HTTP_STATUS.ok);
@@ -101,6 +105,9 @@ async function smokeProduction() {
     await smokeDeviantartOAuth(configuration, client);
     await smokeCollectionScope(configuration, client);
     await smokeMediaRecovery(queue, client);
+    await smokeDownloadDiagnostics(queue, client);
+    await smokeCompanionPairing(application, client, queue);
+    smokeAutomaticRetries(queue, configuration);
     process.stdout.write('Compiled production imports, mobile assets, organization and private diagnostics: passed.\n');
   } finally {
     await queue.stop();

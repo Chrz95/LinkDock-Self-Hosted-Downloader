@@ -23,7 +23,7 @@ export const MEDIA_FAILURE_INFO = {
   verification: {
     title: 'Browser verification required',
     message: 'This source needs browser verification.',
-    guidance: 'Open the source in your browser, then import a verified site session in Settings and use Restart.',
+    guidance: 'Use Test connection to check for a network block. Open the source in your browser to verify access.',
     action: 'browser',
   },
   login: {
@@ -65,7 +65,7 @@ export const MEDIA_FAILURE_INFO = {
   network: {
     title: 'Source connection failed',
     message: 'The download engine could not connect to the source reliably.',
-    guidance: 'Check the station’s network and source availability, then use Restart.',
+    guidance: 'Use Test connection to check DNS and source access from the station, then use Restart.',
     action: 'source',
   },
   utility: {

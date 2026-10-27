@@ -5,6 +5,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { openSource } from '../server/downloads/openSource';
 import { resolvePublicTarget } from '../server/security/target';
 import { parseCookieJar } from '../server/browserAccess/cookieJar';
+import { SourceRetryError } from '../server/downloads/retry';
+import { DOWNLOAD_RETRY } from '../shared/downloadRetry';
 
 /**
  * Verifies: ../server/security/target.
@@ -53,6 +55,30 @@ afterEach(
  * Groups behavior checks: real streaming HTTP transport.
  */
 describe('real streaming HTTP transport', () => {
+  it('returns a deferred cooldown to the queue after one request instead of sleeping in a worker slot', async () => {
+    const throttled = 429;
+    const requestedSeconds = 3_600;
+    let requests = 0;
+    const target = await createUpstream((_request, response) => {
+      requests += 1;
+      response.writeHead(throttled, { 'Retry-After': String(requestedSeconds) });
+      response.end('private-rate-limit-body');
+    });
+    const before = Date.now();
+    const failure = await openSource(
+      target,
+      new AbortController().signal,
+      0,
+      {},
+      { cookies: [], userAgent: '', deferRetries: true },
+    ).catch((error: unknown) => error);
+    expect(failure).toBeInstanceOf(SourceRetryError);
+    expect((failure as SourceRetryError).retryAfterAt).toBeGreaterThanOrEqual(
+      before + requestedSeconds * DOWNLOAD_RETRY.millisecondsPerSecond,
+    );
+    expect(String(failure)).not.toContain('private-rate-limit-body');
+    expect(requests).toBe(1);
+  });
   it('sends only matching imported cookies and browser identity over the pinned transport', async () => {
     const target = await createUpstream((request, response) => {
       expect(request.headers.cookie).toBe('verified=owned');

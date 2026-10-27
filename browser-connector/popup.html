@@ -24,7 +24,7 @@
         <h1>LinkDock<span>COMPANION</span></h1>
         <p>Your next download, docked.</p>
       </div>
-      <span class="version">1.1</span>
+      <span class="version">1.2</span>
     </header>
     <main>
       <section
@@ -56,7 +56,10 @@
             spellcheck="false"
             placeholder="http://raspberrypi:7489"
           />
-          <p class="hint">Keep your signed-in LinkDock tab open. Allow access only to your station when prompted.</p>
+          <p class="hint">
+            Pair once from your signed-in LinkDock 2.31+ tab. Then close it and add downloads from here.
+          </p>
+          <p class="hint">Access expires after 90 days and can be revoked in Settings. Prefer HTTPS to protect it.</p>
           <div class="button-row">
             <button
               id="connect"
@@ -187,10 +190,11 @@
         </p>
       </details>
     </main>
-    <footer>PRIVATE BY DESIGN <span>LINKDOCK / 1.1</span></footer>
+    <footer>PRIVATE BY DESIGN <span>LINKDOCK / 1.2</span></footer>
     <script src="transfer.js"></script>
     <script src="station.js"></script>
     <script src="download.js"></script>
+    <script src="paired.js"></script>
     <script src="session.js"></script>
     <script src="popup.js"></script>
   </body>

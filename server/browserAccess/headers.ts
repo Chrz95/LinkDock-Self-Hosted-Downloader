@@ -3,6 +3,7 @@ import type { BrowserAccessState } from './store.js';
 import { cookieHeader, parseCookieJar, type BrowserCookie } from './cookieJar.js';
 
 export interface SourceAccess {
+  deferRetries?: boolean;
   cookies: BrowserCookie[];
   state?: BrowserAccessState;
   userAgent: string;

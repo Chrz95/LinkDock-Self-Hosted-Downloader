@@ -5,6 +5,7 @@ import { parseTargetUrl, resolvePublicTarget } from '../security/target.js';
 import { browserHeaders, type SourceAccess } from '../browserAccess/headers.js';
 import { retryAfterSeconds, waitForSource } from '../browserAccess/wait.js';
 import { BROWSER_ACCESS } from '../../shared/browserAccess.js';
+import { SourceRetryError, sourceRetryAfter, transientHttpStatus } from './retry.js';
 const SOURCE_HTTP = { throttled: 429, unavailable: 503, unauthorized: 401, forbidden: 403 } as const;
 
 /** Internal response metadata binds entity tags to the exact final resource after redirects. */
@@ -55,7 +56,9 @@ export async function openSource(
         },
         resolve,
       );
-      request.setTimeout(LIMIT.idleTimeoutMilliseconds, () => request.destroy(new Error('The source timed out.')));
+      request.setTimeout(LIMIT.idleTimeoutMilliseconds, () =>
+        request.destroy(Object.assign(new Error('The source timed out.'), { code: 'ETIMEDOUT' })),
+      );
       request.on('error', reject);
     },
   );
@@ -79,6 +82,11 @@ export async function openSource(
     );
   }
   const rangeUnsatisfiable = 416;
+  if (access?.deferRetries && transientHttpStatus(statusCode)) {
+    const deadline = sourceRetryAfter(response.headers['retry-after']);
+    response.destroy();
+    throw new SourceRetryError(statusCode, deadline);
+  }
   const cooldownStatuses: number[] = [SOURCE_HTTP.throttled, SOURCE_HTTP.unavailable];
   if (cooldownStatuses.includes(statusCode)) {
     const seconds = retryAfterSeconds(response.headers['retry-after']);

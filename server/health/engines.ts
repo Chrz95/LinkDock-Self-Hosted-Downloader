@@ -23,12 +23,14 @@ type EngineCheck = (typeof ENGINE_CHECKS)[number];
  * @param {EngineCheck} check - Fixed executable definition.
  * @param {string} [dataDirectory] - Optional managed tool state.
  * @param {NodeJS.ProcessEnv} [environment] - Existing service environment for native libraries.
+ * @param {AbortSignal} [signal] - Optional diagnostic deadline and browser disconnect cancellation.
  * @returns {Promise<EngineHealth>} Sanitized point-in-time command result.
  */
 export function inspectEngine(
   check: EngineCheck,
   dataDirectory?: string,
   environment?: NodeJS.ProcessEnv,
+  signal?: AbortSignal,
 ): Promise<EngineHealth> {
   const execution =
     dataDirectory && check.id !== 'merge'
@@ -40,7 +42,8 @@ export function inspectEngine(
       check.arguments,
       {
         encoding: 'utf8',
-        env: execution.environment,
+        env: execution.environment ?? environment,
+        ...(signal ? { signal } : {}),
         shell: false,
         windowsHide: true,
         timeout: HEALTH_LIMIT.commandTimeoutMilliseconds,

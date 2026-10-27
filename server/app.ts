@@ -24,6 +24,10 @@ import { createDeviantartOAuthRoutes } from './deviantart/oauthRoutes.js';
 import { DeviantartOAuthService } from './deviantart/oauthService.js';
 import { BROWSER_ACCESS } from '../shared/browserAccess.js';
 import { createBrowserAccessRoutes } from './browserAccess/routes.js';
+import { createDiagnosticRoutes } from './diagnostics/routes.js';
+import { COMPANION } from '../shared/companion.js';
+import { CompanionStore } from './companion/store.js';
+import { createCompanionRoutes, createCompanionClientRoutes } from './companion/routes.js';
 
 /**
  * Composes a same-origin application with private API responses and CSRF origin checks.
@@ -40,6 +44,7 @@ export function createApplication(
   const application = express();
   const session = createSessionHandlers(configuration);
   const deviantartOAuth = new DeviantartOAuthService(configuration.dataDirectory);
+  const companions = new CompanionStore(configuration.dataDirectory, configuration.accessToken);
   queue.onTerminal((job) => notifications.enqueue(job));
   application.disable('x-powered-by');
   application.use(
@@ -60,6 +65,11 @@ export function createApplication(
       response.setHeader('Cache-Control', 'no-store');
       next();
     },
+  );
+  application.use(
+    COMPANION.clientPath,
+    express.json({ limit: LIMIT.maximumBodyBytes }),
+    createCompanionClientRoutes(companions, queue),
   );
   application.use(
     API_PATH.prefix /**
@@ -95,6 +105,8 @@ export function createApplication(
     session.login,
   );
   application.delete(API_PATH.session, session.requireSession, session.logout);
+  application.use(COMPANION.path, session.requireSession, createCompanionRoutes(companions));
+  application.use(API_PATH.downloads, session.requireSession, createDiagnosticRoutes(configuration, queue));
   application.use(API_PATH.downloads, session.requireSession, createDownloadRoutes(queue));
   application.use(UTILITY.path, session.requireSession, createUtilityRoutes(queue.utilities));
   application.use(CONTROL.path, session.requireSession, createControlRoutes(queue));

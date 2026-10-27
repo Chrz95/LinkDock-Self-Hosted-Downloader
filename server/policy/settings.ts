@@ -18,6 +18,9 @@ export function validatePolicy(input: unknown): StationPolicy {
     throw new Error('Station preferences must be an object.');
   }
   const value = input as Record<string, unknown>;
+  if (value.automaticRetries !== undefined && typeof value.automaticRetries !== 'boolean') {
+    throw new Error('Automatic retries must be enabled or disabled.');
+  }
   for (const [key, maximum] of [
     ['downloadKibPerSecond', POLICY_LIMIT.maximumRateKib],
     ['uploadKibPerSecond', POLICY_LIMIT.maximumRateKib],
@@ -45,6 +48,7 @@ export function validatePolicy(input: unknown): StationPolicy {
     throw new Error('The timezone must be an IANA name such as Europe/Athens.');
   }
   return {
+    automaticRetries: value.automaticRetries === undefined ? true : value.automaticRetries,
     downloadKibPerSecond: Number(value.downloadKibPerSecond),
     uploadKibPerSecond: Number(value.uploadKibPerSecond),
     reserveGib: Number(value.reserveGib),
@@ -86,6 +90,9 @@ export class PolicyStore {
    */
   update(input: unknown): void {
     const next = validatePolicy(input);
+    if (input && typeof input === 'object' && !Object.hasOwn(input, 'automaticRetries')) {
+      next.automaticRetries = this.value.automaticRetries;
+    }
     if (input && typeof input === 'object' && !Object.hasOwn(input, 'completionDirectory')) {
       next.completionDirectory = this.value.completionDirectory;
     }

@@ -32,6 +32,7 @@ export async function transferToDisk(
     job.stage = `Waiting for source · ${seconds} seconds`;
     job.bytesPerSecond = 0;
   });
+  access.deferRetries = true;
   const { response, offset, totalBytes } = await openResumableSource(job, partialPath, signal, access);
   job.totalBytes = totalBytes;
   job.receivedBytes = offset;
@@ -83,7 +84,9 @@ export async function transferToDisk(
     );
     signal.throwIfAborted();
     if (job.totalBytes !== null && job.receivedBytes !== job.totalBytes) {
-      throw new Error('The source ended before its declared file length was received.');
+      throw Object.assign(new Error('The source ended before its declared file length was received.'), {
+        code: 'ERR_STREAM_PREMATURE_CLOSE',
+      });
     }
     await rename(partialPath, store.getFilePath(job.id));
     job.resumeValidator = undefined;
@@ -92,7 +95,7 @@ export async function transferToDisk(
     failure = error;
     throw error;
   } finally {
-    if (!shouldRetainProgress(job, failure)) {
+    if (!shouldRetainProgress(job, failure, options.automaticRetries)) {
       await rm(partialPath, { force: true });
     }
   }

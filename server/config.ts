@@ -22,6 +22,7 @@ export interface ServerConfig {
   completedDirectory?: string;
   autoUpdateTools?: boolean;
   runtimeEnvironment?: NodeJS.ProcessEnv;
+  automaticRetries?: boolean;
 }
 
 /**

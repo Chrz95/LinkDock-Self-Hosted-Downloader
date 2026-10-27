@@ -23,6 +23,7 @@ export interface DownloadJob {
   finishedAt: string | null;
   errorMessage: string | null;
   mediaFailure?: import('./mediaFailures.js').MediaFailure;
+  retry?: import('./downloadRetry.js').DownloadRetry;
   sourceType?: SourceType;
   quality?: DownloadQuality;
   deviantart?: import('./deviantart.js').DeviantartPreferences;

@@ -1,25 +1,35 @@
 import { expect, it, vi } from 'vitest';
 import { loadCompanion } from './helpers/companionFixture';
 
+const TOKEN_LENGTH = 64;
+const EXTENSION_ID_LENGTH = 32;
 const ORIGIN = 'http://pi:7489';
 const SAVED = { origin: ORIGIN, tabId: 1, incognito: false };
 const OTHER_TAB = 7;
+const TOKEN = `ldc_${'a'.repeat(TOKEN_LENGTH)}`;
+const EXTENSION = `chrome-extension://${'a'.repeat(EXTENSION_ID_LENGTH)}`;
+const CONNECTION = { id: 'paired-id', expiresAt: '2027-01-25T12:00:00Z' };
 /** Creates browser APIs with explicit permissions and station tabs only.
  * @returns {object} Observable station discovery and optional permission boundaries.
  */
 function browserFixture() {
   return {
+    runtime: { getURL: () => `${EXTENSION}/` },
     permissions: { request: vi.fn().mockResolvedValue(true), contains: vi.fn().mockResolvedValue(true) },
     tabs: {
       query: vi.fn().mockResolvedValue([{ id: OTHER_TAB, url: `${ORIGIN}/#library`, incognito: false }]),
       create: vi.fn(),
     },
-    storage: { local: { set: vi.fn() } },
-    scripting: { executeScript: vi.fn().mockResolvedValue([{ result: { ok: true } }]) },
+    storage: {
+      local: { set: vi.fn(), get: vi.fn().mockResolvedValue({}), setAccessLevel: vi.fn().mockResolvedValue(undefined) },
+    },
+    scripting: {
+      executeScript: vi.fn().mockResolvedValue([{ result: { ok: true, token: TOKEN, connection: CONNECTION } }]),
+    },
   };
 }
 
-it('connects only the chosen host and stores no password, page links or account information', async () => {
+it('pairs the chosen host with restricted download access and no station password', async () => {
   const chrome = browserFixture();
   const connecting = loadCompanion({ chrome }).connectStation(`${ORIGIN}/#settings`, false);
   // Permission is requested before the first awaited browser read, preserving the user gesture.
@@ -28,13 +38,13 @@ it('connects only the chosen host and stores no password, page links or account 
   expect((await connecting).ok).toBe(true);
   expect(chrome.tabs.query).toHaveBeenCalledWith({ url: 'http://pi/*' });
   expect(chrome.storage.local.set).toHaveBeenCalledWith({
-    station: { origin: ORIGIN, tabId: OTHER_TAB, incognito: false },
+    station: { origin: ORIGIN, tabId: OTHER_TAB, incognito: false, token: TOKEN, connection: CONNECTION },
   });
   expect(chrome.scripting.executeScript).toHaveBeenCalledWith(
     expect.objectContaining({
       target: { tabId: OTHER_TAB },
       world: 'ISOLATED',
-      args: [ORIGIN],
+      args: [ORIGIN, EXTENSION],
     }),
   );
 });

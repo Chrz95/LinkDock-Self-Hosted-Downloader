@@ -46,9 +46,10 @@ async function findStationTab(station) {
 }
 /** Runs inside the station, retaining its same-origin HttpOnly login and CSRF checks.
  * @param {string} expectedOrigin - Address chosen by the owner.
+ * @param {string} [extensionOrigin] - Extension identity when pairing is explicitly requested.
  * @returns {Promise<object>} Fixed identity result, never account or cookie details.
  */
-async function identifyStation(expectedOrigin) {
+async function identifyStation(expectedOrigin, extensionOrigin) {
   if (location.origin !== expectedOrigin) {
     return { ok: false, message: 'The destination tab changed. Connect your station again.' };
   }
@@ -61,6 +62,27 @@ async function identifyStation(expectedOrigin) {
     });
     if (!response.ok || (await response.json()).connector !== 'linkdock-browser-access-v1') {
       return { ok: false, message: 'Open LinkDock 2.23 or newer and sign in, then connect again.' };
+    }
+    if (extensionOrigin) {
+      if (location.origin !== expectedOrigin) {
+        return { ok: false, message: 'The destination tab changed. Connect your station again.' };
+      }
+      const paired = await fetch('/api/companions', {
+        method: 'POST',
+        credentials: 'same-origin',
+        redirect: 'error',
+        signal: AbortSignal.timeout(timeout),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ extensionOrigin }),
+      });
+      if (!paired.ok) {
+        return { ok: false, message: 'Use LinkDock 2.31 or newer and check companion connections in Settings.' };
+      }
+      const result = await paired.json();
+      if (!/^ldc_[a-f\d]{64}$/u.test(result.token ?? '') || !result.connection?.id || !result.connection?.expiresAt) {
+        return { ok: false, message: 'The station did not return a valid companion connection.' };
+      }
+      return { ok: true, token: result.token, connection: result.connection };
     }
     return { ok: true, message: 'Station connected. You can now add downloads from any tab.' };
   } catch {
@@ -89,14 +111,41 @@ async function connectStation(value, incognito) {
     target: { tabId: tab.id },
     world: 'ISOLATED',
     func: identifyStation,
-    args: [origin],
+    args: [origin, chrome.runtime.getURL('').replace(/\/$/u, '')],
   });
   if (!result?.result?.ok) {
-    return { ok: false, message: 'Could not connect. Open this station, sign in and try Connect again.' };
+    return { ok: false, message: 'Could not pair. Use LinkDock 2.31 or newer, sign in and check companion Settings.' };
+  }
+  if (!/^ldc_[a-f\d]{64}$/u.test(result.result.token ?? '')) {
+    return { ok: false, message: 'Update LinkDock to 2.31 or newer, then reconnect this companion.' };
   }
   station.tabId = tab.id;
-  await chrome.storage.local.set({ station });
-  return { ok: true, station, message: 'Station connected. You can now add downloads from any tab.' };
+  station.token = result.result.token;
+  station.connection = result.result.connection;
+  const storageKey = incognito ? 'stationIncognito' : 'station';
+  const previous = (await chrome.storage.local.get(storageKey))[storageKey];
+  try {
+    await chrome.storage.local.setAccessLevel({ accessLevel: 'TRUSTED_CONTEXTS' });
+    await chrome.storage.local.set({ [storageKey]: station });
+  } catch {
+    await globalThis.LinkDockCompanion.pairedRequest(station, 'connection').catch(() => undefined);
+    return { ok: false, message: 'Could not save the companion connection. Check extension storage permissions.' };
+  }
+  let previousRevoked = true;
+  if (previous?.token) {
+    try {
+      previousRevoked = (await globalThis.LinkDockCompanion.pairedRequest(previous, 'connection')).ok;
+    } catch {
+      previousRevoked = false;
+    }
+  }
+  return {
+    ok: true,
+    station,
+    message: previousRevoked
+      ? 'Companion paired. Downloads now work with the station tab closed.'
+      : 'Companion paired. An older connection could not be revoked; review Browser companions in station Settings.',
+  };
 }
 
 Object.assign(globalThis.LinkDockCompanion, { stationOrigin, stationPattern, findStationTab, connectStation });

@@ -133,19 +133,24 @@ For HTTPS reverse proxies, alternative mounts, environment variables and backups
 The included **LinkDock Browser Companion** lets you add the current page or paste a link without returning to the
 composer. Choose the source, video quality or MP3 output directly in the popup.
 
-1. Download the companion from **Settings → Browser sessions → Connect directly from your browser**.
+1. Download the companion from **Settings → Browser companions**.
 2. Unzip it and install it using **Developer mode → Load unpacked** in desktop Chrome, Edge or Brave.
 3. Open your LinkDock station, sign in and connect the companion to that trusted station.
 4. Open the popup on a source page and choose **Add a download**.
 
-Your signed-in station tab must remain open; it can stay in the background. The companion is supplied as an unpacked
-extension, so installation requires your browser's approval.
+With **Browser Companion 1.2** and **LinkDock 2.31+**, you can close the station tab after pairing. A separate
+connection allows only adding downloads; it cannot read the library or manage accounts. Revoke connections under
+**Settings → Browser companions**. They expire after 90 days, and a station-password change invalidates them. Prefer
+HTTPS to protect pairing and download access. Older saved connections continue in tab mode until you reconnect.
+
+The companion is supplied as an unpacked extension, so installation requires your browser's approval.
 
 ### Connect account sessions without exporting cookie files
 
-For Instagram and DeviantArt, the companion can send a session directly from your browser to your station. Sign in to
-the source normally, choose **Connect a site session**, review the station address and approve the transfer. Multiple
-site sessions are stored separately, so connecting one does not replace the other.
+For Instagram and DeviantArt, the companion can send a session directly from your browser to your station. Keep a
+signed-in station tab open for this separate session-sharing action. Sign in to the source normally, choose **Connect a
+site session**, review the station address and approve the transfer. Multiple site sessions are stored separately, so
+connecting one does not replace the other.
 
 Adding a download does not read source cookies. Session sharing is a separate, explicit action, and the companion has no
 background synchronization. Use HTTPS when transferring account sessions; HTTP sends them unencrypted across your
@@ -168,6 +173,42 @@ sudo docker exec link_dock node dist-server/server/cli.js --help
 ```
 
 See [terminal commands and schedules](OPERATIONS.md#terminal-commands-and-one-shot-schedules) for more examples.
+
+## Understand a failed download
+
+In **Library**, choose **Test connection** on a failed file or media download. LinkDock checks storage, saved account
+setup, DNS, the source response and the active engine. Video checks also report usable browser support and ffmpeg.
+Results include relevant settings or source links, and a **Download diagnostic report** button for sharing JSON without
+source URLs, IP addresses, local paths, cookies or tokens.
+
+The page check uses the worker's DNS selection and public-address protections, including on redirects. It can identify
+private/fake-IP DNS rejection, connection failure, HTTP access errors and recognizable block pages. An incidental
+mention of CAPTCHA in an otherwise successful page is not treated as a challenge.
+
+This is a connectivity check using a different HTTP client from the extractor. Saved authorization is not proof of API
+access, and a successful page response does not verify the media file or full download. Checks do not restart jobs,
+refresh OAuth or replace cookies. Results are reused for one minute, with one active check per station. Torrent and
+magnet diagnostics are outside this check's scope.
+
+## Recover from temporary source failures
+
+LinkDock automatically retries recognized temporary file/media connection failures up to three times, with waits of 30
+seconds, 2 minutes and 5 minutes. Waiting jobs release their download slots, so other sources can keep working. Source
+cooldowns also hold queued downloads from the same hostname (with YouTube's common link aliases grouped).
+
+Retry dates and attempt budgets survive a station restart. Partial files are retained between eligible automatic
+attempts; direct files resume only when their original strong validator and range response still match. Other sources
+may need to start over. The library shows retry timing, progress, recovery and exhausted attempts.
+
+**Pause** or **Cancel** stops a waiting retry. Disable **Retry temporary failures automatically** under **Settings →
+Download defaults** to pause scheduled automatic attempts. Resume remains an explicit option. Daily windows, storage
+holds and source cooldowns still apply; manually restarting does not bypass a current source cooldown.
+
+For direct HTTP 429 responses, retry delays increase from 5 to 10 to 20 minutes. Valid `Retry-After` headers can extend
+these waits, including after redirects; invalid headers require manual review. Extractor-reported rate limits stay
+manual because their original response headers are not reliably available. Login, access, verification, TLS validation,
+private-address rejection, storage errors, torrents and unrecognized failures are outside automatic queue retries. The
+engines' own bounded retries remain separate. Final failure alerts are sent after automatic attempts end.
 
 ## Keep your station up to date
 

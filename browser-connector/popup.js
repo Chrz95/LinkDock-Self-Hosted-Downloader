@@ -38,9 +38,13 @@ function renderControls() {
     !/^https?:/u.test(state.active.url) ||
     new URL(state.active.url).origin === state.station?.origin;
   ui.destination.textContent = state.station?.origin ?? 'Connect your station to get started';
-  ui.mode.textContent = connected ? 'STATION SAVED' : 'NO STATION';
+  ui.mode.textContent = connected
+    ? state.station.token
+      ? 'PAIRED · DOWNLOADS ONLY'
+      : 'TAB MODE · RECONNECT TO UPGRADE'
+    : 'NO STATION';
   ui['open-station'].hidden = !connected;
-  ui['open-station'].href = connected ? `${state.station.origin}/#library` : '#';
+  ui['open-station'].href = connected ? `${state.station.origin}/#downloads` : '#';
 }
 /** Shows only authored status text with a visible success/error distinction.
  * @param {object} result - Fixed operation result from the station boundary.
@@ -93,11 +97,11 @@ ui.connect.addEventListener('click', () =>
 );
 ui.forget.addEventListener('click', () =>
   runAction(async () => {
-    await chrome.storage.local.remove('station');
+    const result = await companion.forgetStation(state.station);
     state.station = undefined;
     ui.confirm.checked = false;
     ui['station-setup'].open = true;
-    return { ok: true, message: 'Station forgotten. Browser site permissions can be managed in extension settings.' };
+    return result;
   }),
 );
 ui['add-download'].addEventListener('click', () =>
@@ -106,6 +110,9 @@ ui['add-download'].addEventListener('click', () =>
       return { ok: false, message: 'Connect your station first.' };
     }
     const request = companion.downloadRequest(ui['download-url'].value, ui['download-source'].value, ui.quality.value);
+    if (state.station.token) {
+      return companion.pairedRequest(state.station, 'downloads', request);
+    }
     const destination = await companion.findStationTab(state.station);
     if (!destination) {
       return { ok: false, message: 'Open your station and sign in, or reconnect it to restore permission.' };
@@ -142,13 +149,15 @@ ui['use-page'].addEventListener('click', () => {
  * @returns {Promise<void>} Ready popup; source cookies are untouched until Send is clicked.
  */
 async function initializePopup() {
+  await chrome.storage.local.setAccessLevel({ accessLevel: 'TRUSTED_CONTEXTS' });
   const [[active], saved] = await Promise.all([
     chrome.tabs.query({ active: true, currentWindow: true }),
-    chrome.storage.local.get('station'),
+    chrome.storage.local.get(['station', 'stationIncognito']),
   ]);
   state.active = active;
-  if (saved.station && Boolean(saved.station.incognito) === Boolean(active?.incognito)) {
-    state.station = { ...saved.station, origin: companion.stationOrigin(saved.station.origin) };
+  const stored = active?.incognito ? (saved.stationIncognito ?? saved.station) : saved.station;
+  if (stored && Boolean(stored.incognito) === Boolean(active?.incognito)) {
+    state.station = { ...stored, origin: companion.stationOrigin(stored.origin) };
   }
   ui['station-address'].value =
     state.station?.origin ??

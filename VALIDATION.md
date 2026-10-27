@@ -1,10 +1,95 @@
-# LinkDock 2.29 delivery and validation
+# LinkDock 2.32 delivery and validation
 
 Validated on 25 October 2026 using Node 24.22.1 and the committed dependency lockfile. The project pins pnpm 12.14.0;
 this session's provided command wrapper reports 11.25.0. A fresh Docker/Pi toolchain build remains unverified. Version
 2.3 adds `web-push` 3.6.7 and development types 3.6.4 for maintained encryption and VAPID signing; the application uses
 its own bounded, public-DNS-pinned HTTPS transport rather than the package's buffered delivery transport. Existing
 frontend and media-engine versions remain pinned by the committed manifests and lockfile.
+
+## Version 2.32 changes: persistent automatic queue retries
+
+Validated on 27 October 2026 using Node 24.22.1. All **719 tests across 89 files** passed, with the full run performed
+without competing build/lint work. Type checking, lint, formatting, the production build and compiled production smoke
+checks passed. Application dependencies and the lockfile are unchanged.
+
+- Recognized transient direct-file/media failures get up to three delayed queue retries (30 seconds, 2 minutes, 5
+  minutes). Waiting releases the slot. Direct HTTP 429 delays increase from 5 to 10 to 20 minutes, with valid provider
+  Retry-After deadlines extending the wait. Seconds and all three HTTP-date forms are parsed without local-timezone
+  dependence; negative/decimal delays, invalid dates and oversized headers are rejected rather than shortened.
+- Queue tests exercise real streaming/storage with controlled transport: supported ETag/range continuation after a
+  reset, cooldown isolation between hosts, bounded attempts and one final notification, persisted deadlines/budgets
+  across restart, authoritative pause/cancel, opt-out at runtime/startup, unchanged active downloads on retry-only
+  preference changes, and fail-closed behavior when a retry decision cannot be saved.
+- Policy/HTTP tests cover fixed eligible types/codes, protected publication state, source DNS policy rejection, TLS and
+  filesystem exclusions, malformed history fields, long/date Retry-After values, rate-limit review, legacy settings
+  migration, omitted-field preservation and a real single-request deferred HTTP 429 without sleeping in the worker.
+- UI tests verify scheduled, paused, recovered and exhausted retry explanations and the owner preference switch.
+  Compiled production smoke checks restore durable retry metadata and apply the disabled-preference hold without
+  contacting a provider.
+- Source cooldowns apply to queued jobs sharing their original hostname, grouping YouTube aliases. Existing active
+  workers are not interrupted by a source cooldown. Source timing, daily windows, storage/global/manual holds still
+  apply. Purely local published-file moves bypass source cooldowns. Engine-internal retries remain separately bounded.
+- Login, verification, access, DRM, TLS validation, private-address rejection, storage, unknown failures and torrent
+  jobs do not enter automatic queue retries. Extractor rate-limit errors remain manual because their Retry-After header
+  is not reliably available. Direct invalid Retry-After errors also remain reviewable rather than auto-retrying.
+- Supported partial data survives between eligible automatic attempts. Direct append still requires the original strong
+  ETag, exact final resource and matching range. Failed final attempts do not guarantee retained partial data; explicit
+  Restart continues to discard partials and reset the retry budget while keeping an active source cooldown.
+- Browser Companion 1.2 is retained. Live Pi/provider/VPN behavior, a fresh Docker image build and native browser
+  installation remain unverified. No Chromium binary is installed here. This release does not add VPN routing changes.
+
+## Version 2.31 changes: independent browser companion pairing
+
+Validated on 27 October 2026 with Node 24.22.1. All **691 tests across 86 files** passed. Type checking, lint,
+formatting, the production build and compiled production smoke checks also passed. Dependencies and lockfile are
+unchanged. An initial full run hit two five-second timeouts in unchanged Settings form tests while other checks were
+running; those tests passed alone, and the complete suite then passed without competing checks. No timeout was
+increased.
+
+- Browser Companion 1.2 pairs through the signed-in station's authenticated same-origin API. The resulting credential
+  permits queue insertion and self-revocation only. Direct extension requests omit browser cookies, reject redirects,
+  use the exact station origin/port and require the existing optional host permission.
+- Native API tests verify cookie-free submission after station logout, owner-only pairing, website-origin rejection,
+  extension-origin mismatch, CORS preflight, bearer scope, immediate owner/self-revocation, persistence, expiry, station
+  password rotation, private hash-only storage, connection-count limits and refusal of corrupt or tampered state.
+- Extension tests exercise the actual shipped scripts and independently serialize the pairing function. They cover
+  closed station tabs, no source-cookie reads for downloads, removed permissions, fixed error messages, uncertain
+  acknowledgements without retries, local forgetting with failed remote revocation and normal/incognito separation.
+- Settings tests verify lazy loading, independent revocation, retained state after failure and view cancellation. A
+  production smoke test runs the shipped extension's direct-fetch function against the compiled server without station
+  cookies, then verifies denied library access and immediate self-revocation.
+- The server retains only hashed credentials and station-specific signatures in bounded private state. Tokens expire
+  after 90 days and become invalid when the station password changes. Local extension tokens are restricted to trusted
+  extension contexts; browser local storage is shared between normal/incognito modes, with separate destination keys.
+- Site-session sharing keeps its separate explicit confirmation and signed-in station-tab requirement. There are no new
+  required browser permissions or background workers. Browser Companion 1.1 saved destinations keep tab mode until
+  paired.
+- Native browser installation, browser network-policy behavior, fresh Docker builds and live Pi deployment remain
+  unverified in this environment. No Chromium binary is installed here. The NordVPN relay remains excluded, and the
+  built-in diagnostics from 2.30 remain in place.
+
+## Version 2.30 changes: built-in download diagnostics
+
+Validated on 27 October 2026 with Node 24.22.1. All 675 tests across 83 files passed; the affected engine/route tests
+also passed after adding command cancellation. Type checking, lint, formatting, production build and compiled smoke
+checks passed. Application dependencies and lockfile are unchanged.
+
+- Failed direct files, videos and galleries expose an explicit Test connection action. The authenticated JSON POST route
+  accepts an existing job ID and never uses a client-supplied URL or executable argument.
+- Real local HTTP fixture tests cover CloudFront 403 classification, successful pages containing incidental CAPTCHA
+  text, redirect cookie isolation, private destination rejection, prefix limits and stalled DNS cancellation.
+- API tests cover authentication, foreign-origin rejection, unsupported job states, report sanitization, unchanged
+  job/session state, station-wide concurrency, cache expiry and expired/unrelated cookies. Engine tests inspect active
+  managed command selection, usable versus unavailable browser targets, ffmpeg and gallery-only checks.
+- UI tests cover explicit invocation, disabled duplicate clicks, session errors, retry, unmount cancellation and JSON
+  export excluding the job URL and filename. A compiled production check exercises actual private DNS rejection and safe
+  export through the new endpoint.
+- Checks use the relevant worker DNS policy and pin every public destination, including redirects. Saved authorization
+  is informational; OAuth is not refreshed and provider APIs/media files are not tested. The Node HTTP client differs
+  from the media extractor, so a successful check does not guarantee a completed download.
+- Browser visual verification was attempted but could not run because Chromium is not installed in this environment.
+  Live Raspberry Pi deployment, NordVPN behavior, provider acceptance and a fresh Docker image build remain unverified.
+  This release introduces no VPN routing changes; the previously excluded relay remains excluded.
 
 ## Version 2.29 changes: usable browser support for video engines
 

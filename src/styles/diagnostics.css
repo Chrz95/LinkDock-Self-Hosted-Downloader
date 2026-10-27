@@ -1,0 +1,30 @@
+.diagnostic-results {
+  display: grid;
+  gap: 12px;
+  margin-top: 12px;
+  overflow-wrap: anywhere;
+}
+.diagnostic-results ul {
+  display: grid;
+  gap: 10px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.diagnostic-results li {
+  border-left: 3px solid var(--line);
+  padding: 8px 12px;
+  background: var(--surface);
+}
+.diagnostic-results li.diagnostic-failed {
+  border-color: var(--warning);
+}
+.diagnostic-results li.diagnostic-passed {
+  border-color: var(--success);
+}
+.diagnostic-results strong {
+  color: var(--text);
+}
+.diagnostic-results small {
+  color: var(--muted);
+}

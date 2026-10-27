@@ -17,6 +17,7 @@ import './styles/library.css';
 import './styles/media.css';
 import './styles/bulk.css';
 import './styles/pages.css';
+import './styles/diagnostics.css';
 
 applyTheme(readTheme());
 captureSharedLinks(window);

@@ -10,6 +10,8 @@ import { MediaRecovery } from './MediaRecovery';
 import { MediaVersion } from './MediaVersion';
 import { CollectionScope } from './CollectionScope';
 import { BrowserAssistance } from './BrowserAssistance';
+import { DownloadDiagnostics } from './DownloadDiagnostics';
+import { DownloadRetryInfo } from './DownloadRetryInfo';
 
 /** A semantic collection item contains its transfer controls and independently saved labels. */
 interface LibraryItemProps extends DownloadRowProps {
@@ -70,6 +72,11 @@ export function LibraryItem({ job, isBusy, onAction, onOrganize, selection }: Li
         <CompletionDestination job={job} />
         <CollectionScope job={job} />
         <MediaRecovery job={job} />
+        <DownloadRetryInfo job={job} />
+        <DownloadDiagnostics
+          key={`${job.id}:${job.status}:${job.finishedAt}`}
+          job={job}
+        />
         <MediaVersion job={job} />
         <BrowserAssistance job={job} />
       </fieldset>

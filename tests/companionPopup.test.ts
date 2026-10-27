@@ -1,7 +1,12 @@
 // @vitest-environment jsdom
 import { readFileSync, existsSync } from 'node:fs';
 import { afterEach, expect, it, vi } from 'vitest';
-import { closeCompanionPopups, companionPopupFixture, COMPANION_STATION } from './helpers/companionPopupFixture';
+import {
+  closeCompanionPopups,
+  companionPopupFixture,
+  COMPANION_STATION,
+  PAIRED_STATION,
+} from './helpers/companionPopupFixture';
 
 const PNG_SIZE_OFFSET = 16;
 const PNG_HEIGHT_OFFSET = 20;
@@ -66,7 +71,7 @@ it('requires station setup and remembers only a verified destination when Connec
   input('station-address', COMPANION_STATION.origin);
   element('connect').click();
   await vi.waitFor(() => expect(element('destination').textContent).toBe(COMPANION_STATION.origin));
-  expect(chrome.storage.local.set).toHaveBeenCalledWith({ station: COMPANION_STATION });
+  expect(chrome.storage.local.set).toHaveBeenCalledWith({ station: PAIRED_STATION });
   expect(chrome.permissions.request).toHaveBeenCalledWith({ origins: ['http://pi/*'] });
   expect(element('confirm').checked).toBe(false);
 });
@@ -105,9 +110,32 @@ it('keeps closed-station failures actionable and does not send elsewhere', async
   expect(chrome.scripting.executeScript).not.toHaveBeenCalled();
 });
 
+it('submits through a paired connection with every station tab closed and never reads source cookies', async () => {
+  const { chrome, fetch, element } = companionPopupFixture(true, 'https://www.youtube.com/watch?v=independent', true);
+  await vi.waitFor(() => expect(element('add-download').disabled).toBe(false));
+  chrome.tabs.query.mockResolvedValue([]);
+  element('add-download').click();
+  await vi.waitFor(() => expect(element('status').textContent).toContain('Download added'));
+  expect(fetch).toHaveBeenCalledWith(
+    `${PAIRED_STATION.origin}/api/companion/downloads`,
+    expect.objectContaining({ credentials: 'omit', redirect: 'error' }),
+  );
+  expect(chrome.scripting.executeScript).not.toHaveBeenCalled();
+  expect(chrome.cookies.getAll).not.toHaveBeenCalled();
+  expect(element('mode').textContent).toContain('PAIRED');
+});
+
+it('does not reuse a normal-mode connection in an incognito popup', async () => {
+  const { chrome, element } = companionPopupFixture(true, 'https://www.youtube.com/watch?v=private', true);
+  chrome.tabs.query.mockResolvedValue([{ id: 9, url: 'https://www.youtube.com/watch?v=private', incognito: true }]);
+  await vi.waitFor(() => expect(element('download-url').value).toContain('private'));
+  expect(element('add-download').disabled).toBe(true);
+  expect(element('destination').textContent).not.toBe(PAIRED_STATION.origin);
+});
+
 it('declares every raster icon and grants no browsing-history or blanket required host access', () => {
   const manifest = JSON.parse(readFileSync('browser-connector/manifest.json', 'utf8'));
-  expect(manifest.version).toBe('1.1.0');
+  expect(manifest.version).toBe('1.2.0');
   expect(manifest.permissions).not.toContain('tabs');
   expect(manifest.host_permissions).toBeUndefined();
   for (const [size, file] of Object.entries(manifest.icons)) {

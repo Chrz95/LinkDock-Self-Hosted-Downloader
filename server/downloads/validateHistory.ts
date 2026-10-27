@@ -10,6 +10,7 @@ import { JOB_PRIORITY } from '../../shared/batch.js';
 import { validateLibraryMetadata, type LibraryMetadata } from '../../shared/library.js';
 import { validateDeviantartPreferences } from '../deviantart/validation.js';
 import { validateJobOptions } from './validateJobOptions.js';
+import { validDownloadRetry } from '../../shared/downloadRetry.js';
 
 /** Storage IDs are generated UUIDs and may never contain filesystem separators. */
 const UUID_PATTERN = /^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/i;
@@ -38,6 +39,7 @@ function isDownloadJob(value: unknown): value is DownloadJob {
     !UUID_PATTERN.test(record.id) ||
     typeof record.url !== 'string' ||
     typeof record.filename !== 'string' ||
+    !validDownloadRetry(record.retry) ||
     !Object.values(DOWNLOAD_STATUS).some((status) => status === record.status) ||
     !isNonnegativeNumber(record.receivedBytes) ||
     !isNonnegativeNumber(record.bytesPerSecond) ||

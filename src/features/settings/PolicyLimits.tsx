@@ -14,46 +14,60 @@ export interface PolicyFieldsProps {
  */
 export function PolicyLimits({ draft, onChange }: PolicyFieldsProps) {
   return (
-    <div className="policy-fields">
-      <label>
-        Download limit · KiB/s
+    <section>
+      <div className="policy-fields">
+        <label>
+          Download limit · KiB/s
+          <input
+            type="number"
+            min={0}
+            max={POLICY_LIMIT.maximumRateKib}
+            step={1}
+            required
+            value={Number.isFinite(draft.downloadKibPerSecond) ? draft.downloadKibPerSecond : ''}
+            onChange={(event) => onChange({ downloadKibPerSecond: event.target.valueAsNumber })}
+          />
+          <small>0 means unlimited</small>
+        </label>
+        <label>
+          Torrent upload · KiB/s
+          <input
+            type="number"
+            min={0}
+            max={POLICY_LIMIT.maximumRateKib}
+            step={1}
+            required
+            value={Number.isFinite(draft.uploadKibPerSecond) ? draft.uploadKibPerSecond : ''}
+            onChange={(event) => onChange({ uploadKibPerSecond: event.target.valueAsNumber })}
+          />
+          <small>0 means unlimited</small>
+        </label>
+        <label>
+          Keep free · GiB
+          <input
+            type="number"
+            min={0}
+            max={POLICY_LIMIT.maximumReserveGib}
+            step={1}
+            required
+            value={Number.isFinite(draft.reserveGib) ? draft.reserveGib : ''}
+            onChange={(event) => onChange({ reserveGib: event.target.valueAsNumber })}
+          />
+          <small>Downloads wait below this buffer</small>
+        </label>
+      </div>
+      <label className="policy-check">
         <input
-          type="number"
-          min={0}
-          max={POLICY_LIMIT.maximumRateKib}
-          step={1}
-          required
-          value={Number.isFinite(draft.downloadKibPerSecond) ? draft.downloadKibPerSecond : ''}
-          onChange={(event) => onChange({ downloadKibPerSecond: event.target.valueAsNumber })}
+          type="checkbox"
+          checked={draft.automaticRetries !== false}
+          onChange={(event) => onChange({ automaticRetries: event.target.checked })}
         />
-        <small>0 means unlimited</small>
+        Retry temporary failures automatically
       </label>
-      <label>
-        Torrent upload · KiB/s
-        <input
-          type="number"
-          min={0}
-          max={POLICY_LIMIT.maximumRateKib}
-          step={1}
-          required
-          value={Number.isFinite(draft.uploadKibPerSecond) ? draft.uploadKibPerSecond : ''}
-          onChange={(event) => onChange({ uploadKibPerSecond: event.target.valueAsNumber })}
-        />
-        <small>0 means unlimited</small>
-      </label>
-      <label>
-        Keep free · GiB
-        <input
-          type="number"
-          min={0}
-          max={POLICY_LIMIT.maximumReserveGib}
-          step={1}
-          required
-          value={Number.isFinite(draft.reserveGib) ? draft.reserveGib : ''}
-          onChange={(event) => onChange({ reserveGib: event.target.valueAsNumber })}
-        />
-        <small>Downloads wait below this buffer</small>
-      </label>
-    </div>
+      <p className="policy-footnote">
+        Up to three delayed retries for temporary file/media failures. Pausing stops automatic attempts. Login, browser
+        verification, permissions and storage errors need review.
+      </p>
+    </section>
   );
 }

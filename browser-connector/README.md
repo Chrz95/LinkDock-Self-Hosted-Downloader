@@ -1,64 +1,69 @@
-# LinkDock Browser Companion 1.1
+# LinkDock Browser Companion 1.2
 
-For desktop Chrome, Edge or Brave, with LinkDock **2.23 or newer**. The download feature works with your existing
-station; no backend upgrade or station password in the extension is required.
+For desktop Chrome, Edge or Brave (Chromium 102+), with **LinkDock 2.31 or newer** for independent download access. Pair
+once from a signed-in station tab, then add downloads even with that tab closed. The station must still be running and
+reachable. No station password is stored in the extension.
 
 ## Install or update
 
 Unzip the companion, open the browser's Extensions page, enable **Developer mode**, choose **Load unpacked** and select
-this folder (the folder containing `manifest.json`). Pin the new green/lime download icon to the toolbar.
+the folder containing `manifest.json`. To update, replace the files in the existing unpacked folder and press
+**Reload**. Download the package from **Settings → Browser companions**, or use the standalone companion ZIP.
 
-To update an existing unpacked installation, replace the files in its existing folder and press **Reload** on its card
-in Extensions. The application also serves the latest package at `/linkdock-browser-connector.zip` after rebuilding.
-This is an unpacked extension, not a browser-store listing; it cannot install itself without browser approval.
+Existing 1.1 connections keep their tab-based download flow until you click **Connect station** again. Independent
+access requires rebuilding the station with LinkDock 2.31+. Installing the extension alone does not upgrade the station.
 
-## Connect your station once
+## Pair your station
 
-1. Open your trusted LinkDock station and sign in. Keep that tab open.
-2. Open the companion. Enter the station address, including the port, for example `http://raspberrypi:7489`.
-3. Click **Connect station** and allow access to that station host. The companion checks the station identity in its
-   existing signed-in tab before remembering it. If no station tab is open, it opens one; sign in and connect again.
+1. Open your trusted LinkDock station and sign in.
+2. Open the companion, enter the exact station address and port, and click **Connect station**.
+3. Allow access to that station host. Pairing uses the open tab's existing station session.
+4. Once pairing is confirmed, close the station tab if you wish.
 
-Only the station origin, preferred tab ID and normal/incognito mode are remembered in local extension storage. No
-station password, source cookies, submitted URL history or download queue is stored there. Host permission patterns can
-cover other ports on the chosen host; every station operation additionally checks the exact origin and port.
+A random download-only token is stored in local extension storage, restricted to trusted extension contexts. The station
+stores only its hash and revocation metadata. No station password, source cookies, submitted-link history or download
+queue is stored by the extension. Pairing must be repeated if it expires or is revoked. Normal and incognito
+destinations are kept separately; browser local storage itself is shared between modes, rather than being an incognito
+vault.
 
-## Add a download from any tab
+Host permissions can include other ports on a hostname; operations always use the exact paired origin and port. Token
+requests omit browser cookies, reject redirects and have a timeout. A token can only add downloads or revoke itself; it
+cannot list files, read the library, change settings or import site sessions. Use **HTTPS**: HTTP transmits pairing
+credentials and download links unencrypted over the network.
 
-1. Browse to the video, gallery or file you want. Open the companion: the current page link is filled in automatically.
-2. Edit that link if needed, or paste any supported HTTP, HTTPS, torrent URL or magnet link.
-3. Optionally expand **Download options** to select a source, video quality or MP3 audio. Quality applies to the video
-   engine; other sources use their normal LinkDock settings. Auto detection uses the same rules as your station.
-4. Click **Add to LinkDock**. A confirmation means the download has been added to your Pi's queue, not that it has
-   finished. **Open library** shows its progress. The popup can be closed after confirmation.
+## Add a download
 
-Keep a signed-in station tab open in the same browser mode. It can be in the background. If you close it, use **Open
-library**, sign in if needed, then send again. The station is found again even if its tab ID changes. If a response is
-lost, check your library before retrying; the companion does not automatically retry potentially accepted submissions.
+1. Browse to a file, video or gallery and open the companion. The current page link is suggested without fetching it.
+2. Edit the link or paste an HTTP, HTTPS, torrent URL or magnet link.
+3. Optionally choose a source, video quality or MP3 audio under **Download options**.
+4. Click **Add to LinkDock** and wait for confirmation. This confirms queue acceptance, not download completion.
 
-Adding a download does not read source cookies or ask for permission to the source site. It uses your station tab's
-existing HttpOnly owner session and same-origin API protections. Sources with browser checks may still need a session or
-additional access configured in LinkDock. Download links can contain private query parameters: only send them to a
-station you trust. HTTP station connections transmit submitted links and session transfers unencrypted across the LAN.
+Downloads do not read source cookies or request source-site permissions. **Open library** shows progress on the station.
+The companion never automatically retries an uncertain submission: check the library before sending again. A revoked or
+expired connection produces reconnection instructions. A closed station tab does not affect a paired download request.
+
+## Revoke or forget access
+
+**Settings → Browser companions** lists creation and expiry times and lets you revoke individual connections
+immediately. Connections expire after 90 days. Changing the station password invalidates all existing connections;
+signing out of the station browser alone does not revoke them.
+
+**Forget** attempts to revoke the current connection and removes it locally. If the station is offline or permission is
+missing, the companion explains that you must revoke it in station Settings. Re-pairing attempts to revoke the previous
+connection for that browser mode; any unsuccessful cleanup is reported. Browser host permissions can be removed in the
+browser's extension settings. Losing an unpacked extension's identity may require a new pairing and manual revocation of
+the old connection.
 
 ## Optional site-session sharing
 
-1. Sign in to Instagram or DeviantArt in this browser profile and complete any site verification normally.
-2. Open the companion and expand **Connect a site session**.
-3. Select the source, verify the displayed station, check the trust box and click **Send session to LinkDock**.
-4. Grant access only to the selected source, then retry the failed download in LinkDock. Reopen Settings → Browser
-   sessions to refresh the saved-session list.
+For this action, open your station and sign in. Sign in to Instagram or DeviantArt in the same browser profile, open
+**Connect a site session**, choose the site, verify the destination, check the trust box and click **Send session to
+LinkDock**. Grant access only to the selected source. Retry the original download from the station.
 
-Only the chosen source's cookies are read, only after that explicit click. Other sources' saved sessions are retained.
-No cookie export file or access-token entry is needed. Send again when a session expires. Ordinary HttpOnly cookies are
-supported; partitioned cookies are excluded because Netscape jars cannot preserve their partition boundaries. The
-station tab's cookie store is used and normal/incognito contexts are not mixed.
+Only the selected site's cookies are read after that explicit click. Other saved site sessions remain intact. The
+station tab's cookie store is used, with normal/incognito separation. Partitioned cookies are excluded because Netscape
+jars cannot preserve their boundaries. Site sessions are sent through the station's ordinary authenticated API, never
+through the download-only token. HTTPS also protects these transfers. DeviantArt OAuth remains separate.
 
-The extension declares optional HTTP/HTTPS host patterns to support self-hosted station addresses, but grants are
-requested only for the station you choose and, separately, Instagram or DeviantArt when sending a session. It has no
-background scripts, browsing-history permission, background synchronization, telemetry or external service requests. It
-does not solve CAPTCHAs. Browser/IP-bound challenges may still fail on the Pi. DeviantArt OAuth remains separate. Mobile
-browsers without extension support can continue to use sessions sent from a desktop browser.
-
-**Forget** removes the remembered station. Manage any previously granted site permissions in the browser's extension
-settings. Reconnecting or changing a station requires checking the session-sharing trust box again.
+No background scripts, broad required host permissions, browsing-history access, telemetry or external services are
+added. The companion does not solve CAPTCHAs, and browser/IP-bound challenges may still fail on the Pi.

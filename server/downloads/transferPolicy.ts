@@ -3,9 +3,11 @@ import { DOWNLOAD_STATUS, type DownloadJob } from '../../shared/contracts.js';
 import { POLICY_LIMIT } from '../../shared/policy.js';
 import { LIMIT } from '../constants.js';
 import { StorageHoldError } from '../policy/storage.js';
+import { canAutomaticallyRetry } from './retry.js';
 
 /** Optional controls keep the direct streaming boundary independently testable. */
 export interface TransferOptions {
+  automaticRetries?: boolean;
   bytesPerSecond?: number;
   reservedFreeBytes?: number;
   onCheckpoint?: () => void;
@@ -15,11 +17,15 @@ export interface TransferOptions {
  * Preserves private partial data for intentional suspension and temporary space pressure.
  * @param {DownloadJob} job - Current lifecycle state.
  * @param {unknown} [error] - Optional worker error.
+ * @param {boolean} [automaticRetries] - Whether this worker can retain bytes for a delayed retry.
  * @returns {boolean} Whether progress must survive worker cleanup.
  */
-export function shouldRetainProgress(job: DownloadJob, error?: unknown): boolean {
+export function shouldRetainProgress(job: DownloadJob, error?: unknown, automaticRetries = false): boolean {
   return (
-    job.status === DOWNLOAD_STATUS.paused || job.status === DOWNLOAD_STATUS.queued || error instanceof StorageHoldError
+    job.status === DOWNLOAD_STATUS.paused ||
+    job.status === DOWNLOAD_STATUS.queued ||
+    error instanceof StorageHoldError ||
+    (automaticRetries && canAutomaticallyRetry(job, error))
   );
 }
 

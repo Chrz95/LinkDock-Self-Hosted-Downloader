@@ -1,5 +1,6 @@
 /** Station-wide transfer preferences stored on the Pi, independent of browser sessions. */
 export interface StationPolicy {
+  automaticRetries?: boolean;
   downloadKibPerSecond: number;
   uploadKibPerSecond: number;
   reserveGib: number;
@@ -29,6 +30,7 @@ export const POLICY_LIMIT = {
 
 /** Defaults leave speed and time unrestricted while reserving a small filesystem buffer. */
 export const DEFAULT_POLICY: StationPolicy = {
+  automaticRetries: true,
   downloadKibPerSecond: 0,
   uploadKibPerSecond: 0,
   reserveGib: 1,

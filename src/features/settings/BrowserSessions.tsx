@@ -22,7 +22,8 @@ export function BrowserSessions({ access }: { access: ReturnType<typeof useBrows
         </a>
         <p className="policy-footnote">
           Open your trusted LinkDock tab, sign in and use Connect station in the companion once. You can then add a
-          download from any tab. For Instagram or DeviantArt sessions, sign in to that source and expand Connect a site
+          download with the station tab closed after pairing with LinkDock 2.31+. Keep a signed-in station tab open for
+          site-session sharing. For Instagram or DeviantArt sessions, sign in to that source and expand Connect a site
           session in the companion. Choose the source, check the station address and send the session. No cookie file or
           access-token entry is needed. Reopen this panel to refresh the list. Mobile browsers without extension support
           can use sessions sent from a desktop browser.

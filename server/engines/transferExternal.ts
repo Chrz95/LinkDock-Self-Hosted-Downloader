@@ -85,7 +85,7 @@ export async function transferExternal(
     failure = error;
     throw error;
   } finally {
-    if (!shouldRetainProgress(job, failure)) {
+    if (!shouldRetainProgress(job, failure, configuration.automaticRetries)) {
       await rm(workingDirectory, { recursive: true, force: true });
     }
   }

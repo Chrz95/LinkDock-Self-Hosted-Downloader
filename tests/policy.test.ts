@@ -66,3 +66,14 @@ it('distinguishes a temporary free-space hold from an ordinary source failure', 
   expect(() => ensureStorage(directory, RESERVED_BYTES)).toThrow(StorageHoldError);
   expect(() => ensureStorage(directory, 0)).not.toThrow();
 });
+
+it('preserves a disabled retry preference when an older client submits settings without that field', () => {
+  const directory = mkdtempSync(path.resolve('tests/.policy-'));
+  directories.push(directory);
+  const store = new PolicyStore(directory);
+  store.update({ ...DEFAULT_POLICY, automaticRetries: false });
+  const legacy = { ...DEFAULT_POLICY };
+  delete legacy.automaticRetries;
+  store.update(legacy);
+  expect(store.settings.automaticRetries).toBe(false);
+});

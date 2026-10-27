@@ -2,18 +2,31 @@ import { runInNewContext } from 'node:vm';
 import { readFileSync } from 'node:fs';
 import { vi } from 'vitest';
 
+const TOKEN_LENGTH = 64;
+const EXTENSION_ID_LENGTH = 32;
 const documents: Document[] = [];
 export const COMPANION_STATION = { origin: 'http://pi:7489', tabId: 1, incognito: false };
+export const PAIRED_STATION = {
+  ...COMPANION_STATION,
+  token: `ldc_${'a'.repeat(TOKEN_LENGTH)}`,
+  connection: { id: 'paired-id', expiresAt: '2027-01-25T12:00:00Z' },
+};
 const PAGE_TAB = 9;
 /** Opens the exact popup HTML and scripts with explicit mocked extension APIs, not duplicated UI logic.
  * @param {boolean} [paired] - Whether local storage contains a previously confirmed station.
  * @param {string} [pageUrl] - Page granted activeTab when the owner opens the popup.
+ * @param {boolean} [independent] - Whether the remembered station has a download-only credential.
  * @returns {object} Live DOM, observable API boundaries and UI lookup helpers.
  */
-export function companionPopupFixture(paired = true, pageUrl = 'https://www.youtube.com/watch?v=popup-example') {
+export function companionPopupFixture(
+  paired = true,
+  pageUrl = 'https://www.youtube.com/watch?v=popup-example',
+  independent = false,
+) {
   const document = new DOMParser().parseFromString(readFileSync('browser-connector/popup.html', 'utf8'), 'text/html');
   documents.push(document);
   const chrome = {
+    runtime: { getURL: () => `chrome-extension://${'a'.repeat(EXTENSION_ID_LENGTH)}/` },
     tabs: {
       query: vi.fn(async (query: { active?: boolean }) =>
         query.active
@@ -39,7 +52,8 @@ export function companionPopupFixture(paired = true, pageUrl = 'https://www.yout
     },
     storage: {
       local: {
-        get: vi.fn().mockResolvedValue(paired ? { station: COMPANION_STATION } : {}),
+        get: vi.fn().mockResolvedValue(paired ? { station: independent ? PAIRED_STATION : COMPANION_STATION } : {}),
+        setAccessLevel: vi.fn().mockResolvedValue(undefined),
         set: vi.fn().mockResolvedValue(undefined),
         remove: vi.fn().mockResolvedValue(undefined),
       },
@@ -49,19 +63,23 @@ export function companionPopupFixture(paired = true, pageUrl = 'https://www.yout
         {
           result: {
             ok: true,
+            token: PAIRED_STATION.token,
+            connection: PAIRED_STATION.connection,
             message: 'Download added to LinkDock. Follow its progress in your library.',
           },
         },
       ]),
     },
   };
-  const scripts = ['transfer.js', 'station.js', 'download.js', 'session.js', 'popup.js'];
+  const fetch = vi.fn().mockResolvedValue({ status: 201 });
+  const scripts = ['transfer.js', 'station.js', 'download.js', 'paired.js', 'session.js', 'popup.js'];
   runInNewContext(scripts.map((file) => readFileSync(`browser-connector/${file}`, 'utf8')).join('\n'), {
     document,
     chrome,
     URL,
     AbortSignal,
     navigator: { userAgent: 'PopupBrowser' },
+    fetch,
   });
   /** Finds an actual popup control with its native DOM behavior.
    * @param {string} id - Shipped control ID.
@@ -78,7 +96,7 @@ export function companionPopupFixture(paired = true, pageUrl = 'https://www.yout
     element(id).value = value;
     element(id).dispatchEvent(new Event('input'));
   }
-  return { chrome, element, input, window: { document, Event } };
+  return { chrome, fetch, element, input, window: { document, Event } };
 }
 /** Releases all DOM windows and listeners after each UI workflow.
  * @returns {void} No popup callbacks remain attached.

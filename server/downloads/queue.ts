@@ -35,6 +35,13 @@ import { QueueControls } from '../control/service.js';
 import { moveCompleted } from './completion/move.js';
 import { destinationDirectory, removeManagedDirectory, safeDirectory } from './completion/paths.js';
 import { readJournal } from './completion/journal.js';
+import {
+  holdDisabledRetries,
+  resetAutomaticRetry,
+  retrySource,
+  scheduleAutomaticRetry,
+  sourceCooldowns,
+} from './retry.js';
 
 /** Persistent bounded queue; only lifecycle events write history, progress stays in memory. */
 export class DownloadQueue {
@@ -61,6 +68,9 @@ export class DownloadQueue {
     this.store = new DownloadStore(configuration.dataDirectory, configuration.completedDirectory);
     holdLegacyCollections(this.store);
     this.policy = new PolicyStore(configuration.dataDirectory);
+    if (holdDisabledRetries(this.store.jobs, this.policy.settings.automaticRetries !== false)) {
+      this.store.save();
+    }
     this.controls = new QueueControls(configuration.dataDirectory, this);
     this.utilities = new UtilityService(configuration, (work) => this.maintainUtilities(work));
     const resumableIds = new Set(
@@ -224,11 +234,22 @@ export class DownloadQueue {
       this.suspendActive(holdReason);
       return;
     }
+    const cooldowns = sourceCooldowns(this.store.jobs);
     for (const job of getQueueOrder(this.store.jobs)) {
       if (this.controllers.size >= this.configuration.concurrency) {
         break;
       }
       if (job.status === DOWNLOAD_STATUS.queued && !this.controllers.has(job.id)) {
+        const availableAt = job.payloadReady
+          ? 0
+          : Math.max(
+              job.retry?.nextAttemptAt ? Date.parse(job.retry.nextAttemptAt) : 0,
+              cooldowns.get(retrySource(job) ?? '') ?? 0,
+            );
+        if (availableAt > Date.now()) {
+          job.stage = job.retry?.nextAttemptAt ? 'Waiting for automatic retry' : 'Waiting for source cooldown';
+          continue;
+        }
         const controller = new AbortController();
         this.controllers.set(job.id, controller);
         const worker = this.run(job, controller);
@@ -255,6 +276,9 @@ export class DownloadQueue {
       throw new Error('Only queued or active downloads can be cancelled.');
     }
     job.status = DOWNLOAD_STATUS.cancelled;
+    if (job.retry) {
+      job.retry.nextAttemptAt = null;
+    }
     job.errorMessage = TRANSFER.cancelledMessage;
     job.bytesPerSecond = 0;
     job.finishedAt = new Date().toISOString();
@@ -390,6 +414,7 @@ export class DownloadQueue {
       throw new Error('This download cannot be retried yet.');
     }
     if (job.payloadReady) {
+      resetAutomaticRetry(job);
       job.status = DOWNLOAD_STATUS.queued;
       job.finishedAt = null;
       job.errorMessage = null;
@@ -403,6 +428,7 @@ export class DownloadQueue {
       job.sourceType === SOURCE_TYPE.deviantart
         ? (job.deviantart ?? readCollectionPreferences(this.configuration.dataDirectory))
         : undefined;
+    resetAutomaticRetry(job);
     Object.assign(job, {
       ...(scope ? { deviantart: scope } : {}),
       status: DOWNLOAD_STATUS.queued,
@@ -639,6 +665,10 @@ export class DownloadQueue {
         return;
       }
       job.status = DOWNLOAD_STATUS.downloading;
+      if (job.retry) {
+        job.retry.nextAttemptAt = null;
+      }
+      job.errorMessage = null;
       job.mediaFailure = undefined;
       if (job.sourceType === SOURCE_TYPE.deviantart && !job.deviantart && !job.payloadReady) {
         job.deviantart = readCollectionPreferences(this.configuration.dataDirectory);
@@ -648,6 +678,7 @@ export class DownloadQueue {
       const { settings } = this.policy;
       const workerConfiguration = {
         ...this.configuration,
+        automaticRetries: settings.automaticRetries !== false,
         downloadBytesPerSecond: Math.floor(
           (settings.downloadKibPerSecond * POLICY_LIMIT.bytesPerKib) / this.configuration.concurrency,
         ),
@@ -660,6 +691,7 @@ export class DownloadQueue {
         await transferToDisk(job, this.store, controller.signal, this.configuration.maximumFileBytes, {
           bytesPerSecond: workerConfiguration.downloadBytesPerSecond,
           reservedFreeBytes: workerConfiguration.reservedFreeBytes,
+          automaticRetries: workerConfiguration.automaticRetries,
           onCheckpoint: () => this.store.save(),
         });
       } else if (!job.payloadReady) {
@@ -691,9 +723,14 @@ export class DownloadQueue {
         job.status = DOWNLOAD_STATUS.queued;
         job.stage = error.message;
       } else if (job.status === DOWNLOAD_STATUS.downloading) {
-        job.status = DOWNLOAD_STATUS.failed;
-        job.errorMessage = error instanceof Error ? error.message : 'The download failed.';
-        job.mediaFailure = error instanceof EngineProcessError ? error.reason : undefined;
+        if (!scheduleAutomaticRetry(job, error, this.policy.settings.automaticRetries !== false)) {
+          job.status = DOWNLOAD_STATUS.failed;
+          job.errorMessage = error instanceof Error ? error.message : 'The download failed.';
+          job.mediaFailure = error instanceof EngineProcessError ? error.reason : undefined;
+          if (job.retry) {
+            job.retry.nextAttemptAt = null;
+          }
+        }
       }
     } finally {
       job.bytesPerSecond = 0;
@@ -714,6 +751,11 @@ export class DownloadQueue {
           }
         }
       } catch (error) {
+        if (job.status === DOWNLOAD_STATUS.queued && job.retry?.nextAttemptAt) {
+          job.status = DOWNLOAD_STATUS.paused;
+          job.retry.nextAttemptAt = null;
+          job.stage = 'Automatic retry could not be saved. Check storage before resuming.';
+        }
         logger.error('Unable to persist queue state.', error);
       }
       this.schedule();
@@ -764,9 +806,20 @@ export class DownloadQueue {
    * @param {unknown} input - Complete settings submitted by the authenticated owner.
    */
   updateSettings(input: unknown): void {
-    const previousSettings = JSON.stringify({ ...this.policy.settings, completionDirectory: null });
+    const previousSettings = JSON.stringify({
+      ...this.policy.settings,
+      completionDirectory: null,
+      automaticRetries: undefined,
+    });
     this.policy.update(input);
-    if (JSON.stringify({ ...this.policy.settings, completionDirectory: null }) === previousSettings) {
+    if (holdDisabledRetries(this.store.jobs, this.policy.settings.automaticRetries !== false)) {
+      this.store.save();
+    }
+    if (
+      JSON.stringify({ ...this.policy.settings, completionDirectory: null, automaticRetries: undefined }) ===
+      previousSettings
+    ) {
+      this.schedule();
       return;
     }
     this.minimumFreeBytes = 0;

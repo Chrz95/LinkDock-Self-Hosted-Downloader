@@ -8,6 +8,7 @@ import { WorkspaceHeading } from './WorkspaceHeading';
 import { ConnectedSources } from '../features/settings/ConnectedSources';
 import { DeviantartSettings } from '../features/settings/DeviantartSettings';
 import { BrowserAccess } from '../features/settings/BrowserAccess';
+import { CompanionConnections } from '../features/settings/CompanionConnections';
 
 interface SettingsPageProps {
   policy: PolicySnapshot | undefined;
@@ -38,6 +39,7 @@ export function SettingsPage({ policy }: SettingsPageProps) {
           <h2>Accounts &amp; browser sessions</h2>
           <p>Connect the sites you use. Saved access does not guarantee every item is downloadable.</p>
           <BrowserAccess />
+          <CompanionConnections />
           <DeviantartSettings />
         </section>
         <section
