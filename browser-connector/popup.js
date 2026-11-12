@@ -17,10 +17,11 @@ const ui = Object.fromEntries(
     'open-station',
     'station-setup',
     'mode',
+    'capture-downloads',
   ].map((id) => [id, document.getElementById(id)]),
 );
 const companion = globalThis.LinkDockCompanion;
-const state = { station: undefined, active: undefined, busy: false };
+const state = { station: undefined, active: undefined, busy: false, captureEnabled: false };
 
 /** Refreshes controls without storing URLs, cookies or station passwords. */
 function renderControls() {
@@ -29,6 +30,8 @@ function renderControls() {
   ui['add-download'].disabled = state.busy || !connected || !ui['download-url'].value.trim();
   ui.connect.disabled = state.busy || !ui['station-address'].value.trim();
   ui.forget.disabled = state.busy || !connected;
+  ui['capture-downloads'].disabled = state.busy || !state.station?.token || !state.station.connection?.id;
+  ui['capture-downloads'].checked = state.captureEnabled;
   for (const id of ['source', 'confirm', 'station-address', 'download-url', 'download-source', 'quality']) {
     ui[id].disabled = state.busy;
   }
@@ -86,6 +89,7 @@ ui.connect.addEventListener('click', () =>
     const result = await companion.connectStation(ui['station-address'].value, Boolean(state.active?.incognito));
     if (result.ok) {
       state.station = result.station;
+      state.captureEnabled = false;
       ui.confirm.checked = false;
       ui['station-setup'].open = false;
       if (state.active?.url && new URL(state.active.url).origin === state.station.origin) {
@@ -99,11 +103,32 @@ ui.forget.addEventListener('click', () =>
   runAction(async () => {
     const result = await companion.forgetStation(state.station);
     state.station = undefined;
+    state.captureEnabled = false;
     ui.confirm.checked = false;
     ui['station-setup'].open = true;
     return result;
   }),
 );
+ui['capture-downloads'].addEventListener('change', () => {
+  const enabled = ui['capture-downloads'].checked;
+  void runAction(async () => {
+    const connection = state.station?.connection?.id;
+    if (!state.station?.token || !connection) {
+      return { ok: false, message: 'Pair your station to catch browser downloads.' };
+    }
+    const keys = companion.downloadCaptureKeys(Boolean(state.active?.incognito));
+    if (enabled) {
+      if (!(await chrome.permissions.request({ permissions: ['downloads'] }))) {
+        return { ok: false, message: 'Download permission was declined. Browser download capture is off.' };
+      }
+      await chrome.storage.local.set({ [keys.capture]: connection });
+    } else {
+      await chrome.storage.local.remove(keys.capture);
+    }
+    state.captureEnabled = enabled;
+    return { ok: true, message: enabled ? 'Browser download capture is on.' : 'Browser download capture is off.' };
+  });
+});
 ui['add-download'].addEventListener('click', () =>
   runAction(async () => {
     if (!state.station) {
@@ -150,14 +175,20 @@ ui['use-page'].addEventListener('click', () => {
  */
 async function initializePopup() {
   await chrome.storage.local.setAccessLevel({ accessLevel: 'TRUSTED_CONTEXTS' });
+  const regular = companion.downloadCaptureKeys(false);
+  const privateMode = companion.downloadCaptureKeys(true);
   const [[active], saved] = await Promise.all([
     chrome.tabs.query({ active: true, currentWindow: true }),
-    chrome.storage.local.get(['station', 'stationIncognito']),
+    chrome.storage.local.get([regular.station, regular.capture, privateMode.station, privateMode.capture]),
   ]);
   state.active = active;
-  const stored = active?.incognito ? (saved.stationIncognito ?? saved.station) : saved.station;
+  const keys = active?.incognito ? privateMode : regular;
+  const stored = saved[keys.station];
   if (stored && Boolean(stored.incognito) === Boolean(active?.incognito)) {
     state.station = { ...stored, origin: companion.stationOrigin(stored.origin) };
+    state.captureEnabled =
+      Boolean(stored.token && stored.connection?.id && saved[keys.capture] === stored.connection.id) &&
+      (await chrome.permissions.contains({ permissions: ['downloads'] }));
   }
   ui['station-address'].value =
     state.station?.origin ??

@@ -14,7 +14,7 @@ export function CompanionConnections() {
       {companions.open && (
         <div className="browser-access-content">
           <p className="policy-footnote">
-            Pair Browser Companion 1.2 from your signed-in station tab. It can then add downloads with the tab closed.
+            Pair the Browser Companion from your signed-in station tab. It can then add downloads with the tab closed.
             Connections can only add downloads; they cannot read your library or manage accounts.
           </p>
           <a

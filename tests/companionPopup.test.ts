@@ -131,11 +131,42 @@ it('does not reuse a normal-mode connection in an incognito popup', async () => 
   await vi.waitFor(() => expect(element('download-url').value).toContain('private'));
   expect(element('add-download').disabled).toBe(true);
   expect(element('destination').textContent).not.toBe(PAIRED_STATION.origin);
+  expect(element('capture-downloads').disabled).toBe(true);
+});
+
+it('asks for download permission only when capture is enabled and saves the paired connection ID', async () => {
+  const { chrome, element } = companionPopupFixture(true, 'https://files.example/file', true);
+  const capture = element('capture-downloads');
+  await vi.waitFor(() => expect(capture.disabled).toBe(false));
+  expect(capture.checked).toBe(false);
+  expect(chrome.permissions.request).not.toHaveBeenCalled();
+  capture.click();
+  await vi.waitFor(() => expect(capture.checked).toBe(true));
+  expect(chrome.permissions.request).toHaveBeenCalledExactlyOnceWith({ permissions: ['downloads'] });
+  expect(chrome.storage.local.set).toHaveBeenCalledExactlyOnceWith({ captureDownloads: PAIRED_STATION.connection.id });
+  capture.click();
+  await vi.waitFor(() => expect(element('status').textContent).toContain('capture is off'));
+  expect(capture.checked).toBe(false);
+  expect(chrome.storage.local.remove).toHaveBeenCalledExactlyOnceWith('captureDownloads');
+});
+
+it('keeps capture off when the optional download permission is declined', async () => {
+  const { chrome, element } = companionPopupFixture(true, 'https://files.example/file', true);
+  const capture = element('capture-downloads');
+  chrome.permissions.request.mockResolvedValue(false);
+  await vi.waitFor(() => expect(capture.disabled).toBe(false));
+  capture.click();
+  await vi.waitFor(() => expect(element('status').textContent).toContain('permission was declined'));
+  expect(capture.checked).toBe(false);
+  expect(chrome.storage.local.set).not.toHaveBeenCalled();
 });
 
 it('declares every raster icon and grants no browsing-history or blanket required host access', () => {
   const manifest = JSON.parse(readFileSync('browser-connector/manifest.json', 'utf8'));
-  expect(manifest.version).toBe('1.2.0');
+  expect(manifest.version).toBe('1.3.0');
+  expect(manifest.background).toEqual({ service_worker: 'background.js' });
+  expect(manifest.optional_permissions).toContain('downloads');
+  expect(manifest.permissions).not.toContain('downloads');
   expect(manifest.permissions).not.toContain('tabs');
   expect(manifest.host_permissions).toBeUndefined();
   for (const [size, file] of Object.entries(manifest.icons)) {

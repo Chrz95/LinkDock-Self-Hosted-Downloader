@@ -138,10 +138,13 @@ composer. Choose the source, video quality or MP3 output directly in the popup.
 3. Open your LinkDock station, sign in and connect the companion to that trusted station.
 4. Open the popup on a source page and choose **Add a download**.
 
-With **Browser Companion 1.2** and **LinkDock 2.31+**, you can close the station tab after pairing. A separate
+With **Browser Companion 1.3** and **LinkDock 2.31+**, you can close the station tab after pairing. A separate
 connection allows only adding downloads; it cannot read the library or manage accounts. Revoke connections under
 **Settings → Browser companions**. They expire after 90 days, and a station-password change invalidates them. Prefer
 HTTPS to protect pairing and download access. Older saved connections continue in tab mode until you reconnect.
+
+Turn on **Catch browser downloads** in the popup to hand new HTTP/HTTPS file downloads to LinkDock. Grant the optional
+Downloads permission when prompted. The browser keeps its transfer running until LinkDock accepts the link.
 
 The companion is supplied as an unpacked extension, so installation requires your browser's approval.
 

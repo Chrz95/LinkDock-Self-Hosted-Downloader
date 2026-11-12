@@ -1,4 +1,4 @@
-# LinkDock Browser Companion 1.2
+# LinkDock Browser Companion 1.3
 
 For desktop Chrome, Edge or Brave (Chromium 102+), with **LinkDock 2.31 or newer** for independent download access. Pair
 once from a signed-in station tab, then add downloads even with that tab closed. The station must still be running and
@@ -42,6 +42,18 @@ Downloads do not read source cookies or request source-site permissions. **Open 
 The companion never automatically retries an uncertain submission: check the library before sending again. A revoked or
 expired connection produces reconnection instructions. A closed station tab does not affect a paired download request.
 
+## Catch browser downloads
+
+Pair your station, then turn on **Catch browser downloads** in the popup and allow the optional Downloads permission.
+New HTTP or HTTPS files go to the paired station as direct downloads, even with the popup and station tab closed. If
+LinkDock accepts the link into its queue, the companion cancels the browser copy if it is still running. If the station
+is unavailable or rejects the link, the browser download continues. A small file may finish in the browser during the
+handoff and also appear in LinkDock.
+
+Capture starts off and is enabled separately for regular and incognito browsing. Pairing again requires enabling it
+again. Downloads from the paired station, browser-only URLs such as `blob:` URLs, and downloads flagged by the browser
+are skipped. Capture sends the file URL only. Keep it off for files that need your browser's sign-in or form data.
+
 ## Revoke or forget access
 
 **Settings → Browser companions** lists creation and expiry times and lets you revoke individual connections
@@ -65,5 +77,5 @@ station tab's cookie store is used, with normal/incognito separation. Partitione
 jars cannot preserve their boundaries. Site sessions are sent through the station's ordinary authenticated API, never
 through the download-only token. HTTPS also protects these transfers. DeviantArt OAuth remains separate.
 
-No background scripts, broad required host permissions, browsing-history access, telemetry or external services are
-added. The companion does not solve CAPTCHAs, and browser/IP-bound challenges may still fail on the Pi.
+The companion requires no broad host permissions, browsing-history access, telemetry or external services. The companion
+does not solve CAPTCHAs, and browser/IP-bound challenges may still fail on the Pi.

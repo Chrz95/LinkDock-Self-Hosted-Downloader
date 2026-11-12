@@ -72,7 +72,7 @@ export function companionPopupFixture(
     },
   };
   const fetch = vi.fn().mockResolvedValue({ status: 201 });
-  const scripts = ['transfer.js', 'station.js', 'download.js', 'paired.js', 'session.js', 'popup.js'];
+  const scripts = ['transfer.js', 'station.js', 'download.js', 'paired.js', 'capture.js', 'session.js', 'popup.js'];
   runInNewContext(scripts.map((file) => readFileSync(`browser-connector/${file}`, 'utf8')).join('\n'), {
     document,
     chrome,
