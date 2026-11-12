@@ -1489,10 +1489,10 @@ multi-file output.
 
 ### Network and resource limits
 
-Direct files and media source URLs use HTTP/HTTPS on standard ports. Direct file redirects and media proxy destinations
-are checked against private/local/reserved addresses and use pinned DNS results. Embedded URL credentials and custom
-source ports are rejected. Video and Instagram tools receive a loopback-only checked egress proxy; arbitrary subprocess
-arguments and shell command text are never accepted from the browser.
+Direct file and torrent metadata requests support HTTP on port 80 and HTTPS on any valid nonzero port, including after
+redirects. These requests and media proxy connections reject private, local, and reserved addresses and use pinned DNS
+results. Embedded URL credentials are rejected. Media tools use a loopback-only egress proxy limited to the standard
+HTTP and HTTPS ports. LinkDock rejects arbitrary subprocess arguments and shell commands from the browser.
 
 Torrent peer, DHT, tracker and webseed networking is managed by aria2 and does **not** inherit the media proxy's
 public-address filter. Use torrent metadata you trust and restrict the container's network externally if you need an
@@ -1947,7 +1947,7 @@ the lockfile with dependency changes. Keep unrelated refactors out of a behavior
 | Station unreachable      | Check service status, Pi IP, published port and network.               |
 | Session disappears       | Use `SECURE_COOKIE=false` for HTTP; check proxy and origin.            |
 | Origin rejected          | Match `PUBLIC_ORIGIN` exactly, including ports; omit trailing slashes. |
-| Private host blocked     | Use a public direct host on a standard HTTP/HTTPS port.                |
+| Private host blocked     | Use a direct file URL that resolves to a public address.               |
 | Source HTTP error        | Check link expiry and source authentication requirements.              |
 | Webpage downloaded       | Use the actual direct file URL instead of its landing page.            |
 | Unknown size             | The source omitted length; actual-byte limits still apply.             |

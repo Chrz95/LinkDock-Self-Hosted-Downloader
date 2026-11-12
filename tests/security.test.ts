@@ -51,6 +51,7 @@ describe('public destination validation', () => {
     'file:///etc/passwd',
     'ftp://example.com/file',
     'https://user:pass@example.com/file',
+    'https://example.com:8443/file',
     'http://example.com:8080/file',
     'javascript:alert(1)',
     'not a url',
@@ -69,6 +70,14 @@ describe('public destination validation', () => {
   it('normalizes links and strips fragments', () => {
     expect(parseTargetUrl('https://example.com/file#section').href).toBe('https://example.com/file');
   });
+  it.each([
+    'http://example.com:8443/file',
+    'https://user:pass@example.com:8443/file',
+    'https://example.com:0/file',
+    'https://example.com:65536/file',
+  ])('rejects unsupported download target %s with custom HTTPS ports enabled', (url) => {
+    expect(() => parseTargetUrl(url, { allowCustomHttpsPort: true })).toThrow();
+  });
   /**
    * Verifies: blocks mixed public/private DNS answers instead of choosing the public answer.
    * @returns {Promise<void>} Completion of the asynchronous behavior.
@@ -78,7 +87,8 @@ describe('public destination validation', () => {
       { address: '1.1.1.1', family: 4 },
       { address: '127.0.0.1', family: 4 },
     ]);
-    await expect(resolvePublicTarget(new URL('https://example.com/file'))).rejects.toThrow('blocked');
+    const target = parseTargetUrl('https://example.com:8443/file', { allowCustomHttpsPort: true });
+    await expect(resolvePublicTarget(target)).rejects.toThrow('blocked');
   });
   /**
    * Verifies: pins a checked result for the HTTP connection.

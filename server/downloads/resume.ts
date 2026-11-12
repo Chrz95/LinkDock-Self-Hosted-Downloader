@@ -29,9 +29,10 @@ export async function openResumableSource(
   const partialBytes = existsSync(partialPath) ? statSync(partialPath).size : 0;
   let offset = job.resumeValidator && job.resumeSourceUrl ? partialBytes : 0;
   const headers: Record<string, string> = offset ? { Range: `bytes=${offset}-`, 'If-Range': job.resumeValidator! } : {};
+  const target = parseTargetUrl(job.url, { allowCustomHttpsPort: true });
   let response = access
-    ? await openSource(parseTargetUrl(job.url), signal, 0, headers, access)
-    : await openSource(parseTargetUrl(job.url), signal, 0, headers);
+    ? await openSource(target, signal, 0, headers, access)
+    : await openSource(target, signal, 0, headers);
   const range = /^bytes (\d+)-(\d+)\/(\d+)$/.exec(String(response.headers['content-range']));
   const total = range ? Number(range[3]) : null;
   const canAppend = Boolean(
@@ -48,9 +49,7 @@ export async function openResumableSource(
   );
   if (offset && !canAppend && response.statusCode !== RANGE_STATUS.complete) {
     response.destroy();
-    response = access
-      ? await openSource(parseTargetUrl(job.url), signal, 0, {}, access)
-      : await openSource(parseTargetUrl(job.url), signal);
+    response = access ? await openSource(target, signal, 0, {}, access) : await openSource(target, signal);
   }
   if (!canAppend) {
     offset = 0;

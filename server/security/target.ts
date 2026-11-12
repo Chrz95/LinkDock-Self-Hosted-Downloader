@@ -25,22 +25,23 @@ export function isPublicAddress(address: string): boolean {
 }
 
 /**
- * Parses a direct download link; custom ports and embedded credentials are prohibited.
+ * Parses a public HTTP(S) target and applies the caller's port policy.
  * @param {unknown} value - User-submitted URL.
+ * @param {object} [options] - Opt-in to custom ports for TLS-verified download requests.
  * @returns {URL} A normalized HTTP or HTTPS URL.
  */
-export function parseTargetUrl(value: unknown): URL {
+export function parseTargetUrl(value: unknown, { allowCustomHttpsPort = false } = {}): URL {
   if (typeof value !== 'string' || value.length > LIMIT.maximumUrlLength) {
     throw new Error('Enter a valid HTTP or HTTPS file link.');
   }
   const target = new URL(value);
-  if (
-    (target.protocol !== TRANSFER.http && target.protocol !== TRANSFER.https) ||
-    target.username ||
-    target.password ||
-    (target.port && target.port !== (target.protocol === TRANSFER.https ? TRANSFER.httpsPort : TRANSFER.httpPort))
-  ) {
-    throw new Error('Only HTTP/HTTPS links on standard ports without embedded credentials are supported.');
+  if ((target.protocol !== TRANSFER.http && target.protocol !== TRANSFER.https) || target.username || target.password) {
+    throw new Error('Only HTTP/HTTPS links without embedded credentials are supported.');
+  }
+  if (target.port && (target.protocol === TRANSFER.http || !allowCustomHttpsPort || target.port === '0')) {
+    throw new Error(
+      allowCustomHttpsPort ? 'Custom ports require HTTPS and a nonzero port.' : 'Use a standard HTTP or HTTPS port.',
+    );
   }
   target.hash = '';
   return target;

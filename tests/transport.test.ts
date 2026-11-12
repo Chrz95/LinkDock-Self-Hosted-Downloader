@@ -183,7 +183,7 @@ describe('real streaming HTTP transport', () => {
        * @param {http.ServerResponse} response - HTTP response destination.
        */
       (_request, response) => {
-        response.writeHead(REDIRECT_STATUS, { Location: 'http://127.0.0.1/private' });
+        response.writeHead(REDIRECT_STATUS, { Location: 'https://127.0.0.1:8443/private' });
         response.end();
       },
     );
@@ -191,7 +191,7 @@ describe('real streaming HTTP transport', () => {
       .mockResolvedValueOnce({ address: '127.0.0.1', family: 4 })
       .mockRejectedValueOnce(new Error('Private destinations are blocked.'));
     await expect(openSource(target, new AbortController().signal)).rejects.toThrow('blocked');
-    expect(vi.mocked(resolvePublicTarget).mock.calls.at(-1)?.[0].hostname).toBe('127.0.0.1');
+    expect(vi.mocked(resolvePublicTarget).mock.calls.at(-1)?.[0].host).toBe('127.0.0.1:8443');
   });
   /**
    * Verifies: does not download an HTTP error response as a successful file.

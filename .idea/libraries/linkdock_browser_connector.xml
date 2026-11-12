@@ -1,0 +1,9 @@
+<component name="libraryTable">
+  <library name="linkdock-browser-connector">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/public/linkdock-browser-connector.zip!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>

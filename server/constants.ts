@@ -23,7 +23,6 @@ export const LIMIT = {
 export const TRANSFER = {
   http: 'http:',
   https: 'https:',
-  httpPort: '80',
   httpsPort: '443',
   partialExtension: '.part',
   historyFile: 'history.json',

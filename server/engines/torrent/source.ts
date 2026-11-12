@@ -25,7 +25,7 @@ export async function readTorrentMetadata(
     const contents = await readFile(metadataPath);
     return contents.toString('base64');
   }
-  const response = await openSource(parseTargetUrl(job.url), signal);
+  const response = await openSource(parseTargetUrl(job.url, { allowCustomHttpsPort: true }), signal);
   const chunks: Buffer[] = [];
   let receivedBytes = 0;
   try {

@@ -73,7 +73,7 @@ export async function openSource(
       throw new Error('Too many redirects.');
     }
     return openSource(
-      parseTargetUrl(new URL(response.headers.location, target).href),
+      parseTargetUrl(new URL(response.headers.location, target).href, { allowCustomHttpsPort: true }),
       signal,
       redirectCount + 1,
       headers,

@@ -26,6 +26,15 @@ describe('persisted history validation', () => {
     expect(validateHistory([VALID_JOB])).toEqual([VALID_JOB]);
     expect(validateHistory([])).toEqual([]);
   });
+  it('restores a download and its resume URL with custom HTTPS ports', () => {
+    const job = {
+      ...VALID_JOB,
+      url: 'https://example.com:8443/file',
+      resumeSourceUrl: 'https://cdn.example:9443/file',
+      resumeValidator: '"stable"',
+    };
+    expect(validateHistory([job])).toEqual([job]);
+  });
   it.each([
     null,
     {},

@@ -80,8 +80,9 @@ export async function inspectPage(
   let stage = 'dns';
   let target: URL;
   const checks: DiagnosticCheck[] = [];
+  const targetOptions = { allowCustomHttpsPort: !media };
   try {
-    target = parseTargetUrl(url);
+    target = parseTargetUrl(url, targetOptions);
     for (let redirects = 0; redirects <= LIMIT.maximumRedirects; redirects += 1) {
       stage = 'dns';
       signal.throwIfAborted();
@@ -118,7 +119,7 @@ export async function inspectPage(
         response.headers.location
       ) {
         response.destroy();
-        target = parseTargetUrl(new URL(response.headers.location, target).href);
+        target = parseTargetUrl(new URL(response.headers.location, target).href, targetOptions);
         continue;
       }
       checks.push(

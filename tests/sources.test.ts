@@ -17,6 +17,12 @@ describe('source routing and validation', () => {
   ])('selects the correct engine for %s', (url, sourceType) => {
     expect(resolveDownloadRequest(url, undefined, undefined).sourceType).toBe(sourceType);
   });
+  it.each([
+    ['https://cdn.example:8443/d/Example%20archive.rar?t=', SOURCE_TYPE.direct],
+    ['https://cdn.example:9443/linux.torrent?token=example', SOURCE_TYPE.torrent],
+  ])('preserves the custom HTTPS port and query for %s', (url, sourceType) => {
+    expect(resolveDownloadRequest(url, undefined, undefined)).toMatchObject({ url, sourceType });
+  });
   it('recognizes magnets and preserves their tracker parameters as data', () => {
     const url = `magnet:?xt=urn:btih:${INFO_HASH}&dn=Ubuntu&tr=udp%3A%2F%2Ftracker.example%3A80`;
     const request = resolveDownloadRequest(url, SOURCE_TYPE.auto, undefined);
@@ -30,6 +36,8 @@ describe('source routing and validation', () => {
     ['https://example.com/file', SOURCE_TYPE.magnet, undefined],
     ['https://example.com/photo', SOURCE_TYPE.instagram, undefined],
     ['https://www.instagram.com/username/', SOURCE_TYPE.auto, undefined],
+    ['https://www.youtube.com:8443/watch?v=abc', SOURCE_TYPE.auto, undefined],
+    ['https://example.com:8443/watch/abc', SOURCE_TYPE.auto, 'mp3-192'],
     ['https://example.com/file', 'unsupported', undefined],
     ['https://example.com/file', SOURCE_TYPE.video, 'injected-format'],
   ])('rejects unsupported or malformed request %s', (url, sourceType, quality) => {

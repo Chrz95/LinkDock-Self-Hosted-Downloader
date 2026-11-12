@@ -88,7 +88,7 @@ function isDownloadJob(value: unknown): value is DownloadJob {
       if (typeof record.resumeSourceUrl !== 'string' || record.resumeSourceUrl.length > LIMIT.maximumUrlLength) {
         return false;
       }
-      parseTargetUrl(record.resumeSourceUrl);
+      parseTargetUrl(record.resumeSourceUrl, { allowCustomHttpsPort: true });
     }
     if (
       record.files !== undefined &&

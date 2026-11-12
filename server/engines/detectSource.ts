@@ -67,7 +67,7 @@ export function resolveDownloadRequest(sourceUrl: unknown, requestedType: unknow
       filename: (target.searchParams.get('dn') || 'Magnet download').slice(0, LIMIT.maximumFilenameLength),
     };
   }
-  const validatedTarget = parseTargetUrl(target.href);
+  const validatedTarget = parseTargetUrl(target.href, { allowCustomHttpsPort: true });
   const { hostname } = validatedTarget;
   const isInstagram = matchesDomain(hostname, 'instagram.com');
   const isDeviantArt = matchesDomain(hostname, 'deviantart.com') || hostname === 'fav.me';
@@ -103,6 +103,9 @@ export function resolveDownloadRequest(sourceUrl: unknown, requestedType: unknow
   }
   if (isAudioQuality(quality) && resolvedType === SOURCE_TYPE.direct && sourceType === SOURCE_TYPE.auto) {
     resolvedType = SOURCE_TYPE.video;
+  }
+  if (validatedTarget.port && resolvedType !== SOURCE_TYPE.direct && resolvedType !== SOURCE_TYPE.torrent) {
+    throw new Error('Media sources require standard HTTP/HTTPS ports. Choose Direct file for a file link.');
   }
   if (isAudioQuality(quality) && resolvedType !== SOURCE_TYPE.video) {
     if (resolvedType === SOURCE_TYPE.deviantart) {
