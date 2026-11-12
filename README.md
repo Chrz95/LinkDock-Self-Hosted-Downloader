@@ -143,6 +143,9 @@ connection allows only adding downloads; it cannot read the library or manage ac
 **Settings → Browser companions**. They expire after 90 days, and a station-password change invalidates them. Prefer
 HTTPS to protect pairing and download access. Older saved connections continue in tab mode until you reconnect.
 
+Choose **Toggle buttons on this page** to send exposed file links and videos directly to LinkDock from the page. Video
+buttons offer a resolution limit or MP3 output with a bitrate choice.
+
 Turn on **Catch browser downloads** in the popup to hand new HTTP/HTTPS file downloads to LinkDock. Grant the optional
 Downloads permission when prompted. The browser keeps its transfer running until LinkDock confirms it has started
 receiving the file.

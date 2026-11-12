@@ -212,4 +212,14 @@ describe('real streaming HTTP transport', () => {
     );
     await expect(openSource(target, new AbortController().signal)).rejects.toThrow('HTTP 404');
   });
+  it('reports a source precondition rejection without retrying or reading its error body', async () => {
+    const preconditionFailed = 412;
+    const hit = vi.fn();
+    const target = await createUpstream((_request, response) => {
+      hit();
+      response.writeHead(preconditionFailed, { 'Retry-After': '0' }).end('private-source-error');
+    });
+    await expect(openSource(target, new AbortController().signal)).rejects.toThrow('HTTP 412: The source rejected');
+    expect(hit).toHaveBeenCalledOnce();
+  });
 });

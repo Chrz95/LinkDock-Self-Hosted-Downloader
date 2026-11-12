@@ -16,6 +16,7 @@ async function pairedRequest(station, operation, request) {
     return { ok: false, message: 'Unsupported companion action.' };
   }
   try {
+    const capture = operation === 'downloads' && request?.browserCapture === true;
     const timeout = 15_000;
     const response = await fetch(`${origin}/api/companion/${operation}`, {
       method: operation === 'downloads' ? 'POST' : 'DELETE',
@@ -34,9 +35,14 @@ async function pairedRequest(station, operation, request) {
       return { ok: true, message: 'Companion download access revoked.' };
     }
     if (operation === 'downloads' && response.status === HTTP.created) {
-      if (request?.browserCapture === true) {
+      if (capture) {
         const result = await response.json();
-        return { ok: true, sourceStarted: result?.accepted === true && result.sourceStarted === true };
+        const sourceStarted = result?.accepted === true && result.sourceStarted === true;
+        const message =
+          result?.sourceFailed === true
+            ? 'LinkDock could not start the file. The browser copy was kept. Check the failed job in the library.'
+            : 'LinkDock queued the link without confirming file bytes. The browser copy was kept.';
+        return { ok: true, sourceStarted, message };
       }
       return { ok: true, message: 'Download added to LinkDock. Follow its progress in your library.' };
     }

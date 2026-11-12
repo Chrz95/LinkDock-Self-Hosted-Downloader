@@ -24,7 +24,7 @@
         <h1>LinkDock<span>COMPANION</span></h1>
         <p>Your next download, docked.</p>
       </div>
-      <span class="version">1.3</span>
+      <span class="version">1.4</span>
     </header>
     <main>
       <section
@@ -149,6 +149,14 @@
           Add to LinkDock <span aria-hidden="true">↗</span>
         </button>
         <p class="hint footer-hint">Downloads run on your Pi. You can close this popup after confirmation.</p>
+        <button
+          id="show-overlays"
+          class="secondary"
+          type="button"
+          disabled
+        >
+          Toggle buttons on this page
+        </button>
         <label class="check"
           ><input
             id="capture-downloads"
@@ -164,6 +172,11 @@
           Pair your station to send new HTTP/HTTPS file downloads automatically. The browser stops its copy only after
           LinkDock starts receiving the file. Turn this off for files that need your browser sign-in.
         </p>
+        <p
+          id="capture-result"
+          class="hint"
+          hidden
+        ></p>
       </section>
       <p
         id="status"
@@ -205,7 +218,7 @@
         </p>
       </details>
     </main>
-    <footer>PRIVATE BY DESIGN <span>LINKDOCK / 1.3</span></footer>
+    <footer>PRIVATE BY DESIGN <span>LINKDOCK / 1.4</span></footer>
     <script src="transfer.js"></script>
     <script src="station.js"></script>
     <script src="download.js"></script>

@@ -161,9 +161,34 @@ it('keeps capture off when the optional download permission is declined', async 
   expect(chrome.storage.local.set).not.toHaveBeenCalled();
 });
 
+it('shows the last capture result for the current pairing when the popup reopens', async () => {
+  const { chrome, element } = companionPopupFixture(true, 'https://files.example/file', true);
+  chrome.storage.local.get.mockResolvedValue({
+    station: PAIRED_STATION,
+    captureDownloads: PAIRED_STATION.connection.id,
+  });
+  chrome.storage.session.get.mockResolvedValue({
+    lastCapture: { connectionId: PAIRED_STATION.connection.id, message: 'The browser copy was kept.' },
+  });
+  await vi.waitFor(() => expect(element('capture-result').textContent).toBe('The browser copy was kept.'));
+  expect(element('capture-result').hidden).toBe(false);
+});
+
+it('shows page controls on explicit request in the active tab only', async () => {
+  const { chrome, element } = companionPopupFixture(true, 'https://files.example/video', true);
+  const show = element('show-overlays');
+  await vi.waitFor(() => expect(show.disabled).toBe(false));
+  expect(chrome.scripting.executeScript).not.toHaveBeenCalled();
+  show.click();
+  await vi.waitFor(() => expect(element('status').textContent).toContain('buttons shown'));
+  const [injection] = chrome.scripting.executeScript.mock.calls[0]!;
+  expect(injection).toMatchObject({ world: 'ISOLATED', files: ['overlay.js'] });
+  expect(chrome.permissions.request).not.toHaveBeenCalled();
+});
+
 it('declares every raster icon and grants no browsing-history or blanket required host access', () => {
   const manifest = JSON.parse(readFileSync('browser-connector/manifest.json', 'utf8'));
-  expect(manifest.version).toBe('1.3.1');
+  expect(manifest.version).toBe('1.4.0');
   expect(manifest.background).toEqual({ service_worker: 'background.js' });
   expect(manifest.optional_permissions).toContain('downloads');
   expect(manifest.permissions).not.toContain('downloads');

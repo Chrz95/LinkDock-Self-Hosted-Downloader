@@ -18,10 +18,12 @@ const ui = Object.fromEntries(
     'station-setup',
     'mode',
     'capture-downloads',
+    'capture-result',
+    'show-overlays',
   ].map((id) => [id, document.getElementById(id)]),
 );
 const companion = globalThis.LinkDockCompanion;
-const state = { station: undefined, active: undefined, busy: false, captureEnabled: false };
+const state = { station: undefined, active: undefined, busy: false, captureEnabled: false, captureResult: '' };
 
 /** Refreshes controls without storing URLs, cookies or station passwords. */
 function renderControls() {
@@ -32,6 +34,8 @@ function renderControls() {
   ui.forget.disabled = state.busy || !connected;
   ui['capture-downloads'].disabled = state.busy || !state.station?.token || !state.station.connection?.id;
   ui['capture-downloads'].checked = state.captureEnabled;
+  ui['capture-result'].textContent = state.captureResult;
+  ui['capture-result'].hidden = !state.captureEnabled || !state.captureResult;
   for (const id of ['source', 'confirm', 'station-address', 'download-url', 'download-source', 'quality']) {
     ui[id].disabled = state.busy;
   }
@@ -40,6 +44,8 @@ function renderControls() {
     !state.active?.url ||
     !/^https?:/u.test(state.active.url) ||
     new URL(state.active.url).origin === state.station?.origin;
+  ui['show-overlays'].disabled =
+    state.busy || !state.station?.token || !Number.isInteger(state.active?.id) || ui['use-page'].disabled;
   ui.destination.textContent = state.station?.origin ?? 'Connect your station to get started';
   ui.mode.textContent = connected
     ? state.station.token
@@ -90,6 +96,7 @@ ui.connect.addEventListener('click', () =>
     if (result.ok) {
       state.station = result.station;
       state.captureEnabled = false;
+      state.captureResult = '';
       ui.confirm.checked = false;
       ui['station-setup'].open = false;
       if (state.active?.url && new URL(state.active.url).origin === state.station.origin) {
@@ -104,6 +111,7 @@ ui.forget.addEventListener('click', () =>
     const result = await companion.forgetStation(state.station);
     state.station = undefined;
     state.captureEnabled = false;
+    state.captureResult = '';
     ui.confirm.checked = false;
     ui['station-setup'].open = true;
     return result;
@@ -151,6 +159,18 @@ ui['add-download'].addEventListener('click', () =>
     return result?.result;
   }),
 );
+ui['show-overlays'].addEventListener('click', () =>
+  runAction(async () => {
+    const [injection] = await chrome.scripting.executeScript({
+      target: { tabId: state.active.id },
+      world: 'ISOLATED',
+      files: ['overlay.js'],
+    });
+    return injection
+      ? { ok: true, message: injection.result ? 'LinkDock buttons shown on this page.' : 'LinkDock buttons hidden.' }
+      : { ok: false, message: 'Could not show LinkDock buttons on this page.' };
+  }),
+);
 ui.send.addEventListener('click', () => {
   if (state.station && ui.confirm.checked) {
     void runAction(() => companion.sendSelectedSession(state.station, ui.source.value));
@@ -189,6 +209,12 @@ async function initializePopup() {
     state.captureEnabled =
       Boolean(stored.token && stored.connection?.id && saved[keys.capture] === stored.connection.id) &&
       (await chrome.permissions.contains({ permissions: ['downloads'] }));
+    if (state.captureEnabled) {
+      const recent = (await chrome.storage.session?.get(keys.result))?.[keys.result];
+      if (recent?.connectionId === stored.connection.id) {
+        state.captureResult = recent.message;
+      }
+    }
   }
   ui['station-address'].value =
     state.station?.origin ??

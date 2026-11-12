@@ -124,7 +124,7 @@ it.each([HTTP_STATUS.notFound, HTTP_STATUS.ok])(
         .send({ url: capturedUrl, sourceType: 'video', browserCapture: true })
         .expect(HTTP_STATUS.created);
       const sourceStarted = sourceStatus === HTTP_STATUS.ok;
-      expect(response.body).toEqual({ accepted: true, sourceStarted });
+      expect(response.body).toEqual({ accepted: true, sourceStarted, ...(!sourceStarted && { sourceFailed: true }) });
       expect(hits).toEqual(['/download?key=example', '/fresh-file']);
       const [job] = fixture.queue.store.jobs;
       expect(job).toMatchObject({ url: capturedUrl, sourceType: 'direct' });

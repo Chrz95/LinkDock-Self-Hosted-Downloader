@@ -11,8 +11,13 @@ RUN pnpm prune --prod
 FROM node:24.19.0-bookworm-slim AS runtime
 ENV NODE_ENV=production PORT=8080 DATA_DIRECTORY=/data XDG_CACHE_HOME=/data/.cache AUTO_UPDATE_TOOLS=true \
     PATH="/opt/media/bin:${PATH}"
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    python3 python3-venv ffmpeg aria2 ca-certificates \
+# Use Node's bundled CA roots until the system CA bundle is installed.
+RUN sed -i 's|^URIs: http://deb.debian.org/|URIs: https://deb.debian.org/|' /etc/apt/sources.list.d/debian.sources \
+    && node -e 'console.log(require("node:tls").getCACertificates("bundled").join("\n"))' > /tmp/linkdock-apt-ca.pem \
+    && apt-get -o Acquire::https::CAInfo=/tmp/linkdock-apt-ca.pem -o Acquire::Retries=3 update --error-on=any \
+    && apt-get -o Acquire::https::CAInfo=/tmp/linkdock-apt-ca.pem -o Acquire::Retries=3 install -y --no-install-recommends \
+        python3 python3-venv ffmpeg aria2 ca-certificates \
+    && rm -f /tmp/linkdock-apt-ca.pem \
     && rm -rf /var/lib/apt/lists/*
 COPY requirements-media.txt ./
 COPY server/utilities/mediaRuntime.py /opt/check-media-runtime.py

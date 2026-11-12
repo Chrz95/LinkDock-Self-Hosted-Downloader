@@ -41,9 +41,16 @@ function captureFixture(permissionGranted = true) {
   };
   const chrome = {
     downloads: permissionGranted ? downloads : undefined,
-    runtime: { getURL: () => `chrome-extension://${'a'.repeat(EXTENSION_ID_LENGTH)}/` },
+    runtime: {
+      getURL: () => `chrome-extension://${'a'.repeat(EXTENSION_ID_LENGTH)}/`,
+      id: 'a'.repeat(EXTENSION_ID_LENGTH),
+      onMessage: { addListener: vi.fn() },
+    },
     permissions: { onAdded: { addListener: onAdded }, contains: vi.fn().mockResolvedValue(true) },
-    storage: { local: { get: vi.fn(async () => ({ ...saved })) } },
+    storage: {
+      local: { get: vi.fn(async () => ({ ...saved })) },
+      session: { set: vi.fn().mockResolvedValue(undefined) },
+    },
     cookies: { getAll: vi.fn() },
   };
   const context = createContext({ chrome, fetch, URL, AbortSignal });
@@ -76,6 +83,31 @@ it('registers once when Chrome makes the optional Downloads API available', () =
   expect(onCreated).toHaveBeenCalledOnce();
 });
 
+it('sends a selected MP3 output from the page through the paired station without forwarding extra fields', async () => {
+  const { chrome, fetch } = captureFixture();
+  const [receive] = chrome.runtime.onMessage.addListener.mock.calls[0]!;
+  const sender = { id: chrome.runtime.id, frameId: 0, tab: { id: file.id }, url: 'https://source.example/watch' };
+  const selection = {
+    type: 'linkdock-overlay-download',
+    url: sender.url,
+    sourceType: 'video',
+    quality: 'mp3-320',
+    browserCapture: true,
+  };
+  const respond = vi.fn();
+  expect(receive(selection, { ...sender, id: 'foreign' }, respond)).toBeUndefined();
+  expect(fetch).not.toHaveBeenCalled();
+  expect(receive(selection, sender, respond)).toBe(true);
+  await vi.waitFor(() => expect(respond).toHaveBeenCalledWith(expect.objectContaining({ ok: true })));
+  expect(fetch).toHaveBeenCalledExactlyOnceWith(
+    `${station.origin}/api/companion/downloads`,
+    expect.objectContaining({
+      credentials: 'omit',
+      body: JSON.stringify({ url: sender.url, sourceType: 'video', quality: 'mp3-320' }),
+    }),
+  );
+});
+
 it('queues the original HTTPS URL and cancels only after the station receives file bytes', async () => {
   const { chrome, downloads, fetch, created } = captureFixture();
   let respond: ((body: object) => void) | undefined;
@@ -105,6 +137,12 @@ it('queues the original HTTPS URL and cancels only after the station receives fi
   respond?.({ accepted: true, sourceStarted: true });
   await handoff;
   expect(downloads.cancel).toHaveBeenCalledExactlyOnceWith(file.id);
+  expect(chrome.storage.session.set).toHaveBeenCalledExactlyOnceWith({
+    lastCapture: {
+      connectionId: station.connection.id,
+      message: 'Handed off to LinkDock. The browser copy was stopped.',
+    },
+  });
 });
 
 it.each([{ accepted: true, sourceStarted: false }, { accepted: true }])(
@@ -117,6 +155,22 @@ it.each([{ accepted: true, sourceStarted: false }, { accepted: true }])(
     expect(downloads.cancel).not.toHaveBeenCalled();
   },
 );
+
+it('shows that the station failed while keeping the local browser copy', async () => {
+  const { chrome, downloads, fetch, created } = captureFixture();
+  fetch.mockResolvedValueOnce({
+    status: HTTP_STATUS.created,
+    json: async () => ({ accepted: true, sourceStarted: false, sourceFailed: true }),
+  });
+  await created();
+  expect(downloads.cancel).not.toHaveBeenCalled();
+  expect(chrome.storage.session.set).toHaveBeenCalledExactlyOnceWith({
+    lastCapture: {
+      connectionId: station.connection.id,
+      message: 'LinkDock could not start the file. The browser copy was kept. Check the failed job in the library.',
+    },
+  });
+});
 
 it.each([HTTP_STATUS.badRequest, HTTP_STATUS.unauthorized, HTTP_STATUS.serverError])(
   'leaves the browser transfer running when the station replies %s',

@@ -6,7 +6,7 @@ import { browserHeaders, type SourceAccess } from '../browserAccess/headers.js';
 import { retryAfterSeconds, waitForSource } from '../browserAccess/wait.js';
 import { BROWSER_ACCESS } from '../../shared/browserAccess.js';
 import { SourceRetryError, sourceRetryAfter, transientHttpStatus } from './retry.js';
-const SOURCE_HTTP = { throttled: 429, unavailable: 503, unauthorized: 401, forbidden: 403 } as const;
+const SOURCE_HTTP = { throttled: 429, unavailable: 503, unauthorized: 401, forbidden: 403, precondition: 412 } as const;
 
 /** Internal response metadata binds entity tags to the exact final resource after redirects. */
 export interface SourceResponse extends IncomingMessage {
@@ -104,6 +104,11 @@ export async function openSource(
     response.destroy();
     if (statusCode === SOURCE_HTTP.unauthorized || statusCode === SOURCE_HTTP.forbidden) {
       throw new Error('Source access needs browser verification or login. Use Browser assistance.');
+    }
+    if (statusCode === SOURCE_HTTP.precondition) {
+      throw new Error(
+        'HTTP 412: The source rejected this request. Try a fresh link or finish the download in your browser.',
+      );
     }
     throw new Error(`The source returned HTTP ${statusCode}.`);
   }

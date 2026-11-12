@@ -126,7 +126,11 @@ export function createCompanionClientRoutes(store: CompanionStore, queue: Downlo
     const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(COMPANION.captureWaitMilliseconds)]);
     const sourceStarted = await captureSourceStarted(job, signal);
     if (!response.destroyed) {
-      response.status(HTTP_STATUS.created).json({ accepted: true, sourceStarted });
+      response.status(HTTP_STATUS.created).json({
+        accepted: true,
+        sourceStarted,
+        ...(job.status === DOWNLOAD_STATUS.failed && { sourceFailed: true }),
+      });
     }
   });
   router.delete('/connection', (_request, response) => {

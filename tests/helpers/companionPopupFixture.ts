@@ -57,6 +57,7 @@ export function companionPopupFixture(
         set: vi.fn().mockResolvedValue(undefined),
         remove: vi.fn().mockResolvedValue(undefined),
       },
+      session: { get: vi.fn().mockResolvedValue({}) },
     },
     scripting: {
       executeScript: vi.fn().mockResolvedValue([
