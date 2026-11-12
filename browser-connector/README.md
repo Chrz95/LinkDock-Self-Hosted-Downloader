@@ -1,4 +1,4 @@
-# LinkDock Browser Companion 1.3
+# LinkDock Browser Companion 1.3.1
 
 For desktop Chrome, Edge or Brave (Chromium 102+), with **LinkDock 2.31 or newer** for independent download access. Pair
 once from a signed-in station tab, then add downloads even with that tab closed. The station must still be running and
@@ -45,10 +45,11 @@ expired connection produces reconnection instructions. A closed station tab does
 ## Catch browser downloads
 
 Pair your station, then turn on **Catch browser downloads** in the popup and allow the optional Downloads permission.
-New HTTP or HTTPS files go to the paired station as direct downloads, even with the popup and station tab closed. If
-LinkDock accepts the link into its queue, the companion cancels the browser copy if it is still running. If the station
-is unavailable or rejects the link, the browser download continues. A small file may finish in the browser during the
-handoff and also appear in LinkDock.
+New HTTP or HTTPS files go to the paired station as direct downloads, even with the popup and station tab closed. The
+station opens the original URL and follows its own redirects. If LinkDock confirms it has started receiving the file,
+the companion cancels the browser copy if it is still running. The browser keeps downloading if the source returns an
+error such as HTTP 404, the station takes too long to start, or an older station confirms only queue acceptance. Both
+copies may finish when the browser completes its transfer before the station confirms it has started.
 
 Capture starts off and is enabled separately for regular and incognito browsing. Pairing again requires enabling it
 again. Downloads from the paired station, browser-only URLs such as `blob:` URLs, and downloads flagged by the browser

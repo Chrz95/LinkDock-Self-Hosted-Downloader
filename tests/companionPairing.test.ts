@@ -1,16 +1,27 @@
 import { readFileSync, writeFileSync } from 'node:fs';
+import { once } from 'node:events';
+import http from 'node:http';
 import path from 'node:path';
 import request from 'supertest';
 import { afterEach, expect, it, vi } from 'vitest';
 import { createDeliveryFixture, cleanupDeliveryFixtures } from './helpers/deliveryFixture';
 import { CompanionStore } from '../server/companion/store';
 import { COMPANION } from '../shared/companion';
-import { API_PATH, HTTP_STATUS } from '../shared/contracts';
+import { API_PATH, DOWNLOAD_STATUS, HTTP_STATUS } from '../shared/contracts';
+import { resolvePublicTarget } from '../server/security/target';
+
+vi.mock('../server/security/target', async (original) => ({
+  ...(await original<typeof import('../server/security/target')>()),
+  resolvePublicTarget: vi.fn(),
+}));
 
 const EXTENSION_ID_LENGTH = 32;
 const extension = `chrome-extension://${'a'.repeat(EXTENSION_ID_LENGTH)}`;
 const otherExtension = `chrome-extension://${'b'.repeat(EXTENSION_ID_LENGTH)}`;
 const source = { url: 'https://www.youtube.com/watch?v=paired-video', sourceType: 'video', quality: 'mp3-192' };
+const publicAddress = { address: '93.184.216.34', family: 4 };
+const capturedUrl = 'http://source.example/download?key=example';
+const FOUND_REDIRECT = 302;
 afterEach(cleanupDeliveryFixtures);
 
 it('requires an owner session and same-origin JSON to create or revoke a connection', async () => {
@@ -69,6 +80,65 @@ it('queues through a standalone bearer request after the browser station session
     .send({ action: 'clear' })
     .expect(HTTP_STATUS.unauthorized);
 });
+
+it.each([HTTP_STATUS.notFound, HTTP_STATUS.ok])(
+  'reports whether file bytes started after the captured source redirects to HTTP %s',
+  async (sourceStatus) => {
+    const hits: (string | undefined)[] = [];
+    const upstream = http.createServer((incoming, outgoing) => {
+      hits.push(incoming.url);
+      if (incoming.url === '/download?key=example') {
+        outgoing.writeHead(FOUND_REDIRECT, { Location: '/fresh-file' }).end();
+      } else {
+        outgoing.writeHead(sourceStatus, { 'Content-Type': 'application/octet-stream' }).end('source bytes');
+      }
+    });
+    upstream.listen(0, '127.0.0.1');
+    await once(upstream, 'listening');
+    try {
+      const address = upstream.address();
+      if (!address || typeof address === 'string') {
+        throw new Error('Missing upstream fixture address.');
+      }
+      vi.mocked(resolvePublicTarget).mockResolvedValue(publicAddress);
+      const { get } = http;
+      vi.spyOn(http, 'get').mockImplementation((...args: unknown[]) => {
+        const [url, options, callback] = args as [URL, http.RequestOptions, (response: http.IncomingMessage) => void];
+        return get(
+          url,
+          {
+            ...options,
+            port: address.port,
+            lookup: (_hostname, _options, complete) => complete(null, '127.0.0.1', publicAddress.family),
+          },
+          callback,
+        );
+      });
+      const fixture = await createDeliveryFixture(true);
+      await fixture.login();
+      const paired = await fixture.client.post(COMPANION.path).send({ extensionOrigin: extension });
+      const response = await request(fixture.application)
+        .post(`${COMPANION.clientPath}/downloads`)
+        .set('X-LinkDock-Extension', extension)
+        .auth(paired.body.token, { type: 'bearer' })
+        .send({ url: capturedUrl, sourceType: 'video', browserCapture: true })
+        .expect(HTTP_STATUS.created);
+      const sourceStarted = sourceStatus === HTTP_STATUS.ok;
+      expect(response.body).toEqual({ accepted: true, sourceStarted });
+      expect(hits).toEqual(['/download?key=example', '/fresh-file']);
+      const [job] = fixture.queue.store.jobs;
+      expect(job).toMatchObject({ url: capturedUrl, sourceType: 'direct' });
+      if (sourceStarted) {
+        expect(job?.receivedBytes).toBeGreaterThan(0);
+      } else {
+        expect(job).toMatchObject({ status: DOWNLOAD_STATUS.failed, errorMessage: 'The source returned HTTP 404.' });
+      }
+    } finally {
+      upstream.closeAllConnections();
+      await new Promise<void>((resolve) => upstream.close(() => resolve()));
+    }
+  },
+);
 
 it('rejects ordinary website origins, mismatched extensions and cookie-only requests on the narrow API', async () => {
   const fixture = await createDeliveryFixture();

@@ -163,7 +163,7 @@ it('keeps capture off when the optional download permission is declined', async 
 
 it('declares every raster icon and grants no browsing-history or blanket required host access', () => {
   const manifest = JSON.parse(readFileSync('browser-connector/manifest.json', 'utf8'));
-  expect(manifest.version).toBe('1.3.0');
+  expect(manifest.version).toBe('1.3.1');
   expect(manifest.background).toEqual({ service_worker: 'background.js' });
   expect(manifest.optional_permissions).toContain('downloads');
   expect(manifest.permissions).not.toContain('downloads');

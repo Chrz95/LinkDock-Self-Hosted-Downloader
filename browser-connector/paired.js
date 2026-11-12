@@ -34,6 +34,10 @@ async function pairedRequest(station, operation, request) {
       return { ok: true, message: 'Companion download access revoked.' };
     }
     if (operation === 'downloads' && response.status === HTTP.created) {
+      if (request?.browserCapture === true) {
+        const result = await response.json();
+        return { ok: true, sourceStarted: result?.accepted === true && result.sourceStarted === true };
+      }
       return { ok: true, message: 'Download added to LinkDock. Follow its progress in your library.' };
     }
     const messages = {

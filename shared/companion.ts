@@ -8,6 +8,8 @@ export const COMPANION = {
   lifetimeMilliseconds: 7_776_000_000,
   requestWindowMilliseconds: 60_000,
   requestsPerWindow: 60,
+  captureWaitMilliseconds: 8_000,
+  capturePollMilliseconds: 200,
 } as const;
 export interface CompanionConnection {
   id: string;

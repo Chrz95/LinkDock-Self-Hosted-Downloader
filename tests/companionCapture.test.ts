@@ -17,7 +17,7 @@ const file = {
   danger: 'safe',
   paused: false,
   incognito: false,
-  url: 'https://source.example/redirect',
+  url: 'https://source.example:8443/redirect?signature=example#fragment',
   finalUrl: 'https://cdn.example:8443/archive.zip?signature=example#fragment',
 };
 type DownloadItem = typeof file & { byExtensionId?: string };
@@ -28,7 +28,10 @@ type DownloadItem = typeof file & { byExtensionId?: string };
  */
 function captureFixture(permissionGranted = true) {
   const saved: Record<string, unknown> = { station, captureDownloads: station.connection.id };
-  const fetch = vi.fn().mockResolvedValue({ status: HTTP_STATUS.created });
+  const fetch = vi.fn().mockResolvedValue({
+    status: HTTP_STATUS.created,
+    json: async () => ({ accepted: true, sourceStarted: true }),
+  });
   const onAdded = vi.fn<(register: () => void) => void>();
   const onCreated = vi.fn<(listener: (item: DownloadItem) => Promise<void>) => void>();
   const downloads = {
@@ -73,31 +76,47 @@ it('registers once when Chrome makes the optional Downloads API available', () =
   expect(onCreated).toHaveBeenCalledOnce();
 });
 
-it('queues the redirected HTTPS URL and cancels only after confirmed station acceptance', async () => {
+it('queues the original HTTPS URL and cancels only after the station receives file bytes', async () => {
   const { chrome, downloads, fetch, created } = captureFixture();
-  let respond: ((response: { status: number }) => void) | undefined;
+  let respond: ((body: object) => void) | undefined;
   fetch.mockReturnValueOnce(
-    new Promise<{ status: number }>((resolve) => {
-      respond = resolve;
+    Promise.resolve({
+      status: HTTP_STATUS.created,
+      json: () =>
+        new Promise<object>((resolve) => {
+          respond = resolve;
+        }),
     }),
   );
   const handoff = created();
-  await vi.waitFor(() => expect(fetch).toHaveBeenCalledOnce());
+  await vi.waitFor(() => expect(respond).toBeDefined());
   expect(downloads.cancel).not.toHaveBeenCalled();
   const request = {
-    url: 'https://cdn.example:8443/archive.zip?signature=example',
+    url: 'https://source.example:8443/redirect?signature=example',
     sourceType: 'direct',
     quality: '1080',
+    browserCapture: true,
   };
   expect(fetch).toHaveBeenCalledWith(
     `${station.origin}/api/companion/downloads`,
     expect.objectContaining({ credentials: 'omit', redirect: 'error', body: JSON.stringify(request) }),
   );
   expect(chrome.cookies.getAll).not.toHaveBeenCalled();
-  respond?.({ status: HTTP_STATUS.created });
+  respond?.({ accepted: true, sourceStarted: true });
   await handoff;
   expect(downloads.cancel).toHaveBeenCalledExactlyOnceWith(file.id);
 });
+
+it.each([{ accepted: true, sourceStarted: false }, { accepted: true }])(
+  'keeps the browser copy running when the station only confirms queue acceptance',
+  async (body) => {
+    const { downloads, fetch, created } = captureFixture();
+    fetch.mockResolvedValueOnce({ status: HTTP_STATUS.created, json: async () => body });
+    await created();
+    expect(fetch).toHaveBeenCalledOnce();
+    expect(downloads.cancel).not.toHaveBeenCalled();
+  },
+);
 
 it.each([HTTP_STATUS.badRequest, HTTP_STATUS.unauthorized, HTTP_STATUS.serverError])(
   'leaves the browser transfer running when the station replies %s',
@@ -160,7 +179,7 @@ it('leaves a finished browser copy and respects turning capture off during an in
   fetch.mockClear();
   fetch.mockImplementationOnce(async () => {
     delete saved.captureDownloads;
-    return { status: HTTP_STATUS.created };
+    return { status: HTTP_STATUS.created, json: async () => ({ accepted: true, sourceStarted: true }) };
   });
   await created();
   expect(fetch).toHaveBeenCalledOnce();

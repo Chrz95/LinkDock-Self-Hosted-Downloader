@@ -144,7 +144,8 @@ connection allows only adding downloads; it cannot read the library or manage ac
 HTTPS to protect pairing and download access. Older saved connections continue in tab mode until you reconnect.
 
 Turn on **Catch browser downloads** in the popup to hand new HTTP/HTTPS file downloads to LinkDock. Grant the optional
-Downloads permission when prompted. The browser keeps its transfer running until LinkDock accepts the link.
+Downloads permission when prompted. The browser keeps its transfer running until LinkDock confirms it has started
+receiving the file.
 
 The companion is supplied as an unpacked extension, so installation requires your browser's approval.
 

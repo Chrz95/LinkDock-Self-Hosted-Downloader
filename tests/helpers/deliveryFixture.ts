@@ -21,10 +21,11 @@ const MAXIMUM_BYTES = 33_554_432;
 const resources: { queue: DownloadQueue; directory: string }[] = [];
 
 /**
- * Creates a stopped real station so source downloads cannot run during saved-file delivery tests.
+ * Creates a real station with workers stopped by default for saved-file delivery tests.
+ * @param {boolean} [startWorkers] - Allow live transfers from a controlled source in integration tests.
  * @returns {Promise<object>} Owner client, queue and published-file factories.
  */
-export async function createDeliveryFixture() {
+export async function createDeliveryFixture(startWorkers = false) {
   const directory = mkdtempSync(path.resolve('tests/.delivery-'));
   const configuration: ServerConfig = {
     dataDirectory: directory,
@@ -37,7 +38,9 @@ export async function createDeliveryFixture() {
     isProduction: false,
   };
   const queue = new DownloadQueue(configuration);
-  await queue.stop();
+  if (!startWorkers) {
+    await queue.stop();
+  }
   resources.push({ queue, directory });
   const application = createApplication(configuration, queue);
   const client = request.agent(application);

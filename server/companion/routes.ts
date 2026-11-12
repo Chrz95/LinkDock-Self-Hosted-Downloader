@@ -1,7 +1,9 @@
 import { Router } from 'express';
+import { setTimeout as delay } from 'node:timers/promises';
 import { rateLimit } from 'express-rate-limit';
 import { COMPANION, EXTENSION_ORIGIN } from '../../shared/companion.js';
-import { HTTP_METHOD, HTTP_STATUS } from '../../shared/contracts.js';
+import { DOWNLOAD_STATUS, HTTP_METHOD, HTTP_STATUS, type DownloadJob } from '../../shared/contracts.js';
+import { SOURCE_TYPE } from '../../shared/sources.js';
 import type { DownloadQueue } from '../downloads/queue.js';
 import type { CompanionStore } from './store.js';
 
@@ -26,6 +28,28 @@ export function createCompanionRoutes(store: CompanionStore): Router {
     response.status(HTTP_STATUS.noContent).end();
   });
   return router;
+}
+
+/**
+ * Observes the job from this submission only, without another request to the file host.
+ * @param {DownloadJob} job - Newly queued direct transfer and its live progress.
+ * @param {AbortSignal} signal - Deadline or disconnected companion.
+ * @returns {Promise<boolean>} Whether the station began receiving file bytes or completed the file.
+ */
+async function captureSourceStarted(job: DownloadJob, signal: AbortSignal): Promise<boolean> {
+  while (!signal.aborted) {
+    if (job.status === DOWNLOAD_STATUS.completed || (job.status === DOWNLOAD_STATUS.downloading && job.receivedBytes)) {
+      return true;
+    }
+    if (
+      (job.status !== DOWNLOAD_STATUS.queued && job.status !== DOWNLOAD_STATUS.downloading) ||
+      job.retry?.nextAttemptAt
+    ) {
+      break;
+    }
+    await delay(COMPANION.capturePollMilliseconds, undefined, { signal }).catch(() => undefined);
+  }
+  return false;
 }
 
 /** Separate extension-only API grants queue submission and self-revocation, never station-session authority.
@@ -78,14 +102,31 @@ export function createCompanionClientRoutes(store: CompanionStore, queue: Downlo
     response.locals.connectionId = connection.id;
     next();
   });
-  router.post('/downloads', (request, response) => {
+  router.post('/downloads', async (request, response) => {
+    const capture = request.body?.browserCapture === true;
+    let job: DownloadJob;
     try {
-      queue.add(request.body?.url, request.body?.sourceType, request.body?.quality);
-      response.status(HTTP_STATUS.created).json({ accepted: true });
+      job = queue.add(
+        request.body?.url,
+        capture ? SOURCE_TYPE.direct : request.body?.sourceType,
+        request.body?.quality,
+      );
     } catch {
       response
         .status(HTTP_STATUS.badRequest)
         .json({ error: 'Link or options rejected. Check the library for duplicates.' });
+      return;
+    }
+    if (!capture) {
+      response.status(HTTP_STATUS.created).json({ accepted: true });
+      return;
+    }
+    const controller = new AbortController();
+    response.once('close', () => controller.abort());
+    const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(COMPANION.captureWaitMilliseconds)]);
+    const sourceStarted = await captureSourceStarted(job, signal);
+    if (!response.destroyed) {
+      response.status(HTTP_STATUS.created).json({ accepted: true, sourceStarted });
     }
   });
   router.delete('/connection', (_request, response) => {

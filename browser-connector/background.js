@@ -27,7 +27,7 @@ function canCatchDownload(item) {
   return item?.state === 'in_progress' && item.danger === 'safe' && !item.paused && !item.byExtensionId;
 }
 
-/** Queues a browser file and cancels its local transfer only after confirmed station acceptance.
+/** Queues a browser file and cancels its local transfer after the station starts receiving it.
  * @param {object} item - New browser download event.
  */
 async function catchBrowserDownload(item) {
@@ -55,9 +55,10 @@ async function catchBrowserDownload(item) {
     ) {
       return;
     }
-    target.hash = '';
-    const request = companion.downloadRequest(target.href, 'direct');
-    if (!(await companion.pairedRequest(station, 'downloads', request)).ok) {
+    original.hash = '';
+    const request = { ...companion.downloadRequest(original.href, 'direct'), browserCapture: true };
+    const result = await companion.pairedRequest(station, 'downloads', request);
+    if (!result.sourceStarted) {
       return;
     }
     const enabled = await captureStation(incognito);
