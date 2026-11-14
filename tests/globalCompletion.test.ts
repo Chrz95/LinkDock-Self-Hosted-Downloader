@@ -88,7 +88,7 @@ it('authenticates settings and moves a new download to the completion root', asy
     const job = resumed.store.jobs[0]!;
     await vi.waitFor(() => expect(job.status).toBe(DOWNLOAD_STATUS.completed));
     expect(job.destination?.moved).toBe(true);
-    const output = path.join(queue.store.completedDirectory, job.id, 'files', 'movie.mp4');
+    const output = path.join(queue.store.completedDirectory, 'movie.mp4');
     expect(readFileSync(output)).toEqual(bytes);
     expect(existsSync(queue.store.getFilePath(job.id))).toBe(false);
     expect(new DownloadStore(configuration.dataDirectory).jobs[0]?.destination?.moved).toBe(true);

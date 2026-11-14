@@ -23,7 +23,14 @@ const ui = Object.fromEntries(
   ].map((id) => [id, document.getElementById(id)]),
 );
 const companion = globalThis.LinkDockCompanion;
-const state = { station: undefined, active: undefined, busy: false, captureEnabled: false, captureResult: '' };
+const state = {
+  station: undefined,
+  active: undefined,
+  busy: false,
+  captureEnabled: false,
+  captureResult: '',
+  overlays: true,
+};
 
 /** Refreshes controls without storing URLs, cookies or station passwords. */
 function renderControls() {
@@ -44,8 +51,8 @@ function renderControls() {
     !state.active?.url ||
     !/^https?:/u.test(state.active.url) ||
     new URL(state.active.url).origin === state.station?.origin;
-  ui['show-overlays'].disabled =
-    state.busy || !state.station?.token || !Number.isInteger(state.active?.id) || ui['use-page'].disabled;
+  ui['show-overlays'].disabled = state.busy || !state.station?.token;
+  ui['show-overlays'].checked = Boolean(state.station?.token) && state.overlays;
   ui.destination.textContent = state.station?.origin ?? 'Connect your station to get started';
   ui.mode.textContent = connected
     ? state.station.token
@@ -159,18 +166,15 @@ ui['add-download'].addEventListener('click', () =>
     return result?.result;
   }),
 );
-ui['show-overlays'].addEventListener('click', () =>
-  runAction(async () => {
-    const [injection] = await chrome.scripting.executeScript({
-      target: { tabId: state.active.id },
-      world: 'ISOLATED',
-      files: ['overlay.js'],
-    });
-    return injection
-      ? { ok: true, message: injection.result ? 'LinkDock buttons shown on this page.' : 'LinkDock buttons hidden.' }
-      : { ok: false, message: 'Could not show LinkDock buttons on this page.' };
-  }),
-);
+ui['show-overlays'].addEventListener('change', () => {
+  const enabled = ui['show-overlays'].checked;
+  void runAction(async () => {
+    const { overlays } = companion.downloadCaptureKeys(Boolean(state.active?.incognito));
+    await chrome.storage.local.set({ [overlays]: enabled });
+    state.overlays = enabled;
+    return { ok: true, message: enabled ? 'Page download buttons are on.' : 'Page download buttons are off.' };
+  });
+});
 ui.send.addEventListener('click', () => {
   if (state.station && ui.confirm.checked) {
     void runAction(() => companion.sendSelectedSession(state.station, ui.source.value));
@@ -199,10 +203,18 @@ async function initializePopup() {
   const privateMode = companion.downloadCaptureKeys(true);
   const [[active], saved] = await Promise.all([
     chrome.tabs.query({ active: true, currentWindow: true }),
-    chrome.storage.local.get([regular.station, regular.capture, privateMode.station, privateMode.capture]),
+    chrome.storage.local.get([
+      regular.station,
+      regular.capture,
+      regular.overlays,
+      privateMode.station,
+      privateMode.capture,
+      privateMode.overlays,
+    ]),
   ]);
   state.active = active;
   const keys = active?.incognito ? privateMode : regular;
+  state.overlays = saved[keys.overlays] !== false;
   const stored = saved[keys.station];
   if (stored && Boolean(stored.incognito) === Boolean(active?.incognito)) {
     state.station = { ...stored, origin: companion.stationOrigin(stored.origin) };

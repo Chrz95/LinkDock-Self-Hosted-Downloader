@@ -121,9 +121,9 @@ jobs inherit this preference, so you do not need to choose it for every download
 | `${LINKDOCK_DOWNLOAD_PATH}/transfers` | `/data/downloads` | Transfer storage and files retained without an automatic move. |
 | `${LINKDOCK_DOWNLOAD_PATH}/completed` | `/completed`      | Completed files when automatic moves are enabled.              |
 
-Completed jobs use their own subdirectories. Use **Library → View files** to locate or save a specific output. To change
-the state directory, edit its bind source in `compose.rpi.yaml`. Containers can write only to host locations that you
-mount; entering an arbitrary Pi path in the interface does not mount it.
+New files are saved directly in the selected folder. Use **Library → View files** to locate or save a specific output.
+To change the state directory, edit its bind source in `compose.rpi.yaml`. Containers can write only to host locations
+that you mount; entering an arbitrary Pi path in the interface does not mount it.
 
 For HTTPS reverse proxies, alternative mounts, environment variables and backups, see the
 [operations guide](OPERATIONS.md#operation-and-network-access).
@@ -143,12 +143,12 @@ connection allows only adding downloads; it cannot read the library or manage ac
 **Settings → Browser companions**. They expire after 90 days, and a station-password change invalidates them. Prefer
 HTTPS to protect pairing and download access. Older saved connections continue in tab mode until you reconnect.
 
-Choose **Toggle buttons on this page** to send exposed file links and videos directly to LinkDock from the page. Video
-buttons offer a resolution limit or MP3 output with a bitrate choice.
+After pairing, on-page buttons send exposed file links and videos directly to LinkDock. Video buttons offer a resolution
+limit or MP3 output with a bitrate choice. Turn off **Show download buttons on websites** in the popup to hide them.
 
 Turn on **Catch browser downloads** in the popup to hand new HTTP/HTTPS file downloads to LinkDock. Grant the optional
 Downloads permission when prompted. The browser keeps its transfer running until LinkDock confirms it has started
-receiving the file.
+receiving the file. A browser notification reports the handoff when LinkDock accepts the download.
 
 The companion is supplied as an unpacked extension, so installation requires your browser's approval.
 

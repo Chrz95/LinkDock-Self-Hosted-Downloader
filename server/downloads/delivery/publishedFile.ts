@@ -1,7 +1,6 @@
 import { constants, type Stats } from 'node:fs';
 import { open, type FileHandle } from 'node:fs/promises';
 import { DOWNLOAD_STATUS, HTTP_STATUS, type DownloadJob } from '../../../shared/contracts.js';
-import { resolveArtifactPath } from '../../engines/artifacts.js';
 import type { DownloadQueue } from '../queue.js';
 
 /** Safe delivery errors contain no filesystem paths or engine diagnostic text. */
@@ -50,7 +49,7 @@ export async function openPublishedFile(
   let handle: FileHandle | undefined;
   try {
     if (artifact) {
-      filename = await resolveArtifactPath(queue.store.getOutputDirectory(job), artifact.relativePath);
+      filename = await queue.store.getOutputFile(job, artifact);
       displayName = artifact.name.split(/[\\/]/).at(-1) ?? artifact.name;
     }
     handle = await open(filename, constants.O_RDONLY | constants.O_NOFOLLOW);

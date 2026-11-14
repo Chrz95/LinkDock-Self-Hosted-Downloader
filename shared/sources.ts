@@ -56,6 +56,7 @@ export interface DownloadArtifact {
   name: string;
   relativePath: string;
   sizeBytes: number;
+  publication?: { inode: string; modified: string };
 }
 /** Product-facing names for source badges and controls. */
 export const SOURCE_LABEL = {

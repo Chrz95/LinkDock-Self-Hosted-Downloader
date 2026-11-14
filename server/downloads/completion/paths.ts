@@ -1,4 +1,4 @@
-import { lstatSync, mkdirSync, realpathSync, rmSync } from 'node:fs';
+import { lstatSync, mkdirSync, realpathSync } from 'node:fs';
 import path from 'node:path';
 import type { DownloadJob } from '../../../shared/contracts.js';
 import { validateDestination } from '../../../shared/jobOptions.js';
@@ -39,18 +39,19 @@ export function safeDirectory(directory: string, create = false): string {
  * @returns {string} Absolute job directory, whose leaf may not yet exist.
  */
 export function destinationDirectory(root: string, job: DownloadJob, createParents = false): string {
+  return path.join(destinationParent(root, job, createParents), job.id);
+}
+
+/** Resolves the selected shared folder beneath the configured root.
+ * @param {string} root - Administrator-controlled storage root.
+ * @param {DownloadJob} job - Job with a validated destination.
+ * @param {boolean} [createParents] - Whether missing folders can be created.
+ * @returns {string} Absolute checked output folder.
+ */
+export function destinationParent(root: string, job: DownloadJob, createParents = false): string {
   if (!job.destination) {
     throw new Error('No completion destination.');
   }
   const base = safeDirectory(root, createParents);
-  const parent = safeDirectory(path.join(base, validateDestination(job.destination.directory)), createParents);
-  return path.join(parent, job.id);
-}
-/**
- * Removes only an owned job directory after its journal identity has been checked by the caller.
- * @param {string} directory - Validated job directory.
- */
-export function removeManagedDirectory(directory: string): void {
-  safeDirectory(directory);
-  rmSync(directory, { recursive: true, force: true });
+  return safeDirectory(path.join(base, validateDestination(job.destination.directory)), createParents);
 }

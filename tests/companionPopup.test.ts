@@ -174,26 +174,28 @@ it('shows the last capture result for the current pairing when the popup reopens
   expect(element('capture-result').hidden).toBe(false);
 });
 
-it('shows page controls on explicit request in the active tab only', async () => {
+it('enables page download buttons by default and saves an opt-out', async () => {
   const { chrome, element } = companionPopupFixture(true, 'https://files.example/video', true);
   const show = element('show-overlays');
   await vi.waitFor(() => expect(show.disabled).toBe(false));
+  expect(show.checked).toBe(true);
   expect(chrome.scripting.executeScript).not.toHaveBeenCalled();
   show.click();
-  await vi.waitFor(() => expect(element('status').textContent).toContain('buttons shown'));
-  const [injection] = chrome.scripting.executeScript.mock.calls[0]!;
-  expect(injection).toMatchObject({ world: 'ISOLATED', files: ['overlay.js'] });
+  await vi.waitFor(() => expect(element('status').textContent).toContain('buttons are off'));
+  expect(show.checked).toBe(false);
+  expect(chrome.storage.local.set).toHaveBeenCalledExactlyOnceWith({ downloadOverlays: false });
   expect(chrome.permissions.request).not.toHaveBeenCalled();
 });
 
-it('declares every raster icon and grants no browsing-history or blanket required host access', () => {
+it('declares raster icons, automatic web overlays and capture notifications without the tabs permission', () => {
   const manifest = JSON.parse(readFileSync('browser-connector/manifest.json', 'utf8'));
-  expect(manifest.version).toBe('1.4.0');
+  expect(manifest.version).toBe('1.5.0');
   expect(manifest.background).toEqual({ service_worker: 'background.js' });
   expect(manifest.optional_permissions).toContain('downloads');
   expect(manifest.permissions).not.toContain('downloads');
   expect(manifest.permissions).not.toContain('tabs');
-  expect(manifest.host_permissions).toBeUndefined();
+  expect(manifest.permissions).toContain('notifications');
+  expect(manifest.content_scripts).toEqual([{ matches: ['http://*/*', 'https://*/*'], js: ['overlay.js'] }]);
   for (const [size, file] of Object.entries(manifest.icons)) {
     expect(existsSync(`browser-connector/${file}`)).toBe(true);
     const png = readFileSync(`browser-connector/${file}`);

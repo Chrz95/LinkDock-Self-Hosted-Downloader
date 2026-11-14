@@ -13,6 +13,7 @@ export interface CompletionDestination {
   directory: string;
   moved: boolean;
   error: string | null;
+  layout?: 'shared';
 }
 export const JOB_OPTIONS = {
   torrent: '/torrent-selection',

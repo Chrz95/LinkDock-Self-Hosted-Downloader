@@ -40,7 +40,7 @@ export function PolicyCompletion({ draft, onChange }: PolicyFieldsProps) {
         </div>
       )}
       <p className="policy-footnote">
-        Use . for your mounted completed folder, or a subfolder such as Movies. Each download gets its own job folder.
+        Use . for your mounted completed folder, or a subfolder such as Movies. Files are saved directly in that folder.
         Save once for all devices and future downloads, including torrents. Existing jobs keep their destination. A
         download’s Move on completion control can override this default.
       </p>

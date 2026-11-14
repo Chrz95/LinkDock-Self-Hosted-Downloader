@@ -1,9 +1,36 @@
 (() => {
-  if (globalThis.linkDockCloseOverlays) {
-    globalThis.linkDockCloseOverlays();
-    return false;
+  if (globalThis.linkDockOverlayLoaded) {
+    return;
+  }
+  globalThis.linkDockOverlayLoaded = true;
+  let closeOverlays;
+  let latestRequest = 0;
+
+  /** Refreshes page controls without giving the page access to extension storage. */
+  async function refresh() {
+    const request = ++latestRequest;
+    const enabled = await chrome.runtime.sendMessage({ type: 'linkdock-overlay-state' }).catch(() => false);
+    if (request !== latestRequest) {
+      return;
+    }
+    if (enabled && !closeOverlays) {
+      closeOverlays = showOverlays();
+    } else if (!enabled && closeOverlays) {
+      closeOverlays();
+      closeOverlays = undefined;
+    }
   }
 
+  chrome.runtime.onMessage.addListener((message) => {
+    if (message?.type === 'linkdock-overlay-refresh') {
+      void refresh();
+    }
+  });
+  void refresh();
+})();
+
+/** Creates the overlay controls and returns a function that removes them. */
+function showOverlays() {
   const host = document.createElement('div');
   const shadow = host.attachShadow({ mode: 'closed' });
   const css = `
@@ -230,7 +257,7 @@
         });
         status.textContent = result?.message ?? 'Could not reach LinkDock. Check your connection.';
       } catch {
-        status.textContent = 'Could not reach the companion. Reopen it and show the buttons again.';
+        status.textContent = 'Could not reach the companion. Reload this page and try again.';
       } finally {
         send.disabled = false;
       }
@@ -310,13 +337,11 @@
     { capture: true, signal: events.signal },
   );
 
-  globalThis.linkDockCloseOverlays = () => {
+  update();
+  return () => {
     events.abort();
     changes.disconnect();
     cancelAnimationFrame(frame);
     host.remove();
-    delete globalThis.linkDockCloseOverlays;
   };
-  update();
-  return true;
-})();
+}

@@ -30,10 +30,21 @@ function canCatchDownload(item) {
 /** Records only the last outcome, without the file name or link.
  * @param {object} station - Pairing used for the attempt.
  * @param {string} message - Fixed companion status text.
+ * @param {boolean} [caught] - Whether the station accepted this browser download.
  */
-async function recordCapture(station, message) {
+async function recordCapture(station, message, caught = false) {
   const { result } = globalThis.LinkDockCompanion.downloadCaptureKeys(Boolean(station.incognito));
   await chrome.storage.session?.set({ [result]: { connectionId: station.connection.id, message } }).catch(() => {});
+  if (caught) {
+    await chrome.notifications
+      .create({
+        type: 'basic',
+        iconUrl: chrome.runtime.getURL('icons/icon-128.png'),
+        title: 'LinkDock caught a download',
+        message,
+      })
+      .catch(() => {});
+  }
 }
 
 /** Queues an eligible browser file and cancels only an active copy after the station receives bytes.
@@ -77,6 +88,7 @@ async function catchBrowserDownload(item) {
       await recordCapture(
         station,
         result.message ?? 'LinkDock queued the link but did not confirm file bytes. Check the library for its status.',
+        result.ok,
       );
       return;
     }
@@ -85,11 +97,11 @@ async function catchBrowserDownload(item) {
       const [remaining] = await chrome.downloads.search({ id });
       if (canCatchDownload(remaining) && remaining.incognito === incognito) {
         await chrome.downloads.cancel(id);
-        await recordCapture(station, 'Handed off to LinkDock. The browser copy was stopped.');
+        await recordCapture(station, 'Handed off to LinkDock. The browser copy was stopped.', true);
         return;
       }
     }
-    await recordCapture(station, 'LinkDock started the file. The browser copy was kept.');
+    await recordCapture(station, 'LinkDock started the file. The browser copy was kept.', true);
   } catch {
     if (station) {
       await recordCapture(station, 'Could not finish the handoff. Check your browser downloads and LinkDock library.');
@@ -108,6 +120,28 @@ function registerDownloadCapture() {
 registerDownloadCapture();
 chrome.permissions.onAdded.addListener(registerDownloadCapture);
 
+/** Resolves the paired station only for enabled, external web pages in the sender's browser mode.
+ * @param {object} sender - Browser-provided tab and frame metadata.
+ * @returns {Promise<object | undefined>} Paired station for this page.
+ */
+async function overlayStation(sender) {
+  const companion = globalThis.LinkDockCompanion;
+  const incognito = Boolean(sender.tab.incognito);
+  const keys = companion.downloadCaptureKeys(incognito);
+  const saved = await chrome.storage.local.get([keys.station, keys.overlays]);
+  const station = saved[keys.station];
+  const page = new URL(sender.url);
+  if (
+    saved[keys.overlays] !== false &&
+    station?.token &&
+    Boolean(station.incognito) === incognito &&
+    ['http:', 'https:'].includes(page.protocol) &&
+    page.origin !== companion.stationOrigin(station.origin)
+  ) {
+    return station;
+  }
+}
+
 /** Submits a link from the companion's on-page controls using the sender's browser mode.
  * @param {object} selection - Link and output choice from the isolated content script.
  * @param {object} sender - Browser-provided tab and frame metadata.
@@ -115,17 +149,15 @@ chrome.permissions.onAdded.addListener(registerDownloadCapture);
  */
 async function submitOverlayDownload(selection, sender) {
   const companion = globalThis.LinkDockCompanion;
-  const incognito = Boolean(sender.tab.incognito);
-  const { station: key } = companion.downloadCaptureKeys(incognito);
-  const station = (await chrome.storage.local.get(key))[key];
-  if (!station?.token || Boolean(station.incognito) !== incognito) {
-    return { ok: false, message: 'Pair the companion with your LinkDock station first.' };
+  const station = await overlayStation(sender);
+  if (!station) {
+    return { ok: false, message: 'Pair your station and enable download buttons in the companion.' };
   }
-  const page = new URL(sender.url);
   const target = new URL(selection.url);
   const origin = companion.stationOrigin(station.origin);
   if (
-    ![page, target].every((url) => ['http:', 'https:'].includes(url.protocol) && url.origin !== origin) ||
+    !['http:', 'https:'].includes(target.protocol) ||
+    target.origin === origin ||
     !['direct', 'video'].includes(selection.sourceType) ||
     (selection.sourceType === 'direct' && selection.quality !== undefined)
   ) {
@@ -137,15 +169,45 @@ async function submitOverlayDownload(selection, sender) {
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (
-    message?.type !== 'linkdock-overlay-download' ||
+    !['linkdock-overlay-state', 'linkdock-overlay-download'].includes(message?.type) ||
     sender.id !== chrome.runtime.id ||
     sender.frameId !== 0 ||
     !Number.isInteger(sender.tab?.id)
   ) {
     return;
   }
+  if (message.type === 'linkdock-overlay-state') {
+    overlayStation(sender).then(
+      (station) => sendResponse(Boolean(station)),
+      () => sendResponse(false),
+    );
+    return true;
+  }
   submitOverlayDownload(message, sender).then(sendResponse, () => {
     sendResponse({ ok: false, message: 'Could not send this link. Check the LinkDock connection and try again.' });
   });
   return true;
+});
+
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area !== 'local') {
+    return;
+  }
+  const companion = globalThis.LinkDockCompanion;
+  const affectedModes = [false, true].filter((incognito) => {
+    const keys = companion.downloadCaptureKeys(incognito);
+    return keys.station in changes || keys.overlays in changes;
+  });
+  if (affectedModes.length) {
+    chrome.tabs
+      .query({})
+      .then((tabs) => {
+        for (const tab of tabs) {
+          if (Number.isInteger(tab.id) && affectedModes.includes(Boolean(tab.incognito))) {
+            void chrome.tabs.sendMessage(tab.id, { type: 'linkdock-overlay-refresh' }).catch(() => {});
+          }
+        }
+      })
+      .catch(() => {});
+  }
 });

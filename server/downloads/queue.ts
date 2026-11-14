@@ -32,9 +32,7 @@ import { ArchiveAccess } from './delivery/access.js';
 import { validateTorrentSelection, validateDestination, type CompletionDestination } from '../../shared/jobOptions.js';
 import { UtilityService } from '../utilities/service.js';
 import { QueueControls } from '../control/service.js';
-import { moveCompleted } from './completion/move.js';
-import { destinationDirectory, removeManagedDirectory, safeDirectory } from './completion/paths.js';
-import { readJournal } from './completion/journal.js';
+import { moveCompleted, removeCompleted } from './completion/move.js';
 import {
   holdDisabledRetries,
   resetAutomaticRetry,
@@ -484,12 +482,7 @@ export class DownloadQueue {
     this.assertRemovable(job);
     if (job.destination) {
       try {
-        const directory = destinationDirectory(this.store.completedDirectory, job);
-        if (existsSync(directory)) {
-          safeDirectory(directory);
-          readJournal(directory, job.id);
-          removeManagedDirectory(directory);
-        }
+        removeCompleted(job, this.store);
       } catch (error) {
         if (job.destination.moved || (error as NodeJS.ErrnoException).code !== 'ENOENT') {
           throw error;

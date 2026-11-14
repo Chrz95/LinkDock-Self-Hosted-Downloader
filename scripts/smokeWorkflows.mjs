@@ -87,10 +87,7 @@ export async function smokeWorkflows(configuration) {
       await delay(WORKFLOW.waitMilliseconds);
     }
     assert.equal(automatic.destination.moved, true);
-    assert.deepEqual(
-      readFileSync(path.join(queue.store.completedDirectory, automatic.id, 'files', 'automatic.bin')),
-      bytes,
-    );
+    assert.deepEqual(readFileSync(path.join(queue.store.completedDirectory, 'automatic.bin')), bytes);
     queue.remove(automatic);
     process.stdout.write('Compiled CLI, torrent selection, global completion default and overridden moves: passed.\n');
   } finally {

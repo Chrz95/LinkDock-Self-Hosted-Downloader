@@ -1,9 +1,12 @@
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { DOWNLOAD_STATUS, type DownloadJob } from '../../shared/contracts.js';
+import type { DownloadArtifact } from '../../shared/sources.js';
 import { TRANSFER } from '../constants.js';
 import { validateHistory } from './validateHistory.js';
-import { destinationDirectory, safeDirectory } from './completion/paths.js';
+import { destinationDirectory, destinationParent, safeDirectory } from './completion/paths.js';
+import { ownsPublication, publicationPath, publicationStat } from './completion/publication.js';
+import { resolveArtifactPath } from '../engines/artifacts.js';
 import { OUTPUT } from '../engines/constants.js';
 import { MOVE } from './completion/journal.js';
 
@@ -64,8 +67,29 @@ export class DownloadStore {
    * @returns {string} Managed published artifact root.
    */
   getOutputDirectory(job: DownloadJob): string {
+    if (job.destination?.layout === 'shared' && job.destination.moved) {
+      return destinationParent(this.completedDirectory, job);
+    }
     return job.destination?.moved
       ? safeDirectory(path.join(destinationDirectory(this.completedDirectory, job), MOVE.files))
       : `${this.getFilePath(job.id)}${OUTPUT.outputSuffix}`;
+  }
+
+  /** Resolves one manifest entry and checks ownership in a shared destination.
+   * @param {DownloadJob} job - Validated existing job.
+   * @param {DownloadArtifact} file - Entry from the job's manifest.
+   * @returns {Promise<string>} Checked published file path.
+   */
+  async getOutputFile(job: DownloadJob, file: DownloadArtifact): Promise<string> {
+    const directory = this.getOutputDirectory(job);
+    if (job.destination?.layout === 'shared' && job.destination.moved) {
+      const filename = publicationPath(directory, file.relativePath);
+      safeDirectory(path.dirname(filename));
+      if (!ownsPublication(publicationStat(filename), file)) {
+        throw new Error('This saved file is unavailable or has changed.');
+      }
+      return filename;
+    }
+    return resolveArtifactPath(directory, file.relativePath);
   }
 }

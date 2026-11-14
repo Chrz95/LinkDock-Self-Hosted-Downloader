@@ -1091,9 +1091,9 @@ Every new single link, batch item, magnet and uploaded torrent inherits that sav
 preference is stored on the Pi in `settings.json`, shared across browsers/devices, and survives container restarts.
 
 For the supplied `compose.rpi.yaml`, with `LINKDOCK_DOWNLOAD_PATH=/home/pi/downloads/linkDock`, using `.` saves files at
-`/home/pi/downloads/linkDock/completed/<job-uuid>/files/`. Choosing `Movies` adds `Movies/` before the job UUID. The
-completion mount must exist and be writable by UID/GID 1000. The browser setting chooses folders beneath that mount;
-changing its host location still requires changing the Compose bind mount.
+`/home/pi/downloads/linkDock/completed/`. Choosing `Movies` saves files in `completed/Movies/`. The completion mount
+must exist and be writable by UID/GID 1000. The browser setting chooses folders beneath that mount; changing its host
+location still requires changing the Compose bind mount.
 
 This setting starts disabled on a fresh installation and when upgrading older preferences. Enable it and save to
 activate automatic moves. Existing jobs keep their original destination. Each job's **Move on completion** control is an
@@ -1311,19 +1311,19 @@ default completion root is `/data/completed` in Docker, or `DATA_DIRECTORY/compl
 relative, or the exact `.` marker for the root, without other dot-prefixed segments, backslashes or traversal. The
 application refuses symlinked destination directories.
 
-Each job writes to `<completion-root>/<folder>/<job-uuid>/files/`, preserving selected torrent/media subfolders. A
-direct download uses its safe display filename. UUID directories avoid collisions between equally named downloads. These
-job directories belong to LinkDock; do not add unrelated files or edit its ownership journal. Browser downloads,
-eligible previews and collection ZIP exports continue to use the moved files. **Delete file & record** also deletes that
-job's managed destination directory. Other jobs and sibling directories are retained.
+Files are saved in `<completion-root>/<folder>/`, preserving subfolders from the source. A direct download uses its safe
+display filename. A numbered suffix such as ` (2)` avoids overwriting an existing file. Browser downloads, eligible
+previews and collection ZIP exports continue to use the moved files. **Delete file & record** removes the job's
+published files, leaving other files and the shared folder in place. Previously moved jobs retain their paths.
 
 Set a destination while downloading, or apply one to an already completed job. Moving a completed job briefly requeues
 it and obeys station holds. Payload completion is checkpointed before copying. Files stream into private destination
-staging, are flushed, and are published by rename after a SHA-256 recovery journal is prepared. History switches to the
-new location before internal originals are removed. Cross-filesystem moves are supported and temporarily need space for
-both copies. A pause/shutdown interrupts copying; resume uses saved payload rather than downloading the source again. A
-prepared destination from an interrupted history commit is verified before adoption. Existing unowned folders are never
-overwritten. This is application recovery, not a substitute for backups or reliable storage hardware.
+staging, are flushed, and are published as exclusive hard links after a SHA-256 recovery journal is prepared. The
+completion filesystem must support hard links. History switches to the new location before internal originals are
+removed. Cross-filesystem moves are supported and temporarily need space for both copies. A pause/shutdown interrupts
+copying; resume uses saved payload rather than downloading the source again. A prepared destination from an interrupted
+history commit is verified before adoption. Existing unowned folders are never overwritten. This is application
+recovery, not a substitute for backups or reliable storage hardware.
 
 If a move fails, the job remains available from its internal copy and **Move needs attention** appears. Fix space, mount
 availability or UID 1000 write permissions, then choose **Retry move** or use `retry-move`. Retry uses saved bytes.

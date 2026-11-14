@@ -24,8 +24,10 @@ it('moves a direct file, saves its routing before cleanup, and keeps file/previe
   job.payloadReady = true;
   job.destination = { directory: 'Pictures/Travel', moved: false, error: null };
   await moveCompleted(job, queue.store, new AbortController().signal);
-  const directory = destinationDirectory(queue.store.completedDirectory, job);
-  expect(readFileSync(path.join(directory, MOVE.files, 'photo.png'))).toEqual(IMAGE_BYTES);
+  const directory = path.join(queue.store.completedDirectory, 'Pictures/Travel');
+  const output = path.join(directory, 'photo.png');
+  expect(readFileSync(output)).toEqual(IMAGE_BYTES);
+  expect(existsSync(path.join(directory, job.id))).toBe(false);
   expect(existsSync(queue.store.getFilePath(job.id))).toBe(false);
   const endpoint = `${API_PATH.downloads}/${job.id}`;
   await client.get(`${endpoint}/file`).expect(HTTP_STATUS.unauthorized);
@@ -36,16 +38,65 @@ it('moves a direct file, saves its routing before cleanup, and keeps file/previe
   const collection = station.createCollection({ 'a.txt': 'one', 'folder/b.txt': 'two' });
   collection.destination = { directory: 'Collections', moved: false, error: null };
   await moveCompleted(collection, queue.store, new AbortController().signal);
+  expect(readFileSync(path.join(queue.store.completedDirectory, 'Collections/folder/b.txt'), 'utf8')).toBe('two');
   const archive = await client.get(`${API_PATH.downloads}/${collection.id}/archive`).expect(HTTP_STATUS.ok);
   expect(archive.headers['content-type']).toContain('application/zip');
   const recovered = new DownloadQueue(configuration);
   try {
     expect(recovered.store.getOutputDirectory(recovered.store.jobs.find((entry) => entry.id === job.id)!)).toBe(
-      path.join(directory, MOVE.files),
+      directory,
     );
   } finally {
     await recovered.stop();
   }
+  queue.remove(job);
+  expect(existsSync(directory)).toBe(true);
+  expect(existsSync(output)).toBe(false);
+});
+
+it('publishes equal filenames concurrently without overwriting and keeps a replacement on deletion', async () => {
+  const { queue, createFile } = await createDeliveryFixture();
+  const first = createFile('movie.mp4', Buffer.from('one'));
+  const second = createFile('movie.mp4', Buffer.from('two'));
+  const { signal } = new AbortController();
+  for (const job of [first, second]) {
+    job.destination = { directory: '.', moved: false, error: null };
+  }
+  await Promise.all([moveCompleted(first, queue.store, signal), moveCompleted(second, queue.store, signal)]);
+  const [firstPath, secondPath] = [first, second].map((job) =>
+    path.join(queue.store.completedDirectory, job.files![0]!.relativePath),
+  );
+  expect([firstPath, secondPath].map((filename) => path.basename(filename!)).sort()).toEqual([
+    'movie (2).mp4',
+    'movie.mp4',
+  ]);
+  expect(readFileSync(firstPath!, 'utf8')).toBe('one');
+  expect(readFileSync(secondPath!, 'utf8')).toBe('two');
+  rmSync(firstPath!);
+  writeFileSync(firstPath!, 'replacement');
+  await expect(queue.store.getOutputFile(first, first.files![0]!)).rejects.toThrow('unavailable or has changed');
+  queue.remove(first);
+  expect(readFileSync(firstPath!, 'utf8')).toBe('replacement');
+  expect(readFileSync(secondPath!, 'utf8')).toBe('two');
+});
+
+it('continues serving and removing a job published using the legacy layout', async () => {
+  const { queue, client, login, createFile } = await createDeliveryFixture();
+  const job = createFile('legacy.txt', Buffer.from('old'));
+  job.destination = { directory: '.', moved: true, error: null };
+  job.files = [{ name: 'legacy.txt', relativePath: 'legacy.txt', sizeBytes: SIZE }];
+  const directory = destinationDirectory(queue.store.completedDirectory, job, true);
+  mkdirSync(path.join(directory, MOVE.files), { recursive: true });
+  writeFileSync(path.join(directory, MOVE.files, 'legacy.txt'), 'old');
+  writeJournal(directory, {
+    jobId: job.id,
+    phase: 'prepared',
+    files: job.files,
+    hashes: [createHash('sha256').update('old').digest('hex')],
+  });
+  await login();
+  const { body } = await client.get(`${API_PATH.downloads}/${job.id}/file`).expect(HTTP_STATUS.ok);
+  expect(body).toEqual(Buffer.from('old'));
   queue.remove(job);
   expect(existsSync(directory)).toBe(false);
 });

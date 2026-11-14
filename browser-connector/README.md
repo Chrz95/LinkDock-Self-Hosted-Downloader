@@ -1,4 +1,4 @@
-# LinkDock Browser Companion 1.4
+# LinkDock Browser Companion 1.5
 
 For desktop Chrome, Edge or Brave (Chromium 102+), with **LinkDock 2.31 or newer** for independent download access. Pair
 once from a signed-in station tab, then add downloads even with that tab closed. The station must still be running and
@@ -44,14 +44,15 @@ expired connection produces reconnection instructions. A closed station tab does
 
 ## Use buttons on the page
 
-On a source page, open the companion and click **Toggle buttons on this page**. **Send to LinkDock** appears beside
-visible download links and buttons that expose a file URL. **LinkDock video** opens video resolution and MP3 bitrate
-choices. Click **Send to LinkDock** in the video panel to queue the selected output on the Pi.
+After pairing, **Send to LinkDock** appears automatically beside visible download links and buttons that expose a file
+URL. **LinkDock video** opens video resolution and MP3 bitrate choices. Click **Send to LinkDock** in the video panel to
+queue the selected output on the Pi.
 
-The buttons are enabled in the current page using Chromium's temporary tab access. Open the popup and click the same
-control to hide them. Buttons driven entirely by site scripts without a visible URL can still use **Catch browser
-downloads**. For embedded videos and browser-only streams, support depends on the site's player and LinkDock's video
-extractor. On-page submission sends the link and output choice through the existing pairing.
+The browser needs site access to display the buttons automatically. Reload any pages already open when updating the
+extension. You can turn off **Show download buttons on websites** in the popup. Buttons driven entirely by site scripts
+without a visible URL can still use **Catch browser downloads**. For embedded videos and browser-only streams, support
+depends on the site's player and LinkDock's video extractor. On-page submission sends the link and output choice through
+the existing pairing.
 
 ## Catch browser downloads
 
@@ -61,7 +62,8 @@ station opens the original URL and follows its own redirects. If LinkDock confir
 the companion cancels the browser copy if it is still running. The browser keeps downloading if the source returns an
 error such as HTTP 404, the station takes too long to start, or an older station confirms only queue acceptance. Both
 copies may finish when the browser completes its transfer before the station confirms it has started. Open the companion
-popup to see the latest handoff result. File names and URLs are excluded from this status.
+popup to see the latest handoff result. A browser notification appears when the station accepts a captured download,
+with the handoff result. File names and URLs are excluded from notifications and capture status.
 
 Capture starts off and is enabled separately for regular and incognito browsing. Pairing again requires enabling it
 again. Downloads from the paired station, browser-only URLs such as `blob:` URLs, and downloads flagged by the browser
@@ -90,5 +92,5 @@ station tab's cookie store is used, with normal/incognito separation. Partitione
 jars cannot preserve their boundaries. Site sessions are sent through the station's ordinary authenticated API, never
 through the download-only token. HTTPS also protects these transfers. DeviantArt OAuth remains separate.
 
-The companion requires no broad host permissions, browsing-history access, telemetry or external services. The companion
-does not solve CAPTCHAs, and browser/IP-bound challenges may still fail on the Pi.
+The companion uses HTTP and HTTPS site access for on-page buttons. It requires no browsing-history permission, telemetry
+or external services. The companion does not solve CAPTCHAs, and browser/IP-bound challenges may still fail on the Pi.

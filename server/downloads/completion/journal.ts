@@ -15,6 +15,7 @@ export interface MoveJournal {
   phase: 'copying' | 'prepared';
   files: DownloadArtifact[];
   hashes?: string[];
+  published?: DownloadArtifact[];
 }
 /**
  * Reads bounded no-follow ownership metadata, refusing unknown folders or changed manifests.
@@ -36,6 +37,8 @@ export function readJournal(directory: string, id: string, files?: DownloadArtif
       journal.jobId !== id ||
       !['copying', 'prepared'].includes(journal.phase) ||
       !Array.isArray(journal.files) ||
+      (journal.published !== undefined &&
+        (!Array.isArray(journal.published) || journal.published.length > journal.files.length)) ||
       (files && JSON.stringify(journal.files) !== JSON.stringify(files)) ||
       (journal.phase === 'prepared' &&
         (!Array.isArray(journal.hashes) ||

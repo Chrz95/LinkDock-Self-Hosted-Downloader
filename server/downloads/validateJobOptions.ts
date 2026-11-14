@@ -39,6 +39,7 @@ export function validateJobOptions(record: Record<string, unknown>): void {
     if (
       validateDestination(destination.directory) !== destination.directory ||
       typeof destination.moved !== 'boolean' ||
+      (destination.layout !== undefined && (destination.layout !== 'shared' || !destination.moved)) ||
       (destination.error !== null &&
         (typeof destination.error !== 'string' || destination.error.length > JOB_OPTIONS.maximumPathCharacters)) ||
       (destination.moved && (!Array.isArray(record.files) || !record.files.length))

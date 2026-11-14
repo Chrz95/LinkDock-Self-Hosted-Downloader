@@ -11,6 +11,8 @@ import { validateLibraryMetadata, type LibraryMetadata } from '../../shared/libr
 import { validateDeviantartPreferences } from '../deviantart/validation.js';
 import { validateJobOptions } from './validateJobOptions.js';
 import { validDownloadRetry } from '../../shared/downloadRetry.js';
+import { publicationPath } from './completion/publication.js';
+import path from 'node:path';
 
 /** Storage IDs are generated UUIDs and may never contain filesystem separators. */
 const UUID_PATTERN = /^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/i;
@@ -99,6 +101,20 @@ function isDownloadJob(value: unknown): value is DownloadJob {
             return false;
           }
           const artifact = file as Record<string, unknown>;
+          if ((record.destination as DownloadJob['destination'])?.layout === 'shared') {
+            const identity = artifact.publication as Record<string, unknown> | undefined;
+            if (
+              typeof artifact.relativePath !== 'string' ||
+              !Number.isSafeInteger(artifact.sizeBytes) ||
+              typeof identity?.inode !== 'string' ||
+              !/^\d{1,20}$/u.test(identity.inode) ||
+              typeof identity.modified !== 'string' ||
+              !/^-?\d{1,20}$/u.test(identity.modified)
+            ) {
+              return false;
+            }
+            publicationPath(path.parse(process.cwd()).root, artifact.relativePath);
+          }
           return (
             typeof artifact.name === 'string' &&
             typeof artifact.relativePath === 'string' &&
