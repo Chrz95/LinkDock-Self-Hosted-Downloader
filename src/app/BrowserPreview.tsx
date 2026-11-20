@@ -7,9 +7,9 @@ interface BrowserPreviewProps {
   onQueue: (url: string) => void;
 }
 
-/** Renders fetched data as text and exposes explicit navigation and queue actions.
+/** Renders the sanitized site and keeps navigation and queue actions inside LinkDock.
  * @param {BrowserPreviewProps} props - Page snapshot and browser actions.
- * @returns {JSX.Element} Static page preview.
+ * @returns {JSX.Element} Sandboxed page preview.
  */
 export function BrowserPreview({ page, busy, onOpen, onQueue }: BrowserPreviewProps) {
   return (
@@ -24,7 +24,15 @@ export function BrowserPreview({ page, busy, onOpen, onQueue }: BrowserPreviewPr
           Queue file
         </button>
       )}
-      {page.text && <p className="browser-text">{page.text}</p>}
+      {page.previewUrl && (
+        <iframe
+          className="browser-preview"
+          title="Website preview"
+          sandbox="allow-scripts"
+          src={page.previewUrl}
+          inert={busy}
+        />
+      )}
       {page.truncated && <p>This page exceeds the browser’s preview limits.</p>}
       {page.links.length > 0 && (
         <ul aria-label="Page links">

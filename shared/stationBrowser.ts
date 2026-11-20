@@ -9,7 +9,7 @@ export interface BrowserLink {
 export interface BrowserPage {
   url: string;
   title: string;
-  text: string;
+  previewUrl: string;
   links: BrowserLink[];
   file: boolean;
   truncated: boolean;

@@ -95,7 +95,7 @@ it('opens the station browser and queues a discovered file via the workspace', a
   vi.mocked(requestApi).mockResolvedValueOnce({
     url,
     title: 'Public files',
-    text: 'Choose a file.',
+    previewUrl: `${STATION_BROWSER_PATH}/preview/example`,
     links: [{ url: file, label: 'Archive', download: true }],
     file: false,
     truncated: false,
@@ -105,6 +105,9 @@ it('opens the station browser and queues a discovered file via the workspace', a
   await user.click(navigation.getByRole('link', { name: 'Browser' }));
   await user.type(screen.getByRole('textbox', { name: 'Website or file address' }), url);
   await user.click(screen.getByRole('button', { name: /^Open$/ }));
+  const preview = await screen.findByTitle('Website preview');
+  expect(preview).toHaveAttribute('src', `${STATION_BROWSER_PATH}/preview/example`);
+  expect(preview).toHaveAttribute('sandbox', 'allow-scripts');
   await user.click(await screen.findByRole('button', { name: 'Queue Archive' }));
   expect(requestApi).toHaveBeenCalledWith(STATION_BROWSER_PATH, { method: 'POST', body: JSON.stringify({ url }) });
   expect(station.queueDownload).toHaveBeenCalledWith(file);

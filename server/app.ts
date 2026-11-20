@@ -52,7 +52,9 @@ export function createApplication(
   application.use(
     helmet({
       strictTransportSecurity: configuration.secureCookie ? undefined : false,
-      contentSecurityPolicy: { directives: { upgradeInsecureRequests: configuration.secureCookie ? [] : null } },
+      contentSecurityPolicy: {
+        directives: { frameSrc: ["'self'"], upgradeInsecureRequests: configuration.secureCookie ? [] : null },
+      },
     }),
   );
   application.get(API_PATH.health, (_request, response) => response.json({ status: 'ok' }));
