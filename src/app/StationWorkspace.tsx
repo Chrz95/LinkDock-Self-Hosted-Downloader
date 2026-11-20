@@ -4,6 +4,7 @@ import { PageView } from './PageView';
 import { OverviewPage } from './OverviewPage';
 import { LibraryPage } from './LibraryPage';
 import { SettingsPage } from './SettingsPage';
+import { BrowserPage } from './BrowserPage';
 
 /**
  * Keeps page drafts alive while queue polling and authentication remain owned by the application shell.
@@ -51,6 +52,9 @@ export function StationWorkspace({
       </PageView>
       <PageView active={page === WORKSPACE_PAGE.settings}>
         <SettingsPage policy={snapshot.policy} />
+      </PageView>
+      <PageView active={page === WORKSPACE_PAGE.browser}>
+        <BrowserPage onAdd={onAdd} />
       </PageView>
       <footer className="page-footer">
         <span>

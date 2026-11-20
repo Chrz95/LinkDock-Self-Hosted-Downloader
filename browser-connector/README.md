@@ -44,9 +44,9 @@ expired connection produces reconnection instructions. A closed station tab does
 
 ## Use buttons on the page
 
-After pairing, **Send to LinkDock** appears automatically beside visible download links and buttons that expose a file
-URL. **LinkDock video** opens video resolution and MP3 bitrate choices. Click **Send to LinkDock** in the video panel to
-queue the selected output on the Pi.
+After pairing, down-arrow buttons appear automatically beside visible download links and buttons that expose a file URL.
+The arrow on a video opens video resolution and MP3 bitrate choices. Click the arrow inside the video panel to queue the
+selected output on the Pi.
 
 The browser needs site access to display the buttons automatically. Reload any pages already open when updating the
 extension. You can turn off **Show download buttons on websites** in the popup. Buttons driven entirely by site scripts

@@ -9,6 +9,7 @@ import { requestApi } from '../src/lib/api/requestApi';
 import { API_PATH, DOWNLOAD_STATUS } from '../shared/contracts';
 import { DEFAULT_POLICY } from '../shared/policy';
 import { UTILITY } from '../shared/utilities';
+import { STATION_BROWSER_PATH } from '../shared/stationBrowser';
 
 vi.mock('../src/features/downloads/hooks/useDownloads', () => ({ useDownloads: vi.fn() }));
 vi.mock('../src/lib/api/requestApi', () => ({ requestApi: vi.fn() }));
@@ -85,7 +86,29 @@ it('separates the overview, library and consolidated settings through phone navi
   expect(screen.queryByRole('button', { name: 'Save preferences' })).not.toBeInTheDocument();
 });
 
-const DEFAULT_ROUTES = { overview: '#main', library: '#downloads', settings: '#settings' };
+const DEFAULT_ROUTES = { overview: '#main', library: '#downloads', browser: '#browser', settings: '#settings' };
+
+it('opens the station browser and queues a discovered file via the workspace', async () => {
+  const user = userEvent.setup();
+  const url = 'https://example.com/files';
+  const file = 'https://example.com/archive.zip';
+  vi.mocked(requestApi).mockResolvedValueOnce({
+    url,
+    title: 'Public files',
+    text: 'Choose a file.',
+    links: [{ url: file, label: 'Archive', download: true }],
+    file: false,
+    truncated: false,
+  });
+  render(<App />);
+  const navigation = within(screen.getByRole('navigation', { name: 'Mobile workspace' }));
+  await user.click(navigation.getByRole('link', { name: 'Browser' }));
+  await user.type(screen.getByRole('textbox', { name: 'Website or file address' }), url);
+  await user.click(screen.getByRole('button', { name: /^Open$/ }));
+  await user.click(await screen.findByRole('button', { name: 'Queue Archive' }));
+  expect(requestApi).toHaveBeenCalledWith(STATION_BROWSER_PATH, { method: 'POST', body: JSON.stringify({ url }) });
+  expect(station.queueDownload).toHaveBeenCalledWith(file);
+});
 
 it('retains composer, library filters and unsaved global preferences when switching pages', async () => {
   const user = userEvent.setup();

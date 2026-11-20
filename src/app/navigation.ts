@@ -1,5 +1,10 @@
 /** Stable fragment routes keep bookmarks, notification clicks and shared-link entry points working. */
-export const WORKSPACE_PAGE = { overview: 'overview', library: 'library', settings: 'settings' } as const;
+export const WORKSPACE_PAGE = {
+  overview: 'overview',
+  library: 'library',
+  browser: 'browser',
+  settings: 'settings',
+} as const;
 export type WorkspacePage = (typeof WORKSPACE_PAGE)[keyof typeof WORKSPACE_PAGE];
 export interface WorkspaceNavigationProps {
   page: WorkspacePage;
@@ -7,6 +12,7 @@ export interface WorkspaceNavigationProps {
 export const PAGE_INFO = {
   overview: { href: '#main', label: 'Overview', shortLabel: 'Overview', icon: 'grid' },
   library: { href: '#downloads', label: 'Download library', shortLabel: 'Library', icon: 'download' },
+  browser: { href: '#browser', label: 'Browser', shortLabel: 'Browser', icon: 'search' },
   settings: { href: '#settings', label: 'Settings', shortLabel: 'Settings', icon: 'settings' },
 } as const;
 

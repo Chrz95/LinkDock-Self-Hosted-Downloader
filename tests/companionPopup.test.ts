@@ -189,7 +189,7 @@ it('enables page download buttons by default and saves an opt-out', async () => 
 
 it('declares raster icons, automatic web overlays and capture notifications without the tabs permission', () => {
   const manifest = JSON.parse(readFileSync('browser-connector/manifest.json', 'utf8'));
-  expect(manifest.version).toBe('1.5.0');
+  expect(manifest.version).toBe('1.5.1');
   expect(manifest.background).toEqual({ service_worker: 'background.js' });
   expect(manifest.optional_permissions).toContain('downloads');
   expect(manifest.permissions).not.toContain('downloads');

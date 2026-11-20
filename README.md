@@ -130,6 +130,10 @@ For HTTPS reverse proxies, alternative mounts, environment variables and backups
 
 ## Send downloads from your browser
 
+The station's **Browser** page opens public HTTP and HTTPS pages from the Pi. Follow links in the text preview or queue
+an address or page link for download. The preview displays page text and links and supports sites that expose them in
+HTML. Use your regular browser for sites that require JavaScript or sign-in.
+
 The included **LinkDock Browser Companion** lets you add the current page or paste a link without returning to the
 composer. Choose the source, video quality or MP3 output directly in the popup.
 

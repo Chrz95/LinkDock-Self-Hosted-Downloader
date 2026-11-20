@@ -28,6 +28,8 @@ import { createDiagnosticRoutes } from './diagnostics/routes.js';
 import { COMPANION } from '../shared/companion.js';
 import { CompanionStore } from './companion/store.js';
 import { createCompanionRoutes, createCompanionClientRoutes } from './companion/routes.js';
+import { STATION_BROWSER_PATH } from '../shared/stationBrowser.js';
+import { createStationBrowserRoutes } from './stationBrowser/routes.js';
 
 /**
  * Composes a same-origin application with private API responses and CSRF origin checks.
@@ -106,6 +108,7 @@ export function createApplication(
   );
   application.delete(API_PATH.session, session.requireSession, session.logout);
   application.use(COMPANION.path, session.requireSession, createCompanionRoutes(companions));
+  application.use(STATION_BROWSER_PATH, session.requireSession, createStationBrowserRoutes());
   application.use(API_PATH.downloads, session.requireSession, createDiagnosticRoutes(configuration, queue));
   application.use(API_PATH.downloads, session.requireSession, createDownloadRoutes(queue));
   application.use(UTILITY.path, session.requireSession, createUtilityRoutes(queue.utilities));

@@ -164,7 +164,9 @@ function showOverlays() {
   function createControl(target, isVideo) {
     const root = element('div');
     root.className = 'control';
-    const toggle = element('button', isVideo ? 'LinkDock video' : 'Send to LinkDock');
+    const toggle = element('button', '↓');
+    toggle.title = isVideo ? 'LinkDock video options' : 'Send to LinkDock';
+    toggle.setAttribute('aria-label', toggle.title);
     toggle.type = 'button';
     const panel = element('div');
     panel.className = 'panel';
@@ -182,7 +184,9 @@ function showOverlays() {
       quality = selectField(panel, 'Quality');
       fillQuality(quality, false);
       output.addEventListener('change', () => fillQuality(quality, output.value === 'audio'));
-      send = element('button', 'Send to LinkDock');
+      send = element('button', '↓');
+      send.title = 'Send to LinkDock';
+      send.setAttribute('aria-label', send.title);
       send.type = 'button';
       panel.append(send);
     }

@@ -1,7 +1,54 @@
 .overview-page,
 .library-page,
-.settings-page {
+.settings-page,
+.station-browser {
   min-width: 0;
+}
+.station-browser form,
+.station-browser ul {
+  display: grid;
+  gap: 10px;
+}
+.browser-actions,
+.station-browser li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.browser-actions input,
+.station-browser button:not(.primary-button) {
+  min-height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 12px;
+  background: var(--field);
+  color: inherit;
+}
+.browser-actions input {
+  flex: 1 1 16rem;
+  min-width: 0;
+}
+.station-browser ul {
+  list-style: none;
+  padding: 0;
+}
+.station-browser li button:first-child {
+  flex: 1 1 12rem;
+  min-width: 0;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+.station-browser .browser-url,
+.station-browser .browser-text {
+  overflow-wrap: anywhere;
+}
+.station-browser > output {
+  display: block;
+  margin-block: 12px;
+  color: var(--muted);
+}
+.station-browser > output:empty {
+  margin: 0;
 }
 .overview-details {
   display: grid;
